@@ -313,12 +313,35 @@ namespace SheetAtlas.Core.Domain.Entities
     public record MergedRange(int StartRow, int StartCol, int EndRow, int EndCol);
 
     /// <summary>
-    /// Column-level metadata (width, hidden state, etc.).
+    /// Column-level metadata (width, hidden state, detected type, etc.).
     /// Shared for all cells in the column.
+    /// Extended by Foundation Layer for type detection and quality analysis.
     /// </summary>
     public record ColumnMetadata
     {
+        // Original fields
         public double? Width { get; init; }
         public bool IsHidden { get; init; }
+
+        // Foundation Layer extensions
+        /// <summary>
+        /// Detected data type for column (from Foundation Layer analysis).
+        /// </summary>
+        public ValueObjects.DataType? DetectedType { get; init; }
+
+        /// <summary>
+        /// Type confidence score (0.0 - 1.0). >0.8 = strong type.
+        /// </summary>
+        public double? TypeConfidence { get; init; }
+
+        /// <summary>
+        /// Currency info if column contains monetary values.
+        /// </summary>
+        public ValueObjects.CurrencyInfo? Currency { get; init; }
+
+        /// <summary>
+        /// Number of data quality warnings in column sample.
+        /// </summary>
+        public int QualityWarningCount { get; init; }
     }
 }
