@@ -31,8 +31,10 @@ namespace SheetAtlas.Core.Application.DTOs
 
         /// <summary>
         /// Normalization successful (cleaned value is usable).
+        /// True even with warnings - check QualityIssue for data quality concerns.
+        /// False only when normalization completely failed (CleanedValue is null).
         /// </summary>
-        public bool IsSuccess => CleanedValue != null && QualityIssue == DataQualityIssue.None;
+        public bool IsSuccess => CleanedValue != null;
 
         /// <summary>
         /// Optional error message if normalization failed.

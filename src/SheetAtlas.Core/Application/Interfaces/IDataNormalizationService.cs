@@ -23,24 +23,29 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// <param name="rawValue">Cell value from Excel file</param>
         /// <param name="numberFormat">Excel number format (for date/currency context)</param>
         /// <param name="cellDataType">Excel data type (N=number, S=string, etc)</param>
+        /// <param name="dateSystem">Date system used by workbook (1900 or 1904)</param>
         /// <returns>Normalized cell value; null if normalization failed</returns>
         /// <remarks>
         /// Sets DataQualityIssue in returned metadata if issues found.
         /// Original value always preserved for auditing.
+        /// DateSystem affects date serial number conversion (1,462 day difference).
         /// </remarks>
         NormalizationResult Normalize(
             object? rawValue,
             string? numberFormat = null,
-            CellDataType cellDataType = CellDataType.General);
+            CellDataType cellDataType = CellDataType.General,
+            DateSystem dateSystem = DateSystem.Date1900);
 
         /// <summary>
         /// Normalizes collection of cells (column-level, for efficiency).
         /// </summary>
         /// <param name="cellValues">Raw cell values from column</param>
         /// <param name="dataType">Expected data type for column</param>
+        /// <param name="dateSystem">Date system used by workbook (1900 or 1904)</param>
         /// <returns>List of normalized results with metadata</returns>
         IReadOnlyList<NormalizationResult> NormalizeBatch(
             IEnumerable<(object? Value, string? Format)> cellValues,
-            CellDataType dataType = CellDataType.General);
+            CellDataType dataType = CellDataType.General,
+            DateSystem dateSystem = DateSystem.Date1900);
     }
 }

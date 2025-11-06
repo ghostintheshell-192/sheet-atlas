@@ -57,6 +57,10 @@ namespace SheetAtlas.Infrastructure.External.Readers
                         return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
                     }
 
+                    // Detect date system (1900 vs 1904)
+                    var dateSystem = DetectDateSystem(workbookPart);
+                    _logger.LogInfo($"Detected date system: {dateSystem}", "OpenXmlFileReader");
+
                     var sheetElements = GetSheets(workbookPart);
                     _logger.LogInfo($"Reading Excel file with {sheetElements.Count()} sheets", "OpenXmlFileReader");
 
@@ -123,7 +127,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     }
 
                     var status = DetermineLoadStatus(sheets, errors);
-                    return new ExcelFile(filePath, status, sheets, errors);
+                    return new ExcelFile(filePath, status, sheets, errors, dateSystem);
                 }, cancellationToken);
             }
             catch (OperationCanceledException)
@@ -172,6 +176,21 @@ namespace SheetAtlas.Infrastructure.External.Readers
         private IEnumerable<Sheet> GetSheets(WorkbookPart workbookPart)
         {
             return workbookPart.Workbook.Descendants<Sheet>();
+        }
+
+        private DateSystem DetectDateSystem(WorkbookPart workbookPart)
+        {
+            // Access WorkbookProperties to detect Date1904 property
+            // If Date1904 is true → 1904 system, otherwise → 1900 system (default)
+            var workbookProperties = workbookPart.Workbook.WorkbookProperties;
+
+            if (workbookProperties?.Date1904?.Value == true)
+            {
+                return DateSystem.Date1904;
+            }
+
+            // Default: 1900 system (Windows Excel default)
+            return DateSystem.Date1900;
         }
 
         private SASheetData? ProcessSheet(string fileName, string sheetName, WorkbookPart workbookPart, WorksheetPart worksheetPart)
