@@ -41,12 +41,25 @@ namespace SheetAtlas.Core.Domain.Entities
         /// </summary>
         public IReadOnlyList<ExcelError> Errors { get; }
 
-        public ExcelFile(string filePath, LoadStatus status, Dictionary<string, SASheetData> sheets, List<ExcelError> errors)
+        /// <summary>
+        /// Date system used by this workbook (1900 or 1904).
+        /// Determines how date serial numbers are converted to DateTime.
+        /// Most Windows Excel files use Date1900, older Mac files may use Date1904.
+        /// </summary>
+        public DateSystem DateSystem { get; }
+
+        public ExcelFile(
+            string filePath,
+            LoadStatus status,
+            Dictionary<string, SASheetData> sheets,
+            List<ExcelError> errors,
+            DateSystem dateSystem = DateSystem.Date1900)
         {
             FilePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
             Status = status;
             Sheets = sheets?.AsReadOnly() ?? throw new ArgumentNullException(nameof(sheets));
             Errors = errors?.AsReadOnly() ?? throw new ArgumentNullException(nameof(errors));
+            DateSystem = dateSystem;
             LoadedAt = DateTime.UtcNow;
         }
 
