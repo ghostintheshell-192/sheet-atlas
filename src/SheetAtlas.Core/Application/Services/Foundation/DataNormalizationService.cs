@@ -311,17 +311,12 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         private bool TryParseDate(string text, out DateTime result)
         {
+            // Only validate SYNTACTIC correctness, not semantic validity
+            // Let ColumnAnalysisService handle semantic validation using context from adjacent cells
+
             // Try standard formats
             if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
-            {
-                // Reject unreasonable dates (e.g., "1,234" → Jan 1, 234 AD)
-                if (result.Year < 1900 || result.Year > 2100)
-                {
-                    result = DateTime.MinValue;
-                    return false;
-                }
                 return true;
-            }
 
             // Try ISO format
             if (DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
