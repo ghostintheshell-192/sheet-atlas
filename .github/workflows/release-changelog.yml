@@ -46,8 +46,26 @@ jobs:
 
           Co-Authored-By: Claude <noreply@anthropic.com>"
 
-      - name: Create and push tag
+      - name: Push CHANGELOG to develop
         run: |
-          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
           git push origin develop
-          git push origin "v${{ inputs.version }}"
+
+      - name: Instructions for manual tag creation
+        run: |
+          echo "=========================================="
+          echo "✅ CHANGELOG generated and pushed!"
+          echo "=========================================="
+          echo ""
+          echo "📋 Next steps (MANUAL):"
+          echo ""
+          echo "1. Pull the latest develop branch:"
+          echo "   git checkout develop"
+          echo "   git pull origin develop"
+          echo ""
+          echo "2. Create signed tag:"
+          echo "   git tag -s v${{ inputs.version }} -m \"Release v${{ inputs.version }}\""
+          echo ""
+          echo "3. Push the tag to trigger release workflow:"
+          echo "   git push origin v${{ inputs.version }}"
+          echo ""
+          echo "=========================================="
