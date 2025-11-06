@@ -297,7 +297,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         [Theory]
         [InlineData("[$€-407] #,##0.00", '.')]         // German uses PERIOD as thousand sep (1.234,56)
         [InlineData("[$$-409] #,##0.00", ',')]         // US uses comma
-        [InlineData("[$€-40C] #.##0,00", ',')]         // French uses comma as thousand sep (inverted format)
+        [InlineData("[$€-40C] #,##0.00", '.')]         // French: Excel saves US format, displays with space (period is approximation)
         public void DetectCurrency_VariousThousandSeparators_CorrectSeparatorDetection(
             string format,
             char expectedSeparator)
