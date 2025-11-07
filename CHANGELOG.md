@@ -5,14 +5,147 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.1] - 2025-10-24
 
----
+### Added
 
-## [0.2.0] - 2025-10-12 (Alpha)
+- Comprehensive website deployment with automated testing
 
-> **Note**: This release was initially tagged as v1.1.0 but renumbered to v0.2.0 to reflect alpha status.
-> All tags are now GPG-signed for security and authenticity.
+### Documentation
+
+- Update website for release v0.3.1
+
+### Fixed
+
+- Remove incorrect data from website structured metadata
+- Critical fixes for website deployment workflow
+
+### Miscellaneous
+
+- Add website data configuration file
+
+### Refactored
+
+- Remove redundant alpha status message
+
+## [0.3.0] - 2025-10-23
+
+### Added
+
+- Implement honest SEO improvements focused on Windows availability
+- Create website template with version placeholders
+- Implement unified release workflow
+- Unified release pipeline with website automation
+- Extract SheetAtlas.Logging as reusable module
+- Integrate LogService into error notification flow
+- Simplified extension methods for LogService
+- Implement native file logging with daily rotation
+- Add pre-push hook for automated unit testing
+- Add structured JSON file logging system
+- Tabular error log view with full history tracking
+- Implement collapsible sidebar with vertical toggle bar
+- Implement dynamic tab system with progressive disclosure
+- Comprehensive UI/UX improvements
+- Implement IDisposable pattern on MainWindowViewModel
+- Implement parallel file loading with configurable concurrency
+
+### Docs
+
+- Clean up redundant comments and add XML documentation
+
+### Documentation
+
+- Update CHANGELOG to reflect corrected versioning (0.x for alpha)
+- Correct README.md to reflect honest platform availability
+- Add release process documentation and update CLAUDE.md
+- Major SEO improvements for website discoverability
+- Revise privacy messaging in features page
+
+### Fixed
+
+- Merge build-release workflow fix from main
+- Remove hardcoded version numbers from website, add alpha status notice
+- Update website download links to use specific v0.2.0 tag
+- Correct error messages for corrupted xlsx files
+- Translate all Italian error messages to English
+- Catch specific regex exceptions in SearchService instead of all exceptions
+- Update test to expect Info level for empty sheets
+- Remove redundant .NET project detection in pre-push hook
+- Fix tab selection bugs and refactor navigation logic
+- Resolve memory leak in UnloadAllFiles by reusing single-file cleanup logic
+- Prevent memory leak from inline PropertyChanged subscription
+- Eliminate fire-and-forget inconsistency and retry UI flicker
+- Correct alpha banner version substitution and platform availability text
+- Correct sitemap and alpha banner generation
+- Improve website deployment and navbar alignment
+
+### Miscellaneous
+
+- Remove legacy ExcelViewer references and directories
+- Remove duplicate release workflows
+- Remove unused using directives across codebase
+
+### Perf
+
+- Precompute column comparison data to eliminate redundant calculations
+- Eliminate duplicate GetCellAsStringByHeader calls
+- Implement flat cache for RefreshCellColors to eliminate nested iteration
+
+### Performance
+
+- Optimize PropertyChanged notifications in TreeSearchResultsViewModel
+- Implement flat cache in SearchHistoryItem to reduce O(n³) to O(n)
+
+### Refactor
+
+- Replace toast notifications with inline treeview error display
+- Simplify property propagation in OnTabNavigatorPropertyChanged
+- Simplify property propagation in OnComparisonCoordinatorPropertyChanged
+- Extract SelectedFile setter logic to helper methods
+- Unify duplicate switch logic in LoadedFilesManager
+- Eliminate message duplication and redundant null checks
+- Standardize event delegates and fix memory leak
+
+### Refactored
+
+- Consolidate severity levels using LogSeverity
+- Clean up nomenclature in Logging module
+- Migrate all UI layer logging to ILogService
+- Migrate Infrastructure layer logging to ILogService
+- Migrate Core layer logging to ILogService
+- Migrate Services/Commands logging to ILogService
+- Standardize error handling pattern across file readers
+- Simplify null validation in RowComparisonService
+- Implement IDisposable pattern to fix memory leaks
+- Consolidate button styles to centralized Buttons.axaml
+- Extract menu styles and replace hardcoded colors with theme resources
+- Add SecondaryButton style and eliminate last hardcoded colors
+- Remove deprecated ShowSearchResultsCommand
+- Extract TabNavigationCoordinator from MainWindowViewModel
+- Extract FileDetails operations to FileDetailsCoordinator
+- Simplify UnloadAllFilesAsync with self-documenting helper methods
+- Split MainWindowViewModel into partial classes for better organization
+
+### Test
+
+- Add comprehensive regex tests for SearchService
+
+### Testing
+
+- Migrate test mocks from ILogger to ILogService
+- Update assertions for English error messages
+- Add comprehensive unit tests for structured file logging system
+
+### Ci
+
+- Add workflow_dispatch trigger to build-release workflow
+- Integrate Windows installer build into main release workflow
+
+### Release
+
+- Unified release pipeline v1.0
+
+## [0.2.0] - 2025-10-12
 
 ### Added
 
@@ -42,6 +175,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RowComparison cells now adapt to dark mode theme (#7)
 - Menu items cleanup and implementation (#1-6)
 - Update website version numbers to v1.1.0
+- Update project path from ExcelViewer to SheetAtlas in build-release workflow
+
+### Miscellaneous
+
+- Update CHANGELOG for v1.1.0
+- Merge develop for v1.0.0 release
+- Update GitHub Page for v1.0.0 release
 
 ### Performance
 
@@ -54,10 +194,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename project from ExcelViewer to SheetAtlas
 - Fix all nullability warnings for cleaner build
 
-## [0.1.0] - 2025-10-08 (Alpha)
-
-> **Note**: This release was initially tagged as v1.0.0 but renumbered to v0.1.0 to reflect alpha status.
-> This is the initial public alpha release with core features.
+## [0.1.0] - 2025-10-08
 
 ### Added
 
