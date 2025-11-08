@@ -50,26 +50,27 @@ namespace SheetAtlas.Core.Application.Services
 
             for (int colIndex = 0; colIndex < sheetData.ColumnCount; colIndex++)
             {
-                // Sample cells from column (skip empty cells)
+                // Sample cells from column (include empty cells for anomaly detection)
                 var sampleCells = new List<SACellValue>();
                 var numberFormats = new List<string?>();
 
                 for (int rowIndex = 0; rowIndex < maxSampleSize && rowIndex < sheetData.RowCount; rowIndex++)
                 {
                     var cellData = sheetData.GetCellData(rowIndex, colIndex);
-                    if (!cellData.Value.IsEmpty)
-                    {
-                        // Normalize cell value (soft normalization: trim whitespace, clean text)
-                        var normalized = NormalizeCellValue(cellData.Value, cellData.Metadata?.NumberFormat);
 
-                        sampleCells.Add(normalized);
-                        // Extract numberFormat from metadata (saved during file read)
-                        numberFormats.Add(cellData.Metadata?.NumberFormat);
-                    }
+                    // Normalize cell value (soft normalization: trim whitespace, clean text)
+                    // NOTE: Empty cells are included in sample for anomaly detection
+                    var normalized = cellData.Value.IsEmpty
+                        ? cellData.Value
+                        : NormalizeCellValue(cellData.Value, cellData.Metadata?.NumberFormat);
+
+                    sampleCells.Add(normalized);
+                    // Extract numberFormat from metadata (saved during file read)
+                    numberFormats.Add(cellData.Metadata?.NumberFormat);
                 }
 
-                // Skip empty columns
-                if (sampleCells.Count == 0)
+                // Skip completely empty columns
+                if (sampleCells.All(c => c.IsEmpty))
                     continue;
 
                 // Analyze column

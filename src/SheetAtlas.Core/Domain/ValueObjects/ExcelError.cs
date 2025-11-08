@@ -125,19 +125,25 @@ namespace SheetAtlas.Core.Domain.ValueObjects
 
     /// <summary>
     /// Represents a specific cell location within a sheet using zero-based row and column indices.
+    /// Row/Column are 0-based indices in the data (after header rows have been removed).
+    /// HeaderRowCount tracks how many header rows were skipped during file reading.
     /// </summary>
     public class CellReference
     {
-        /// <summary>Zero-based row index.</summary>
+        /// <summary>Zero-based row index in data (0 = first data row after headers).</summary>
         public int Row { get; }
 
         /// <summary>Zero-based column index.</summary>
         public int Column { get; }
 
-        public CellReference(int row, int column)
+        /// <summary>Number of header rows that were skipped (default: 1).</summary>
+        public int HeaderRowCount { get; }
+
+        public CellReference(int row, int column, int headerRowCount = 1)
         {
             Row = row;
             Column = column;
+            HeaderRowCount = headerRowCount;
         }
 
         /// <summary>
@@ -146,7 +152,8 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         public override string ToString() => $"R{Row}C{Column}";
 
         /// <summary>
-        /// Converts to Excel A1 notation (e.g., "B6" for row=5, col=1).
+        /// Converts to Excel A1 notation (e.g., "B6" for row=5, col=1, headerRowCount=1).
+        /// Accounts for header rows: excelRow = dataRow + headerRowCount + 1
         /// </summary>
         public string ToExcelNotation()
         {
@@ -157,7 +164,9 @@ namespace SheetAtlas.Core.Domain.ValueObjects
                 columnName = (char)('A' + (col % 26)) + columnName;
                 col = col / 26 - 1;
             }
-            return $"{columnName}{Row + 1}";
+            // Convert 0-based data row to 1-based Excel row, accounting for skipped header rows
+            int excelRow = Row + HeaderRowCount + 1;
+            return $"{columnName}{excelRow}";
         }
     }
 }

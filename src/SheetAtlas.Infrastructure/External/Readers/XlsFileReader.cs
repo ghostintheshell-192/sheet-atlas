@@ -18,12 +18,14 @@ namespace SheetAtlas.Infrastructure.External.Readers
     public class XlsFileReader : IFileFormatReader
     {
         private readonly ILogService _logger;
+        private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
         private static bool _encodingProviderRegistered = false;
         private static readonly object _encodingLock = new object();
 
-        public XlsFileReader(ILogService logger)
+        public XlsFileReader(ILogService logger, ISheetAnalysisOrchestrator analysisOrchestrator)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
             RegisterEncodingProvider();
         }
 
@@ -88,7 +90,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
                         try
                         {
-                            var processedSheet = ProcessSheet(Path.GetFileNameWithoutExtension(filePath), table);
+                            var processedSheet = ProcessSheet(Path.GetFileNameWithoutExtension(filePath), table, errors);
 
                             // Skip empty sheets (no rows or no columns) - this is normal, not an error
                             if (processedSheet == null)
@@ -138,7 +140,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
         }
 
-        private SASheetData? ProcessSheet(string fileName, System.Data.DataTable sourceTable)
+        private SASheetData? ProcessSheet(string fileName, System.Data.DataTable sourceTable, List<ExcelError> errors)
         {
             var sheetName = sourceTable.TableName;
 
@@ -179,12 +181,28 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
                 for (int colIndex = 0; colIndex < columnNames.Count && colIndex < sourceTable.Columns.Count; colIndex++)
                 {
-                    string cellText = sourceRow[colIndex]?.ToString() ?? string.Empty;
+                    var cellValue = sourceRow[colIndex];
 
-                    // Use FromString for auto-type detection!
-                    rowData[colIndex] = new SACellData(SACellValue.FromString(cellText));
+                    // OPTIMIZATION: Use native types from ExcelDataReader instead of converting to string
+                    // This preserves type information and avoids locale-dependent string formatting
+                    SACellValue sacValue = cellValue switch
+                    {
+                        null => SACellValue.Empty,
+                        DBNull => SACellValue.Empty,
+                        DateTime dt => SACellValue.FromDateTime(dt),
+                        double d => SACellValue.FromNumber(d),
+                        float f => SACellValue.FromNumber(f),
+                        int i => SACellValue.FromNumber(i),
+                        long l => SACellValue.FromNumber(l),
+                        decimal dec => SACellValue.FromNumber((double)dec),
+                        bool b => SACellValue.FromBoolean(b),
+                        string s => string.IsNullOrWhiteSpace(s) ? SACellValue.Empty : SACellValue.FromString(s),
+                        _ => string.IsNullOrWhiteSpace(cellValue.ToString()) ? SACellValue.Empty : SACellValue.FromString(cellValue.ToString()!)
+                    };
 
-                    if (!string.IsNullOrWhiteSpace(cellText))
+                    rowData[colIndex] = new SACellData(sacValue);
+
+                    if (!sacValue.IsEmpty)
                     {
                         hasData = true;
                     }
@@ -200,7 +218,10 @@ namespace SheetAtlas.Infrastructure.External.Readers
             // Trim excess capacity to save memory
             sheetData.TrimExcess();
 
-            return sheetData;
+            // INTEGRATION: Analyze and enrich sheet data via orchestrator
+            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, fileName, errors).Result;
+
+            return enrichedData;
         }
 
         private string EnsureUniqueColumnName(string baseName, Dictionary<string, int> columnNameCounts)
