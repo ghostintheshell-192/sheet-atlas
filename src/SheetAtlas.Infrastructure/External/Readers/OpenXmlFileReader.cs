@@ -19,17 +19,20 @@ namespace SheetAtlas.Infrastructure.External.Readers
         private readonly ICellReferenceParser _cellParser;
         private readonly IMergedCellProcessor _mergedCellProcessor;
         private readonly ICellValueReader _cellValueReader;
+        private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
 
         public OpenXmlFileReader(
             ILogService logger,
             ICellReferenceParser cellParser,
             IMergedCellProcessor mergedCellProcessor,
-            ICellValueReader cellValueReader)
+            ICellValueReader cellValueReader,
+            ISheetAnalysisOrchestrator analysisOrchestrator)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cellParser = cellParser ?? throw new ArgumentNullException(nameof(cellParser));
             _mergedCellProcessor = mergedCellProcessor ?? throw new ArgumentNullException(nameof(mergedCellProcessor));
             _cellValueReader = cellValueReader ?? throw new ArgumentNullException(nameof(cellValueReader));
+            _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
         }
 
         public IReadOnlyList<string> SupportedExtensions =>
@@ -93,7 +96,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                                 continue;
                             }
 
-                            var sheetData = ProcessSheet(Path.GetFileNameWithoutExtension(filePath), sheetName, workbookPart, worksheetPart);
+                            var sheetData = ProcessSheet(Path.GetFileNameWithoutExtension(filePath), sheetName, workbookPart, worksheetPart, errors);
 
                             // Skip empty sheets (no columns means no meaningful data)
                             if (sheetData == null)
@@ -193,7 +196,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return DateSystem.Date1900;
         }
 
-        private SASheetData? ProcessSheet(string fileName, string sheetName, WorkbookPart workbookPart, WorksheetPart worksheetPart)
+        private SASheetData? ProcessSheet(string fileName, string sheetName, WorkbookPart workbookPart, WorksheetPart worksheetPart, List<ExcelError> errors)
         {
             var sharedStringTable = workbookPart.SharedStringTablePart?.SharedStringTable;
 
@@ -211,13 +214,16 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var columnNames = CreateColumnNamesArray(headerColumns);
             var sheetData = new SASheetData(sheetName, columnNames);
 
-            // Populate rows
-            PopulateSheetRows(sheetData, worksheetPart, sharedStringTable, mergedCells, headerColumns);
+            // Populate rows (with numberFormat extraction)
+            PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedCells, headerColumns);
 
             // Trim excess capacity to save memory
             sheetData.TrimExcess();
 
-            return sheetData;
+            // INTEGRATION: Analyze and enrich sheet data via orchestrator
+            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, fileName, errors).Result;
+
+            return enrichedData;
         }
 
         private Dictionary<int, string> ProcessHeaderRow(WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells)
@@ -277,7 +283,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return $"{baseName}_{columnNameCounts[baseName]}";
         }
 
-        private void PopulateSheetRows(SASheetData sheetData, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells, Dictionary<int, string> headerColumns)
+        private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells, Dictionary<int, string> headerColumns)
         {
             int firstCol = headerColumns.Keys.Min();
             bool isFirstRow = true;
@@ -290,7 +296,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     continue; // Skip header row
                 }
 
-                var rowData = CreateRowData(sheetData.ColumnCount, row, sharedStringTable, mergedCells, firstCol);
+                var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, mergedCells, firstCol);
                 if (rowData != null)
                 {
                     sheetData.AddRow(rowData);
@@ -298,7 +304,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
         }
 
-        private SACellData[]? CreateRowData(int columnCount, Row row, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells, int firstCol)
+        private SACellData[]? CreateRowData(int columnCount, Row row, WorkbookPart workbookPart, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells, int firstCol)
         {
             var rowData = new SACellData[columnCount];
             bool hasData = false;
@@ -318,8 +324,20 @@ namespace SheetAtlas.Infrastructure.External.Readers
                 if (columnIndex < 0 || columnIndex >= columnCount)
                     continue;
 
+                // Extract cell value
                 SACellValue cellValue = GetCellValueWithMerge(cell, sharedStringTable, mergedCells);
-                rowData[columnIndex] = new SACellData(cellValue);
+
+                // Extract number format (for foundation services)
+                string? numberFormat = GetNumberFormat(cell, workbookPart);
+
+                // Create metadata if numberFormat is present (memory optimization)
+                SheetAtlas.Core.Domain.ValueObjects.CellMetadata? metadata = null;
+                if (numberFormat != null)
+                {
+                    metadata = new SheetAtlas.Core.Domain.ValueObjects.CellMetadata { NumberFormat = numberFormat };
+                }
+
+                rowData[columnIndex] = new SACellData(cellValue, metadata);
                 hasData = true;
             }
 
@@ -350,6 +368,94 @@ namespace SheetAtlas.Infrastructure.External.Readers
         private SACellValue GetCellValue(Cell cell, SharedStringTable? sharedStringTable)
         {
             return _cellValueReader.GetCellValue(cell, sharedStringTable);
+        }
+
+        /// <summary>
+        /// Extracts Excel number format string from cell style.
+        /// Returns format like "mm/dd/yyyy", "[$€-407] #,##0.00", or null if General/no format.
+        /// </summary>
+        private string? GetNumberFormat(Cell cell, WorkbookPart workbookPart)
+        {
+            // No StyleIndex = default style (General format)
+            if (cell.StyleIndex == null)
+                return null;
+
+            var stylesPart = workbookPart.WorkbookStylesPart;
+            if (stylesPart?.Stylesheet == null)
+                return null;
+
+            // Get CellFormat from StyleIndex
+            var cellFormats = stylesPart.Stylesheet.CellFormats;
+            if (cellFormats == null)
+                return null;
+
+            var styleIndex = (int)cell.StyleIndex.Value;
+            if (styleIndex < 0 || styleIndex >= cellFormats.Count())
+                return null;
+
+            var cellFormat = cellFormats.ElementAt(styleIndex) as CellFormat;
+            if (cellFormat?.NumberFormatId == null)
+                return null;
+
+            var numberFormatId = cellFormat.NumberFormatId.Value;
+
+            // Built-in formats (0-163): use predefined mapping
+            if (numberFormatId < 164)
+            {
+                return GetBuiltInNumberFormat(numberFormatId);
+            }
+
+            // Custom formats (164+): lookup in NumberingFormats collection
+            var numberingFormats = stylesPart.Stylesheet.NumberingFormats;
+            if (numberingFormats == null)
+                return null;
+
+            var customFormat = numberingFormats.Elements<NumberingFormat>()
+                .FirstOrDefault(nf => nf.NumberFormatId?.Value == numberFormatId);
+
+            return customFormat?.FormatCode?.Value;
+        }
+
+        /// <summary>
+        /// Maps built-in Excel number format IDs to format strings.
+        /// Only includes commonly used formats; returns null for General/uncommon formats.
+        /// </summary>
+        private string? GetBuiltInNumberFormat(uint formatId)
+        {
+            // Common built-in formats
+            // Full list: https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.numberingformat
+            return formatId switch
+            {
+                0 => null, // General
+                1 => "0",
+                2 => "0.00",
+                3 => "#,##0",
+                4 => "#,##0.00",
+                9 => "0%",
+                10 => "0.00%",
+                11 => "0.00E+00",
+                12 => "# ?/?",
+                13 => "# ??/??",
+                14 => "mm/dd/yyyy", // Date
+                15 => "d-mmm-yy",
+                16 => "d-mmm",
+                17 => "mmm-yy",
+                18 => "h:mm AM/PM",
+                19 => "h:mm:ss AM/PM",
+                20 => "h:mm",
+                21 => "h:mm:ss",
+                22 => "m/d/yy h:mm",
+                37 => "#,##0 ;(#,##0)",
+                38 => "#,##0 ;[Red](#,##0)",
+                39 => "#,##0.00;(#,##0.00)",
+                40 => "#,##0.00;[Red](#,##0.00)",
+                45 => "mm:ss",
+                46 => "[h]:mm:ss",
+                47 => "mmss.0",
+                48 => "##0.0E+0",
+                49 => "@", // Text
+                _ => null // Unknown/uncommon format
+            };
         }
     }
 }

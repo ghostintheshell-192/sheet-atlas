@@ -73,7 +73,7 @@ namespace SheetAtlas.Core.Configuration
 
         /// <summary>
         /// Minimum confidence score (0.0-1.0) to classify column as strong type.
-        /// >0.8 = strong type, <0.8 = mixed type.
+        /// more than 0.8 = strong type, less than 0.8 = mixed type.
         /// </summary>
         public double ConfidenceThreshold { get; set; } = 0.8;
 
