@@ -27,5 +27,12 @@ namespace SheetAtlas.Core.Application.DTOs
         /// <summary>Factory for chaotic merge warning.</summary>
         public static MergeWarning Chaos(string rangeRef, string message) =>
             new() { RangeRef = rangeRef, Complexity = MergeComplexity.Chaos, Message = message };
+
+        /// <summary>Factory for high complexity warning (>20% merged).</summary>
+        public static MergeWarning HighComplexity(
+            MergeComplexity complexity,
+            double percentage,
+            string message) =>
+            new() { RangeRef = "", Complexity = complexity, Message = message };
     }
 }
