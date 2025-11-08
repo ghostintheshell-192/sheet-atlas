@@ -1,5 +1,6 @@
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Logging.Models;
 
 namespace SheetAtlas.Core.Application.DTOs
 {
@@ -21,8 +22,17 @@ namespace SheetAtlas.Core.Application.DTOs
         /// <summary>Currency info if column is currency type.</summary>
         public CurrencyInfo? Currency { get; init; }
 
-        /// <summary>Number of data quality issues found in sample.</summary>
-        public int WarningCount { get; init; }
+        /// <summary>
+        /// Anomalies detected during column analysis (context-aware).
+        /// Includes type mismatches, formula errors, and other quality issues.
+        /// </summary>
+        public IReadOnlyList<CellAnomaly> Anomalies { get; init; } = Array.Empty<CellAnomaly>();
+
+        /// <summary>
+        /// Number of data quality warnings found in sample.
+        /// Computed property: counts anomalies with severity >= Warning.
+        /// </summary>
+        public int WarningCount => Anomalies.Count(a => a.Severity >= LogSeverity.Warning);
 
         /// <summary>Distribution of data types in sample.</summary>
         public Dictionary<DataType, int> TypeDistribution { get; init; } = new();
