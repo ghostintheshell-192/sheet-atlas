@@ -1,5 +1,6 @@
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Application.Services;
+using SheetAtlas.Core.Application.Services.Foundation;
 using SheetAtlas.Core.Domain.Exceptions;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Infrastructure.External;
@@ -257,8 +258,22 @@ namespace SheetAtlas.Tests.Services
             var cellValueReader = new CellValueReader();
             var mergedCellProcessor = new MergedCellProcessor(cellParser, cellValueReader);
 
-            // Create OpenXmlFileReader with its dependencies
-            var openXmlReader = new OpenXmlFileReader(readerLogger.Object, cellParser, mergedCellProcessor, cellValueReader);
+            // Foundation services (real implementations for integration tests)
+            var currencyDetector = new CurrencyDetector();
+            var normalizationService = new DataNormalizationService();
+            var columnAnalysisService = new ColumnAnalysisService(currencyDetector);
+            var mergedCellResolver = new MergedCellResolver();
+
+            // Create orchestrator
+            var orchestrator = new SheetAnalysisOrchestrator(columnAnalysisService, normalizationService, readerLogger.Object);
+
+            // Create OpenXmlFileReader with orchestrator
+            var openXmlReader = new OpenXmlFileReader(
+                readerLogger.Object,
+                cellParser,
+                mergedCellProcessor,
+                cellValueReader,
+                orchestrator);
             var readers = new List<IFileFormatReader> { openXmlReader };
 
             // Create settings mock

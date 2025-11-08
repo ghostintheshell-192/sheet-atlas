@@ -117,6 +117,12 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         /// </summary>
         public DataType? DetectedType { get; set; }
 
+        /// <summary>
+        /// Excel number format string (e.g., "mm/dd/yyyy", "[$€-407] #,##0.00").
+        /// Used by CurrencyDetector and type inference for accurate analysis.
+        /// </summary>
+        public string? NumberFormat { get; set; }
+
         // === Extensibility ===
 
         /// <summary>

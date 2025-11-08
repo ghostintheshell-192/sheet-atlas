@@ -81,6 +81,15 @@ public partial class App : Application
                 services.AddSingleton<ICellValueReader, CellValueReader>();
                 services.AddSingleton<IMergedCellProcessor, MergedCellProcessor>();
 
+                // Register Foundation Layer services
+                services.AddSingleton<ICurrencyDetector, SheetAtlas.Core.Application.Services.Foundation.CurrencyDetector>();
+                services.AddSingleton<IDataNormalizationService, SheetAtlas.Core.Application.Services.Foundation.DataNormalizationService>();
+                services.AddSingleton<IColumnAnalysisService, SheetAtlas.Core.Application.Services.Foundation.ColumnAnalysisService>();
+                services.AddSingleton<IMergedCellResolver, SheetAtlas.Core.Application.Services.Foundation.MergedCellResolver>();
+
+                // Register Sheet Analysis Orchestrator
+                services.AddSingleton<ISheetAnalysisOrchestrator, SheetAnalysisOrchestrator>();
+
                 // Register file format readers (must be before ExcelReaderService)
                 services.AddSingleton<IFileFormatReader, OpenXmlFileReader>();
                 services.AddSingleton<IFileFormatReader, XlsFileReader>();
