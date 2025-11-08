@@ -11,7 +11,7 @@ namespace SheetAtlas.Core.Application.DTOs
         /// <summary>Overall complexity level.</summary>
         public MergeComplexity Level { get; init; }
 
-        /// <summary>Percentage of cells that are merged (0.0 - 100.0).</summary>
+        /// <summary>Percentage of cells that are merged (0.0 - 1.0).</summary>
         public double MergedCellPercentage { get; init; }
 
         /// <summary>Recommended strategy based on analysis.</summary>
@@ -19,6 +19,15 @@ namespace SheetAtlas.Core.Application.DTOs
 
         /// <summary>Human-readable explanation of recommendation.</summary>
         public string Explanation { get; init; } = string.Empty;
+
+        /// <summary>Number of vertical merges detected.</summary>
+        public int VerticalMergeCount { get; init; }
+
+        /// <summary>Number of horizontal merges detected.</summary>
+        public int HorizontalMergeCount { get; init; }
+
+        /// <summary>Total number of merge ranges.</summary>
+        public int TotalMergeRanges { get; init; }
 
         /// <summary>Factory for simple cases (headers only).</summary>
         public static MergeComplexityAnalysis SimpleCase(double percentage) =>
@@ -48,6 +57,19 @@ namespace SheetAtlas.Core.Application.DTOs
                 MergedCellPercentage = percentage,
                 RecommendedStrategy = MergeStrategy.KeepTopLeft,
                 Explanation = $"High merge density ({percentage:F1}%). Consider exporting as values first."
+            };
+
+        /// <summary>Factory for simple no-merge case.</summary>
+        public static MergeComplexityAnalysis Simple(
+            double percentage,
+            MergeStrategy recommendedStrategy,
+            string explanation) =>
+            new()
+            {
+                Level = MergeComplexity.Simple,
+                MergedCellPercentage = percentage,
+                RecommendedStrategy = recommendedStrategy,
+                Explanation = explanation
             };
     }
 }
