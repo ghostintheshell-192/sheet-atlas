@@ -278,8 +278,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Theory]
-        [InlineData("1", true)]
-        [InlineData("0", false)]
+        // NOTE: "1" and "0" removed - no longer treated as boolean (too ambiguous with numeric IDs)
         [InlineData("true", true)]
         [InlineData("false", false)]
         [InlineData("True", true)]

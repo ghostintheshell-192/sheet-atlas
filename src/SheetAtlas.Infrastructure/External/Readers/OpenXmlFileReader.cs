@@ -17,20 +17,20 @@ namespace SheetAtlas.Infrastructure.External.Readers
     {
         private readonly ILogService _logger;
         private readonly ICellReferenceParser _cellParser;
-        private readonly IMergedCellProcessor _mergedCellProcessor;
+        private readonly IMergedRangeExtractor<WorksheetPart> _mergedRangeExtractor;
         private readonly ICellValueReader _cellValueReader;
         private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
 
         public OpenXmlFileReader(
             ILogService logger,
             ICellReferenceParser cellParser,
-            IMergedCellProcessor mergedCellProcessor,
+            IMergedRangeExtractor<WorksheetPart> mergedRangeExtractor,
             ICellValueReader cellValueReader,
             ISheetAnalysisOrchestrator analysisOrchestrator)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cellParser = cellParser ?? throw new ArgumentNullException(nameof(cellParser));
-            _mergedCellProcessor = mergedCellProcessor ?? throw new ArgumentNullException(nameof(mergedCellProcessor));
+            _mergedRangeExtractor = mergedRangeExtractor ?? throw new ArgumentNullException(nameof(mergedRangeExtractor));
             _cellValueReader = cellValueReader ?? throw new ArgumentNullException(nameof(cellValueReader));
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
         }
@@ -200,8 +200,11 @@ namespace SheetAtlas.Infrastructure.External.Readers
         {
             var sharedStringTable = workbookPart.SharedStringTablePart?.SharedStringTable;
 
-            var mergedCells = _mergedCellProcessor.ProcessMergedCells(worksheetPart, sharedStringTable);
-            var headerColumns = ProcessHeaderRow(worksheetPart, sharedStringTable, mergedCells);
+            // Extract merged cell ranges (structural information only)
+            var mergedRanges = _mergedRangeExtractor.ExtractMergedRanges(worksheetPart);
+
+            // Process header row (expands merged cells for column names)
+            var headerColumns = ProcessHeaderRow(worksheetPart, sharedStringTable, mergedRanges);
 
             // If no headers found, return null - caller will handle as empty sheet
             if (!headerColumns.Any())
@@ -214,32 +217,70 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var columnNames = CreateColumnNamesArray(headerColumns);
             var sheetData = new SASheetData(sheetName, columnNames);
 
-            // Populate rows (with numberFormat extraction)
-            PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedCells, headerColumns);
+            // Populate SASheetData.MergedCells for Foundation Layer processing
+            PopulateMergedCells(sheetData, mergedRanges, headerColumns.Keys.Min());
+
+            // Populate rows (data rows do NOT expand merged cells - left to MergedCellResolver)
+            PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns);
 
             // Trim excess capacity to save memory
             sheetData.TrimExcess();
 
             // INTEGRATION: Analyze and enrich sheet data via orchestrator
+            // Orchestrator will apply MergedCellResolver BEFORE column analysis
             var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, fileName, errors).Result;
 
             return enrichedData;
         }
 
-        private Dictionary<int, string> ProcessHeaderRow(WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells)
+        /// <summary>
+        /// Populates SASheetData.MergedCells collection from extracted ranges.
+        /// Uses absolute row indices (row 0 = header, row 1+ = data).
+        /// Only adjusts column indices relative to first column.
+        /// </summary>
+        private void PopulateMergedCells(SASheetData sheetData, MergedRange[] mergedRanges, int firstCol)
+        {
+            foreach (var range in mergedRanges)
+            {
+                // Use absolute row indices (no adjustment needed - range already has 0-based indices)
+                // Row 0 = header row, Row 1 = first data row, etc.
+
+                // Adjust column indices relative to first column
+                int adjustedStartCol = range.StartCol - firstCol;
+                int adjustedEndCol = range.EndCol - firstCol;
+
+                // Create adjusted range (only columns adjusted, rows stay absolute)
+                var adjustedRange = new MergedRange(range.StartRow, adjustedStartCol, range.EndRow, adjustedEndCol);
+
+                // Generate unique key for this range (e.g., "R0C1:R2C3")
+                string rangeKey = $"R{range.StartRow}C{adjustedStartCol}:R{range.EndRow}C{adjustedEndCol}";
+
+                sheetData.AddMergedCell(rangeKey, adjustedRange);
+            }
+        }
+
+        private Dictionary<int, string> ProcessHeaderRow(WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, MergedRange[] mergedRanges)
         {
             var firstRow = worksheetPart.Worksheet.Descendants<Row>().FirstOrDefault();
             if (firstRow == null)
                 return new Dictionary<int, string>();
 
             var headerValues = new Dictionary<int, string>();
+
+            // Build cell lookup for header row
+            var cellsByRef = firstRow.Elements<Cell>()
+                .Where(c => c.CellReference?.Value != null)
+                .ToDictionary(c => c.CellReference!.Value!, c => c);
+
             foreach (var cell in firstRow.Elements<Cell>())
             {
                 var cellRef = cell.CellReference?.Value;
                 if (cellRef == null) continue;
 
                 int columnIndex = _cellParser.GetColumnIndex(cellRef);
-                string cellValue = GetCellValueWithMerge(cell, sharedStringTable, mergedCells).ToString();
+
+                // Expand merged cells for header (necessary for column names)
+                string cellValue = GetHeaderCellValue(cell, cellsByRef, sharedStringTable, mergedRanges);
                 headerValues[columnIndex] = cellValue;
             }
 
@@ -283,7 +324,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return $"{baseName}_{columnNameCounts[baseName]}";
         }
 
-        private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells, Dictionary<int, string> headerColumns)
+        private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, MergedRange[] mergedRanges, Dictionary<int, string> headerColumns)
         {
             int firstCol = headerColumns.Keys.Min();
             bool isFirstRow = true;
@@ -296,7 +337,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     continue; // Skip header row
                 }
 
-                var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, mergedCells, firstCol);
+                var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, firstCol);
                 if (rowData != null)
                 {
                     sheetData.AddRow(rowData);
@@ -304,7 +345,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
         }
 
-        private SACellData[]? CreateRowData(int columnCount, Row row, WorkbookPart workbookPart, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells, int firstCol)
+        private SACellData[]? CreateRowData(int columnCount, Row row, WorkbookPart workbookPart, SharedStringTable? sharedStringTable, int firstCol)
         {
             var rowData = new SACellData[columnCount];
             bool hasData = false;
@@ -324,8 +365,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
                 if (columnIndex < 0 || columnIndex >= columnCount)
                     continue;
 
-                // Extract cell value
-                SACellValue cellValue = GetCellValueWithMerge(cell, sharedStringTable, mergedCells);
+                // Extract cell value (NO merge expansion - MergedCellResolver will handle it)
+                // Only top-left cells in merged ranges have values in OpenXML, others are empty
+                SACellValue cellValue = GetCellValue(cell, sharedStringTable);
 
                 // Extract number format (for foundation services)
                 string? numberFormat = GetNumberFormat(cell, workbookPart);
@@ -344,15 +386,44 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return hasData ? rowData : null;
         }
 
-        private SACellValue GetCellValueWithMerge(Cell cell, SharedStringTable? sharedStringTable, Dictionary<string, SACellValue> mergedCells)
+        /// <summary>
+        /// Gets header cell value, expanding merged cells to ensure column names are correct.
+        /// For merged cells, retrieves value from top-left cell.
+        /// </summary>
+        private string GetHeaderCellValue(
+            Cell cell,
+            Dictionary<string, Cell> cellsByRef,
+            SharedStringTable? sharedStringTable,
+            MergedRange[] mergedRanges)
         {
             var cellRef = cell.CellReference?.Value;
-            if (cellRef != null && mergedCells.TryGetValue(cellRef, out SACellValue mergedValue))
+            if (cellRef == null)
+                return string.Empty;
+
+            // Parse current cell coordinates
+            int row = _cellParser.GetRowIndex(cellRef) - 1; // 0-based
+            int col = _cellParser.GetColumnIndex(cellRef);
+
+            // Check if this cell is in a merged range
+            var range = mergedRanges.FirstOrDefault(r =>
+                row >= r.StartRow && row <= r.EndRow &&
+                col >= r.StartCol && col <= r.EndCol);
+
+            if (range != null && (row != range.StartRow || col != range.StartCol))
             {
-                return mergedValue;
+                // This is NOT the top-left cell - find top-left value
+                var topLeftRef = _cellParser.CreateCellReference(range.StartCol, range.StartRow + 1); // 1-based for Excel
+                if (cellsByRef.TryGetValue(topLeftRef, out var topLeftCell))
+                {
+                    return GetCellValue(topLeftCell, sharedStringTable).ToString();
+                }
+
+                // Top-left not found (shouldn't happen), return empty
+                return string.Empty;
             }
 
-            return GetCellValue(cell, sharedStringTable);
+            // Not merged or is top-left cell - read normally
+            return GetCellValue(cell, sharedStringTable).ToString();
         }
 
         private LoadStatus DetermineLoadStatus(Dictionary<string, SASheetData> sheets, List<ExcelError> errors)

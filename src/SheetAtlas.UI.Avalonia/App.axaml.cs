@@ -21,6 +21,8 @@ using SheetAtlas.Infrastructure.External.Readers;
 using SheetAtlas.UI.Avalonia.Managers;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Core.Configuration;
+using DocumentFormat.OpenXml.Packaging;
+using Microsoft.Extensions.Options;
 
 namespace SheetAtlas.UI.Avalonia;
 
@@ -79,7 +81,9 @@ public partial class App : Application
                 // Register Core services
                 services.AddSingleton<ICellReferenceParser, CellReferenceParser>();
                 services.AddSingleton<ICellValueReader, CellValueReader>();
-                services.AddSingleton<IMergedCellProcessor, MergedCellProcessor>();
+
+                // Register MergedRangeExtractor (generic interface for OpenXML)
+                services.AddSingleton<IMergedRangeExtractor<WorksheetPart>, OpenXmlMergedRangeExtractor>();
 
                 // Register Foundation Layer services
                 services.AddSingleton<ICurrencyDetector, SheetAtlas.Core.Application.Services.Foundation.CurrencyDetector>();
@@ -87,8 +91,28 @@ public partial class App : Application
                 services.AddSingleton<IColumnAnalysisService, SheetAtlas.Core.Application.Services.Foundation.ColumnAnalysisService>();
                 services.AddSingleton<IMergedCellResolver, SheetAtlas.Core.Application.Services.Foundation.MergedCellResolver>();
 
-                // Register Sheet Analysis Orchestrator
-                services.AddSingleton<ISheetAnalysisOrchestrator, SheetAnalysisOrchestrator>();
+                // Register Sheet Analysis Orchestrator with configuration
+                services.AddSingleton<ISheetAnalysisOrchestrator>(sp =>
+                {
+                    var settings = sp.GetRequiredService<IOptions<AppSettings>>().Value;
+
+                    // Parse merge strategy from configuration
+                    var strategyStr = settings.FoundationLayer.MergedCells.DefaultStrategy;
+                    var strategy = Enum.TryParse<SheetAtlas.Core.Domain.ValueObjects.MergeStrategy>(strategyStr, out var parsed)
+                        ? parsed
+                        : SheetAtlas.Core.Domain.ValueObjects.MergeStrategy.ExpandValue;
+
+                    // Get warn threshold (convert percentage to decimal)
+                    double warnThreshold = settings.FoundationLayer.MergedCells.WarnThresholdPercentage / 100.0;
+
+                    return new SheetAnalysisOrchestrator(
+                        sp.GetRequiredService<IMergedCellResolver>(),
+                        sp.GetRequiredService<IColumnAnalysisService>(),
+                        sp.GetRequiredService<IDataNormalizationService>(),
+                        sp.GetRequiredService<ILogService>(),
+                        strategy,
+                        warnThreshold);
+                });
 
                 // Register file format readers (must be before ExcelReaderService)
                 services.AddSingleton<IFileFormatReader, OpenXmlFileReader>();
