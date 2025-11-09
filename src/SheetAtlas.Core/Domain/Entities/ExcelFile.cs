@@ -109,8 +109,6 @@ namespace SheetAtlas.Core.Domain.Entities
             // NOTE: GC.SuppressFinalize() intentionally NOT called
             // REASON: DataTable has 10-14x memory overhead (managed but memory-intensive)
             // ISSUE: If lingering references keep this object alive, finalizer ensures cleanup
-            // TODO: When DataTable is replaced with lightweight structures, add SuppressFinalize()
-            // and follow standard IDisposable pattern for better GC performance
         }
 
         ~ExcelFile()

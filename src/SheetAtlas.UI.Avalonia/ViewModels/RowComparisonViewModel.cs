@@ -56,7 +56,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 return Task.CompletedTask;
             });
 
-            // Subscribe to theme changes to refresh cell colors
             if (_themeManager != null)
             {
                 _themeManager.ThemeChanged += OnThemeChanged;
@@ -99,7 +98,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             var allHeaders = Comparison.GetAllColumnHeaders();
 
-            // Log warnings if any structural issues were detected
             if (Comparison.Warnings.Any())
             {
                 _logger.LogWarning($"Row comparison detected {Comparison.Warnings.Count} structural inconsistencies in column headers", "RowComparisonViewModel");
@@ -109,7 +107,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 }
             }
 
-            // Create columns using header-based mapping
             for (int i = 0; i < allHeaders.Count; i++)
             {
                 var header = allHeaders[i];
@@ -122,7 +119,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             _logger.LogInfo($"Created row comparison with {allHeaders.Count} columns for {Comparison.Rows.Count} rows using intelligent header mapping", "RowComparisonViewModel");
 
-            // Notify that RowCount and HasRows changed
             OnPropertyChanged(nameof(RowCount));
             OnPropertyChanged(nameof(HasRows));
         }
@@ -138,13 +134,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             if (disposing)
             {
-                // Unsubscribe from theme changes
                 if (_themeManager != null)
                 {
                     _themeManager.ThemeChanged -= OnThemeChanged;
                 }
 
-                // Dispose all column ViewModels
                 if (Columns != null)
                 {
                     foreach (var column in Columns.OfType<IDisposable>())
@@ -229,11 +223,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         private static CellComparisonResult DetermineComparisonResult(string currentValue, ColumnComparisonData columnData)
         {
-            // Normalize current value only (column data is already pre-computed)
             var normalizedCurrentValue = (currentValue ?? "").Trim();
             var hasValue = !string.IsNullOrWhiteSpace(normalizedCurrentValue);
 
-            // Handle empty values
             if (!hasValue)
             {
                 return columnData.AllNonEmptyValues.Any()
@@ -241,16 +233,13 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                     : CellComparisonResult.CreateMatch(columnData.TotalCount, columnData.TotalCount);
             }
 
-            // Handle case where all non-empty values are the same
             if (columnData.DistinctNonEmptyValues.Count <= 1)
             {
                 return CellComparisonResult.CreateMatch(columnData.AllNonEmptyValues.Count, columnData.AllNonEmptyValues.Count);
             }
 
-            // Use pre-computed value groups (no recalculation needed!)
             var valueGroups = columnData.ValueGroups;
 
-            // Find current value's rank in the sorted groups
             var currentRank = valueGroups.FindIndex(g => g.Value == normalizedCurrentValue);
             var currentFrequency = valueGroups[currentRank].Count;
             var totalGroups = valueGroups.Count;
