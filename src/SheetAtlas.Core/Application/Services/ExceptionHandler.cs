@@ -76,14 +76,28 @@ namespace SheetAtlas.Core.Application.Services
 
         public bool IsRecoverable(Exception exception)
         {
+            return IsRecoverableException(exception);
+        }
+
+        /// <summary>
+        /// Static helper to determine if an exception is recoverable.
+        /// Recoverable = user can take action to fix the issue (e.g., select different file, grant permissions).
+        /// Used by both ExceptionHandler and ExcelErrorJsonConverter to ensure consistent logic.
+        /// </summary>
+        public static bool IsRecoverableException(Exception? exception)
+        {
+            if (exception == null)
+                return false;
+
             return exception switch
             {
-                // Recoverable: user can fix by selecting different file
+                // Recoverable: user can fix by selecting different file or granting permissions
                 ComparisonException => true,
                 FileNotFoundException => true,
+                UnauthorizedAccessException => true,  // User can grant file permissions
                 IOException => true,
 
-                // Not recoverable: programming errors
+                // Not recoverable: programming errors (should never reach user in production)
                 ArgumentNullException => false,
                 NullReferenceException => false,
                 InvalidCastException => false,
