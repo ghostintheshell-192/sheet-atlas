@@ -32,16 +32,6 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
     public int SelectedCount => _cachedSelectedCount;
     public bool CanCompareRows => _cachedSelectedCount >= 2;
 
-    // public IEnumerable<SearchResultItem> SelectedItems =>
-    //     SearchHistory
-    //         .SelectMany(sh => sh.FileGroups)
-    //         .SelectMany(fg => fg.SheetGroups)
-    //         .SelectMany(sg => sg.Results)
-    //         .Where(item => item.IsSelected && item.CanBeCompared);
-
-    // public int SelectedCount => SelectedItems.Count();
-    // public bool CanCompareRows => SelectedCount >= 2;
-
     // Event for notifying about row comparison creation
     public event EventHandler<RowComparison>? RowComparisonCreated;
 
