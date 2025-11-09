@@ -10,7 +10,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
     /// </summary>
     public partial class CurrencyDetector : ICurrencyDetector
     {
-        private static readonly System.Buffers.SearchValues<char> s_myChars = System.Buffers.SearchValues.Create("#0");
+        private static readonly System.Buffers.SearchValues<char> _formatChars = System.Buffers.SearchValues.Create("#0");
 
         // Pattern for Excel format: [$€-407] #,##0.00
         private static readonly Regex _currencyFormatPattern = MyRegex();
@@ -296,7 +296,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
         {
             // Find the position of symbol relative to numbers
             var symbolIndex = format.IndexOf(symbol);
-            var numberIndex = format.AsSpan().IndexOfAny(s_myChars);
+            var numberIndex = format.AsSpan().IndexOfAny(_formatChars);
 
             if (symbolIndex < 0 || numberIndex < 0)
                 return CurrencyPosition.Prefix;

@@ -29,9 +29,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
             RegisterEncodingProvider();
         }
 
-        public IReadOnlyList<string> SupportedExtensions => list.AsReadOnly();
+        private static readonly string[] _supportedExtensions = new[] { ".xls", ".xlt" };
 
-        private static readonly string[] list = new[] { ".xls", ".xlt" };
+        public IReadOnlyList<string> SupportedExtensions => _supportedExtensions.AsReadOnly();
 
         public async Task<ExcelFile> ReadAsync(string filePath, CancellationToken cancellationToken = default)
         {
