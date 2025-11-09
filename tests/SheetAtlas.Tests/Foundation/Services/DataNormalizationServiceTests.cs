@@ -138,10 +138,10 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Theory]
-        [InlineData("1.234,56", 1234.56)]       // European format (period thousand, comma decimal)
-        [InlineData("1,234.56", 1234.56)]       // US format (comma thousand, period decimal)
-        [InlineData("1 234,56", 1234.56)]       // French format (space thousand, comma decimal)
-        public void Normalize_EuropeanNumberFormat_ParsesCorrectly(string numberString, double expected)
+        [InlineData("1.234,56")]       // European format (period thousand, comma decimal)
+        [InlineData("1,234.56")]       // US format (comma thousand, period decimal)
+        [InlineData("1 234,56")]       // French format (space thousand, comma decimal)
+        public void Normalize_EuropeanNumberFormat_ParsesCorrectly(string numberString)
         {
             // Act
             var result = _service.Normalize(
@@ -155,10 +155,10 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Theory]
-        [InlineData("1.23E+02", 123)]            // Scientific notation (large)
-        [InlineData("1.23E-02", 0.0123)]         // Scientific notation (small)
-        [InlineData("1E+05", 100000)]            // Scientific integer
-        public void Normalize_ScientificNotation_ParsesCorrectly(string numberString, double expected)
+        [InlineData("1.23E+02")]            // Scientific notation (large)
+        [InlineData("1.23E-02")]         // Scientific notation (small)
+        [InlineData("1E+05")]            // Scientific integer
+        public void Normalize_ScientificNotation_ParsesCorrectly(string numberString)
         {
             // Act
             var result = _service.Normalize(numberString);
