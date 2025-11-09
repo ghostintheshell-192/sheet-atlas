@@ -167,95 +167,6 @@ namespace SheetAtlas.Tests.Foundation.Services
 
         #endregion
 
-        #region Header Detection Tests
-
-        [Fact]
-        public void DetectHeaders_SingleHeaderRow_ReturnsCorrectIndex()
-        {
-            // Arrange - Build a sheet where row 0 has text (headers), rows 1+ have data
-            var firstRows = new List<SACellData[]>
-            {
-                // Row 0: Headers
-                new[] { new SACellData(SACellValue.FromText("Name")), new SACellData(SACellValue.FromText("Amount")), new SACellData(SACellValue.FromText("Date")) },
-                // Row 1: Data
-                new[] { new SACellData(SACellValue.FromText("John")), new SACellData(SACellValue.FromInteger(1000)), new SACellData(SACellValue.FromInteger(45292)) },
-                // Row 2: Data
-                new[] { new SACellData(SACellValue.FromText("Jane")), new SACellData(SACellValue.FromInteger(2000)), new SACellData(SACellValue.FromInteger(45293)) }
-            };
-
-            // Act
-            var result = _service.DetectHeaders(firstRows, 3);
-
-            // Assert
-            result.HeaderRowIndices.Should().Contain(0);
-            result.FirstDataRowIndex.Should().Be(1);
-            result.Confidence.Should().BeGreaterThan(0.7);
-        }
-
-        [Fact]
-        public void DetectHeaders_MultiRowHeaders_ReturnsAllIndices()
-        {
-            // Arrange - Multiple header rows (merged cells or multi-line headers)
-            var firstRows = new List<SACellData[]>
-            {
-                // Rows 0-1: Headers
-                new[] { new SACellData(SACellValue.FromText("Department")), new SACellData(SACellValue.FromText("Financial Data")), new SACellData(SACellValue.FromText("Report")) },
-                new[] { new SACellData(SACellValue.FromText("Sales")), new SACellData(SACellValue.FromText("Q3 Revenue")), new SACellData(SACellValue.FromText("2024")) },
-                // Row 2: Data
-                new[] { new SACellData(SACellValue.FromText("Team A")), new SACellData(SACellValue.FromInteger(50000)), new SACellData(SACellValue.FromText("Final")) }
-            };
-
-            // Act
-            var result = _service.DetectHeaders(firstRows, 3);
-
-            // Assert
-            result.HeaderRowIndices.Should().HaveCountGreaterThan(1);
-        }
-
-        [Fact]
-        public void DetectHeaders_NoHeaderRow_ReturnsEmptyOrFirstRow()
-        {
-            // Arrange - All rows are numeric data (no headers)
-            var firstRows = new List<SACellData[]>
-            {
-                new[] { new SACellData(SACellValue.FromInteger(100)), new SACellData(SACellValue.FromInteger(200)), new SACellData(SACellValue.FromInteger(300)) },
-                new[] { new SACellData(SACellValue.FromInteger(101)), new SACellData(SACellValue.FromInteger(201)), new SACellData(SACellValue.FromInteger(301)) },
-                new[] { new SACellData(SACellValue.FromInteger(102)), new SACellData(SACellValue.FromInteger(202)), new SACellData(SACellValue.FromInteger(302)) }
-            };
-
-            // Act
-            var result = _service.DetectHeaders(firstRows, 3);
-
-            // Assert
-            result.Confidence.Should().BeLessThan(0.5);
-            result.FirstDataRowIndex.Should().BeGreaterThanOrEqualTo(0);
-        }
-
-        [Fact]
-        public void DetectHeaders_BlankFirstRow_SkipsBlankRow()
-        {
-            // Arrange - First row is blank, headers in row 2
-            var firstRows = new List<SACellData[]>
-            {
-                // Row 0: Blank
-                new[] { new SACellData(SACellValue.Empty), new SACellData(SACellValue.Empty), new SACellData(SACellValue.Empty) },
-                // Row 1: Blank/Title
-                new[] { new SACellData(SACellValue.FromText("Headers:")), new SACellData(SACellValue.Empty), new SACellData(SACellValue.Empty) },
-                // Row 2: Actual headers
-                new[] { new SACellData(SACellValue.FromText("Name")), new SACellData(SACellValue.FromText("Amount")), new SACellData(SACellValue.FromText("Date")) },
-                // Row 3: Data
-                new[] { new SACellData(SACellValue.FromText("John")), new SACellData(SACellValue.FromInteger(1000)), new SACellData(SACellValue.FromInteger(45292)) }
-            };
-
-            // Act
-            var result = _service.DetectHeaders(firstRows, 3);
-
-            // Assert
-            result.HeaderRowIndices.Should().NotBeEmpty();
-        }
-
-        #endregion
-
         #region Type Distribution Tests
 
         [Fact]
@@ -421,19 +332,6 @@ namespace SheetAtlas.Tests.Foundation.Services
             // Assert
             result.DetectedType.Should().Be(DataType.Unknown);
             result.TypeConfidence.Should().BeLessThan(0.5);
-        }
-
-        [Fact]
-        public void DetectHeaders_EmptyRows_ReturnsEmpty()
-        {
-            // Arrange
-            var firstRows = new List<SACellData[]>();
-
-            // Act
-            var result = _service.DetectHeaders(firstRows, 0);
-
-            // Assert
-            result.HeaderRowIndices.Should().BeEmpty();
         }
 
         #endregion

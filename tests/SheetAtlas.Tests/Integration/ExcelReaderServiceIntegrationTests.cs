@@ -83,11 +83,18 @@ namespace SheetAtlas.Tests.Integration
             return Array.IndexOf(sheet.ColumnNames, columnName);
         }
 
-        private static string GetCellValueAsString(SASheetData sheet, int rowIndex, string columnName)
+        /// <summary>
+        /// Get cell value using DATA-RELATIVE row index (0 = first data row).
+        /// Automatically converts to absolute row index by adding HeaderRowCount.
+        /// </summary>
+        private static string GetCellValueAsString(SASheetData sheet, int dataRowIndex, string columnName)
         {
             int colIndex = GetColumnIndex(sheet, columnName);
             if (colIndex == -1) throw new ArgumentException($"Column '{columnName}' not found");
-            return sheet.GetCellValue(rowIndex, colIndex).ToString();
+
+            // Convert data-relative index to absolute index
+            int absoluteRow = sheet.HeaderRowCount + dataRowIndex;
+            return sheet.GetCellValue(absoluteRow, colIndex).ToString();
         }
 
         #endregion
@@ -110,7 +117,7 @@ namespace SheetAtlas.Tests.Integration
 
             var sheet = result.Sheets["Sheet1"];
             sheet.ColumnCount.Should().Be(3);
-            sheet.RowCount.Should().Be(2);
+            sheet.DataRowCount.Should().Be(2);
 
             // Verify headers
             sheet.ColumnNames[0].Should().Be("Name");
@@ -143,7 +150,7 @@ namespace SheetAtlas.Tests.Integration
 
             var sheet = result.Sheets["Data"];
             sheet.ColumnCount.Should().Be(5);
-            sheet.RowCount.Should().Be(100);
+            sheet.DataRowCount.Should().Be(100);
 
             result.Status.Should().Be(LoadStatus.Success);
 
@@ -312,7 +319,7 @@ namespace SheetAtlas.Tests.Integration
             result.Sheets.Should().ContainKey("Special Chars");
 
             var sheet = result.Sheets["Special Chars"];
-            sheet.RowCount.Should().BeGreaterThan(0);
+            sheet.DataRowCount.Should().BeGreaterThan(0);
 
             // Verify special characters are preserved
             GetCellValueAsString(sheet, 0, "Name").Should().Contain("Café");
@@ -336,7 +343,7 @@ namespace SheetAtlas.Tests.Integration
 
             var sheet = result.Sheets["Formulas"];
             sheet.ColumnCount.Should().Be(3);
-            sheet.RowCount.Should().BeGreaterThan(0);
+            sheet.DataRowCount.Should().BeGreaterThan(0);
 
             // Note: OpenXml reads formula results, not the formulas themselves
             // Verify the structure is correct
@@ -360,7 +367,7 @@ namespace SheetAtlas.Tests.Integration
             result.Sheets.Should().ContainKey("Merged");
 
             var sheet = result.Sheets["Merged"];
-            sheet.RowCount.Should().BeGreaterThan(0);
+            sheet.DataRowCount.Should().BeGreaterThan(0);
 
             // Verify merged cell header is read
             sheet.ColumnNames[0].Should().Be("Merged Title");

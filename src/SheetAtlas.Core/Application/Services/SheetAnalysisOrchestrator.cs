@@ -43,6 +43,9 @@ namespace SheetAtlas.Core.Application.Services
             if (errors == null)
                 throw new ArgumentNullException(nameof(errors));
 
+            // NOTE: HeaderRowCount is set by file reader (default=1)
+            // Future: UI will allow manual configuration for multi-row headers
+
             // STEP 1: Resolve merged cells (FIRST - before column analysis needs expanded data)
             var resolvedData = await ResolveMergedCells(rawData, fileName, errors);
 
@@ -123,20 +126,24 @@ namespace SheetAtlas.Core.Application.Services
         /// <summary>
         /// Enriches sheet data with column analysis using foundation services.
         /// Samples cells from each column, normalizes data, runs analysis, populates metadata, adds anomalies as ExcelErrors.
+        /// NOTE: Only analyzes DATA rows (skips header rows).
         /// </summary>
         private void EnrichSheetWithColumnAnalysis(string fileName, SASheetData sheetData, List<ExcelError> errors)
         {
-            int maxSampleSize = Math.Min(100, sheetData.RowCount);
+            int maxSampleSize = Math.Min(100, sheetData.DataRowCount);
 
             for (int colIndex = 0; colIndex < sheetData.ColumnCount; colIndex++)
             {
                 // Sample cells from column (include empty cells for anomaly detection)
                 var sampleCells = new List<SACellValue>();
                 var numberFormats = new List<string?>();
+                var absoluteRowIndices = new List<int>(); // Track absolute row indices for anomaly reporting
 
-                for (int rowIndex = 0; rowIndex < maxSampleSize && rowIndex < sheetData.RowCount; rowIndex++)
+                // Iterate ONLY over data rows (skip header rows)
+                for (int dataRowIndex = 0; dataRowIndex < maxSampleSize && dataRowIndex < sheetData.DataRowCount; dataRowIndex++)
                 {
-                    var cellData = sheetData.GetCellData(rowIndex, colIndex);
+                    int absoluteRow = sheetData.HeaderRowCount + dataRowIndex;
+                    var cellData = sheetData.GetCellData(absoluteRow, colIndex);
 
                     // Normalize cell value (soft normalization: trim whitespace, clean text)
                     // NOTE: Empty cells are included in sample for anomaly detection
@@ -147,6 +154,8 @@ namespace SheetAtlas.Core.Application.Services
                     sampleCells.Add(normalized);
                     // Extract numberFormat from metadata (saved during file read)
                     numberFormats.Add(cellData.Metadata?.NumberFormat);
+                    // Track absolute row index for this cell (for anomaly reporting)
+                    absoluteRowIndices.Add(absoluteRow);
                 }
 
                 // Skip completely empty columns
@@ -166,9 +175,10 @@ namespace SheetAtlas.Core.Application.Services
                 sheetData.SetColumnMetadata(colIndex, analysisResult.ToMetadata());
 
                 // Add anomalies to errors list (will be saved in structured JSON log)
+                // Map sample row index to absolute row index
                 foreach (var anomaly in analysisResult.Anomalies)
                 {
-                    var error = CreateExcelErrorFromAnomaly(fileName, sheetData.SheetName, colIndex, anomaly);
+                    var error = CreateExcelErrorFromAnomaly(fileName, sheetData.SheetName, colIndex, anomaly, absoluteRowIndices);
                     errors.Add(error);
                 }
 
@@ -216,11 +226,18 @@ namespace SheetAtlas.Core.Application.Services
         /// Helper method: Maps CellAnomaly to ExcelError for structured file logging.
         /// Creates cell-level error with location reference (e.g., row=5, col=2) and appropriate severity.
         /// </summary>
-        private ExcelError CreateExcelErrorFromAnomaly(string fileName, string sheetName, int columnIndex, CellAnomaly anomaly)
+        /// <param name="fileName">Source file name</param>
+        /// <param name="sheetName">Sheet name where anomaly was found</param>
+        /// <param name="columnIndex">Column index (0-based)</param>
+        /// <param name="anomaly">Cell anomaly with sample-relative row index</param>
+        /// <param name="absoluteRowIndices">Mapping from sample index to absolute sheet row index</param>
+        private ExcelError CreateExcelErrorFromAnomaly(string fileName, string sheetName, int columnIndex, CellAnomaly anomaly, List<int> absoluteRowIndices)
         {
-            // Create cell reference with absolute row index
-            // anomaly.RowIndex is relative to data (0 = first data row), so add 1 for header row
-            var cellRef = new CellReference(anomaly.RowIndex + 1, columnIndex);
+            // Map sample row index to absolute sheet row index
+            // anomaly.RowIndex is relative to the sample (0 = first cell in sample)
+            // absoluteRowIndices[anomaly.RowIndex] gives the actual row in SASheetData (absolute 0-based)
+            int absoluteRow = absoluteRowIndices[anomaly.RowIndex];
+            var cellRef = new CellReference(absoluteRow, columnIndex);
 
             // Message includes sheet name and cell location in Excel notation (e.g., "Sheet1!B2")
             string cellAddress = cellRef.ToExcelNotation();
