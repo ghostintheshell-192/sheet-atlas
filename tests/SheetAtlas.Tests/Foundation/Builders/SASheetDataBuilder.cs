@@ -146,8 +146,7 @@ namespace SheetAtlas.Tests.Foundation.Builders
             if (columnIndex < 0)
                 throw new ArgumentException("Column index must be non-negative", nameof(columnIndex));
 
-            if (metadata == null)
-                throw new ArgumentNullException(nameof(metadata));
+            ArgumentNullException.ThrowIfNull(metadata);
 
             _columnMetadata[columnIndex] = metadata;
             return this;

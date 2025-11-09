@@ -35,8 +35,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
         }
 
-        public IReadOnlyList<string> SupportedExtensions =>
-            new[] { ".xlsx", ".xlsm", ".xltx", ".xltm" }.AsReadOnly();
+        public IReadOnlyList<string> SupportedExtensions => list.AsReadOnly();
+
+        private static readonly string[] list = new[] { ".xlsx", ".xlsm", ".xltx", ".xltm" };
 
         public async Task<ExcelFile> ReadAsync(string filePath, CancellationToken cancellationToken = default)
         {
@@ -156,17 +157,17 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
         }
 
-        private SpreadsheetDocument OpenDocument(string filePath)
+        private static SpreadsheetDocument OpenDocument(string filePath)
         {
             return SpreadsheetDocument.Open(filePath, false);
         }
 
-        private IEnumerable<Sheet> GetSheets(WorkbookPart workbookPart)
+        private static IEnumerable<Sheet> GetSheets(WorkbookPart workbookPart)
         {
             return workbookPart.Workbook.Descendants<Sheet>();
         }
 
-        private DateSystem DetectDateSystem(WorkbookPart workbookPart)
+        private static DateSystem DetectDateSystem(WorkbookPart workbookPart)
         {
             var workbookProperties = workbookPart.Workbook.WorkbookProperties;
 
@@ -185,7 +186,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var mergedRanges = _mergedRangeExtractor.ExtractMergedRanges(worksheetPart, sheetName, errors);
 
             var headerColumns = ProcessHeaderRow(worksheetPart, sharedStringTable, mergedRanges);
-            if (!headerColumns.Any())
+            if (headerColumns.Count == 0)
             {
                 _logger.LogWarning($"Sheet {sheetName} has no header row", "OpenXmlFileReader");
                 return null;
@@ -212,7 +213,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
         /// Uses absolute row indices (row 0 = header, row 1+ = data).
         /// Only adjusts column indices relative to first column.
         /// </summary>
-        private void PopulateMergedCells(SASheetData sheetData, MergedRange[] mergedRanges, int firstCol)
+        private static void PopulateMergedCells(SASheetData sheetData, MergedRange[] mergedRanges, int firstCol)
         {
             foreach (var range in mergedRanges)
             {
@@ -255,7 +256,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
         private string[] CreateColumnNamesArray(Dictionary<int, string> headerColumns)
         {
-            if (!headerColumns.Any())
+            if (headerColumns.Count == 0)
                 return Array.Empty<string>();
 
             int firstCol = headerColumns.Keys.Min();
@@ -278,16 +279,17 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return columnNames;
         }
 
-        private string EnsureUniqueColumnName(string baseName, Dictionary<string, int> columnNameCounts)
+        private static string EnsureUniqueColumnName(string baseName, Dictionary<string, int> columnNameCounts)
         {
-            if (!columnNameCounts.ContainsKey(baseName))
+            if (!columnNameCounts.TryGetValue(baseName, out int value))
             {
-                columnNameCounts[baseName] = 1;
+                value = 1;
+                columnNameCounts[baseName] = value;
                 return baseName;
             }
 
-            columnNameCounts[baseName]++;
-            return $"{baseName}_{columnNameCounts[baseName]}";
+            columnNameCounts[baseName] = ++value;
+            return $"{baseName}_{value}";
         }
 
         private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, MergedRange[] mergedRanges, Dictionary<int, string> headerColumns)
@@ -372,14 +374,14 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return GetCellValue(cell, sharedStringTable).ToString();
         }
 
-        private LoadStatus DetermineLoadStatus(Dictionary<string, SASheetData> sheets, List<ExcelError> errors)
+        private static LoadStatus DetermineLoadStatus(Dictionary<string, SASheetData> sheets, List<ExcelError> errors)
         {
             var hasErrors = errors.Any(e => e.Level == LogSeverity.Error || e.Level == LogSeverity.Critical);
 
             if (!hasErrors)
                 return LoadStatus.Success;
 
-            return sheets.Any() ? LoadStatus.PartialSuccess : LoadStatus.Failed;
+            return sheets.Count != 0 ? LoadStatus.PartialSuccess : LoadStatus.Failed;
         }
 
         private SACellValue GetCellValue(Cell cell, SharedStringTable? sharedStringTable)
@@ -432,7 +434,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
         /// Maps built-in Excel number format IDs to format strings.
         /// Only includes commonly used formats; returns null for General/uncommon formats.
         /// </summary>
-        private string? GetBuiltInNumberFormat(uint formatId)
+        private static string? GetBuiltInNumberFormat(uint formatId)
         {
             // Common built-in formats
             // Full list: https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.numberingformat

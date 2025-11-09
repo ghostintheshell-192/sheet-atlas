@@ -13,6 +13,7 @@ namespace SheetAtlas.Tests.Foundation.Services
     public class CurrencyDetectorTests
     {
         private readonly ICurrencyDetector _detector = new CurrencyDetector();
+        private static readonly string[] _expected = new[] { "EUR", "USD", "GBP" };
 
         #region Euro Currency Detection
 
@@ -223,7 +224,7 @@ namespace SheetAtlas.Tests.Foundation.Services
 
             // Assert
             result.Should().HaveCount(3); // EUR, USD, GBP
-            result.Select(c => c.Code).Should().Contain(new[] { "EUR", "USD", "GBP" });
+            result.Select(c => c.Code).Should().Contain(_expected);
         }
 
         [Fact]

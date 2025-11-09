@@ -79,8 +79,7 @@ namespace SheetAtlas.Core.Application.Services
 
         public IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName)
         {
-            if (file == null)
-                throw new ArgumentNullException(nameof(file));
+            ArgumentNullException.ThrowIfNull(file);
 
             var sheet = file.GetSheet(sheetName);
             if (sheet == null)

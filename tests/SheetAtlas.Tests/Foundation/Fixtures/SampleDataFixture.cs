@@ -106,7 +106,7 @@ namespace SheetAtlas.Tests.Foundation.Fixtures
         /// <summary>
         /// Reads a CSV file and returns its content as lines.
         /// </summary>
-        public string[] ReadCsvLines(string filePath)
+        public static string[] ReadCsvLines(string filePath)
         {
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"File not found: {filePath}");

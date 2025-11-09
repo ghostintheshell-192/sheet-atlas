@@ -8,7 +8,7 @@ namespace SheetAtlas.UI.Avalonia.Services;
 
 public class AvaloniaDialogService : IDialogService
 {
-    private Window? GetMainWindow()
+    private static Window? GetMainWindow()
     {
         if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

@@ -158,7 +158,7 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
             var reloadedFiles = await _excelReaderService.LoadFilesAsync([filePath]);
 
             // ExcelReaderService always returns a list (never null), but check if empty
-            if (!reloadedFiles.Any())
+            if (reloadedFiles.Count == 0)
             {
                 _logger.LogError($"Retry failed: ExcelReaderService returned no results for {filePath}", "LoadedFilesManager");
                 await _dialogService.ShowErrorAsync(
@@ -431,7 +431,7 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
     /// <summary>
     /// Creates error summary with aggregations
     /// </summary>
-    private ErrorSummary CreateErrorSummary(IReadOnlyList<ExcelError> errors)
+    private static ErrorSummary CreateErrorSummary(IReadOnlyList<ExcelError> errors)
     {
         var summary = new ErrorSummary
         {

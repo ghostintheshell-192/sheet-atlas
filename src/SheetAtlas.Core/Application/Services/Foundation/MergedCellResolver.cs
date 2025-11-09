@@ -16,8 +16,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             MergeStrategy strategy = MergeStrategy.ExpandValue,
             Action<MergeWarning>? warningCallback = null)
         {
-            if (sheetData == null)
-                throw new ArgumentNullException(nameof(sheetData));
+            ArgumentNullException.ThrowIfNull(sheetData);
 
             // If no merged cells, return original
             if (sheetData.MergedCells.Count == 0)
@@ -127,13 +126,13 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             };
         }
 
-        private SASheetData ApplyMergeStrategy(
+        private static SASheetData ApplyMergeStrategy(
             SASheetData original,
             MergeStrategy strategy,
             Action<MergeWarning>? warningCallback)
         {
             // Create new SASheetData with same structure
-            var resolved = new SASheetData(original.SheetName, original.ColumnNames, original.RowCount);
+            SASheetData resolved = new(original.SheetName, original.ColumnNames, original.RowCount);
 
             // Build lookup for merged cells (row,col) -> MergedRange
             var mergeMap = BuildMergeMap(original.MergedCells);
@@ -165,10 +164,10 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return resolved;
         }
 
-        private Dictionary<(int row, int col), MergedRange> BuildMergeMap(
+        private static Dictionary<(int row, int col), MergedRange> BuildMergeMap(
             IReadOnlyDictionary<string, MergedRange> mergedCells)
         {
-            var map = new Dictionary<(int, int), MergedRange>();
+            Dictionary<(int, int), MergedRange> map = new();
 
             foreach (var range in mergedCells.Values)
             {
@@ -184,7 +183,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return map;
         }
 
-        private SACellData ApplyCellStrategy(
+        private static SACellData ApplyCellStrategy(
             SASheetData original,
             MergedRange range,
             int row,
@@ -211,7 +210,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                     if (isTopLeft)
                     {
                         // Collect all non-empty values in range
-                        var values = new List<string>();
+                        List<string> values = new();
                         for (int r = range.StartRow; r <= range.EndRow; r++)
                         {
                             for (int c = range.StartCol; c <= range.EndCol; c++)

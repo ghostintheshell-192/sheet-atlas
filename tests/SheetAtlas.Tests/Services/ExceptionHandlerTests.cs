@@ -251,7 +251,7 @@ namespace SheetAtlas.Tests.Services
 
         #region Helper Methods
 
-        private IExcelReaderService CreateRealExcelReaderService()
+        private static IExcelReaderService CreateRealExcelReaderService()
         {
             var serviceLogger = new Mock<ILogService>();
             var readerLogger = new Mock<ILogService>();

@@ -215,17 +215,17 @@ namespace SheetAtlas.Tests.Foundation.TestUtilities
             if (string.IsNullOrEmpty(format))
                 return false;
 
-            return format.Contains("$")
-                || format.Contains("€")
-                || format.Contains("£")
-                || format.Contains("¥")
+            return format.Contains('$')
+                || format.Contains('€')
+                || format.Contains('£')
+                || format.Contains('¥')
                 || format.Contains("kr")
                 || format.Contains("zł")
-                || format.Contains("₹")
-                || format.Contains("₽")
-                || format.Contains("₩")
-                || format.Contains("₴")
-                || format.Contains("¤");
+                || format.Contains('₹')
+                || format.Contains('₽')
+                || format.Contains('₩')
+                || format.Contains('₴')
+                || format.Contains('¤');
         }
 
         /// <summary>
@@ -241,8 +241,8 @@ namespace SheetAtlas.Tests.Foundation.TestUtilities
                 || lower.Contains("dd")
                 || lower.Contains("yyyy")
                 || lower.Contains("yy")
-                || lower.Contains("m")
-                || lower.Contains("d")
+                || lower.Contains('m')
+                || lower.Contains('d')
                 || lower.Contains("h:")
                 || lower.Contains("am/pm");
         }

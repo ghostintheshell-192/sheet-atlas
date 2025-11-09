@@ -228,7 +228,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             if (!hasValue)
             {
-                return columnData.AllNonEmptyValues.Any()
+                return columnData.AllNonEmptyValues.Count != 0
                     ? CellComparisonResult.CreateMissing(columnData.AllNonEmptyValues.Count)
                     : CellComparisonResult.CreateMatch(columnData.TotalCount, columnData.TotalCount);
             }

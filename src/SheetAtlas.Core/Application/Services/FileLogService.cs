@@ -61,8 +61,7 @@ namespace SheetAtlas.Core.Application.Services
 
         public async Task SaveFileLogAsync(FileLogEntry logEntry)
         {
-            if (logEntry == null)
-                throw new ArgumentNullException(nameof(logEntry));
+            ArgumentNullException.ThrowIfNull(logEntry);
 
             if (logEntry.File == null || string.IsNullOrWhiteSpace(logEntry.File.OriginalPath))
                 throw new ArgumentException("Log entry must have valid file info", nameof(logEntry));

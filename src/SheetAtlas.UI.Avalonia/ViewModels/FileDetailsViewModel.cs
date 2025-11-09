@@ -238,7 +238,7 @@ public class FileDetailsViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
-    private string GetFileFormat(string filePath)
+    private static string GetFileFormat(string filePath)
     {
         var extension = Path.GetExtension(filePath).ToLowerInvariant();
         return extension switch
@@ -251,7 +251,7 @@ public class FileDetailsViewModel : ViewModelBase
         };
     }
 
-    private string FormatFileSize(string filePath)
+    private static string FormatFileSize(string filePath)
     {
         try
         {
@@ -269,16 +269,16 @@ public class FileDetailsViewModel : ViewModelBase
         }
     }
 
-    private string TruncatePath(string path, int maxLength)
+    private static string TruncatePath(string path, int maxLength)
     {
         if (path.Length <= maxLength) return path;
-        return "..." + path.Substring(path.Length - maxLength + 3);
+        return string.Concat("...", path.AsSpan(path.Length - maxLength + 3));
     }
 
-    private string TruncateText(string text, int maxLength)
+    private static string TruncateText(string text, int maxLength)
     {
         if (text.Length <= maxLength) return text;
-        return text.Substring(0, maxLength - 3) + "...";
+        return string.Concat(text.AsSpan(0, maxLength - 3), "...");
     }
 
     // Action handlers - these will be implemented to communicate with MainWindowViewModel
