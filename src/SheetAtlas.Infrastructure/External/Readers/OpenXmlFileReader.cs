@@ -49,7 +49,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             try
             {
-                return await Task.Run(() =>
+                return await Task.Run(async () =>
                 {
                     using var document = OpenDocument(filePath);
                     var workbookPart = document.WorkbookPart;
@@ -96,7 +96,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                                 continue;
                             }
 
-                            var sheetData = ProcessSheet(Path.GetFileNameWithoutExtension(filePath), sheetName, workbookPart, worksheetPart, errors);
+                            var sheetData = await ProcessSheet(Path.GetFileNameWithoutExtension(filePath), sheetName, workbookPart, worksheetPart, errors);
 
                             // Skip empty sheets (no columns means no meaningful data)
                             if (sheetData == null)
@@ -196,7 +196,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return DateSystem.Date1900;
         }
 
-        private SASheetData? ProcessSheet(string fileName, string sheetName, WorkbookPart workbookPart, WorksheetPart worksheetPart, List<ExcelError> errors)
+        private async Task<SASheetData?> ProcessSheet(string fileName, string sheetName, WorkbookPart workbookPart, WorksheetPart worksheetPart, List<ExcelError> errors)
         {
             var sharedStringTable = workbookPart.SharedStringTablePart?.SharedStringTable;
 
@@ -228,7 +228,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             // INTEGRATION: Analyze and enrich sheet data via orchestrator
             // Orchestrator will apply MergedCellResolver BEFORE column analysis
-            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, fileName, errors).Result;
+            var enrichedData = await _analysisOrchestrator.EnrichAsync(sheetData, fileName, errors);
 
             return enrichedData;
         }
