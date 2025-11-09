@@ -60,7 +60,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
                         return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
                     }
 
-                    // Detect date system (1900 vs 1904)
                     var dateSystem = DetectDateSystem(workbookPart);
                     _logger.LogInfo($"Detected date system: {dateSystem}", "OpenXmlFileReader");
 
@@ -69,7 +68,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
                     foreach (var sheet in sheetElements)
                     {
-                        // Check cancellation before processing each sheet
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var sheetName = sheet.Name?.Value;
@@ -98,7 +96,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
                             var sheetData = await ProcessSheet(Path.GetFileNameWithoutExtension(filePath), sheetName, workbookPart, worksheetPart, errors);
 
-                            // Skip empty sheets (no columns means no meaningful data)
                             if (sheetData == null)
                             {
                                 errors.Add(ExcelError.Info("File", $"Sheet '{sheetName}' is empty and was skipped"));
@@ -111,19 +108,14 @@ namespace SheetAtlas.Infrastructure.External.Readers
                         }
                         catch (InvalidCastException ex)
                         {
-                            // GetPartById could return different type (sheet-specific error)
                             _logger.LogError($"Invalid sheet part type for {sheetName}", ex, "OpenXmlFileReader");
                             errors.Add(ExcelError.SheetError(sheetName, $"Invalid sheet structure", ex));
                         }
                         catch (XmlException ex)
                         {
-                            // XML parsing errors: malformed XML in worksheet (sheet-specific error)
                             _logger.LogError($"Malformed XML in sheet {sheetName}", ex, "OpenXmlFileReader");
                             errors.Add(ExcelError.SheetError(sheetName, $"Sheet contains invalid XML: {ex.Message}", ex));
                         }
-                        // NOTE: OpenXmlPackageException removed from here (Issue #7 fix)
-                        // This is typically a file-level corruption, not sheet-specific.
-                        // Let it propagate to the file-level catch block below.
                     }
 
                     var status = DetermineLoadStatus(sheets, errors);
@@ -137,7 +129,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
             catch (FileFormatException ex)
             {
-                // Corrupted .xlsx file
                 _logger.LogError($"Corrupted file format: {filePath}", ex, "OpenXmlFileReader");
                 errors.Add(ExcelError.Critical("File",
                     $"Corrupted or invalid .xlsx file: {ex.Message}",
@@ -147,21 +138,18 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             catch (IOException ex)
             {
-                // File I/O errors: locked, permission denied, network issues
                 _logger.LogError($"I/O error reading Excel file: {filePath}", ex, "OpenXmlFileReader");
                 errors.Add(ExcelError.Critical("File", $"Cannot access file: {ex.Message}", ex));
                 return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
             }
             catch (InvalidOperationException ex)
             {
-                // OpenXml-specific errors: corrupted file structure
                 _logger.LogError($"Invalid Excel file format: {filePath}", ex, "OpenXmlFileReader");
                 errors.Add(ExcelError.Critical("File", $"Invalid Excel file: {ex.Message}", ex));
                 return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
             }
             catch (OpenXmlPackageException ex)
             {
-                // OpenXml package errors: file corrupted or not a valid Excel file
                 _logger.LogError($"Excel file is corrupted or invalid: {filePath}", ex, "OpenXmlFileReader");
                 errors.Add(ExcelError.Critical("File", $"Corrupted Excel file: {ex.Message}", ex));
                 return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
@@ -180,8 +168,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
         private DateSystem DetectDateSystem(WorkbookPart workbookPart)
         {
-            // Access WorkbookProperties to detect Date1904 property
-            // If Date1904 is true → 1904 system, otherwise → 1900 system (default)
             var workbookProperties = workbookPart.Workbook.WorkbookProperties;
 
             if (workbookProperties?.Date1904?.Value == true)
@@ -189,7 +175,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
                 return DateSystem.Date1904;
             }
 
-            // Default: 1900 system (Windows Excel default)
             return DateSystem.Date1900;
         }
 
@@ -197,40 +182,26 @@ namespace SheetAtlas.Infrastructure.External.Readers
         {
             var sharedStringTable = workbookPart.SharedStringTablePart?.SharedStringTable;
 
-            // Extract merged cell ranges (structural information only)
-            // Invalid ranges are reported as warnings in errors collection
             var mergedRanges = _mergedRangeExtractor.ExtractMergedRanges(worksheetPart, sheetName, errors);
 
-            // Process header row (expands merged cells for column names)
             var headerColumns = ProcessHeaderRow(worksheetPart, sharedStringTable, mergedRanges);
-
-            // If no headers found, return null - caller will handle as empty sheet
             if (!headerColumns.Any())
             {
                 _logger.LogWarning($"Sheet {sheetName} has no header row", "OpenXmlFileReader");
                 return null;
             }
 
-            // Create SASheetData with temporary column names (will be updated after header population)
             var columnNames = CreateColumnNamesArray(headerColumns);
             var sheetData = new SASheetData(sheetName, columnNames);
 
-            // Populate SASheetData.MergedCells for Foundation Layer processing
             PopulateMergedCells(sheetData, mergedRanges, headerColumns.Keys.Min());
 
-            // NEW: Populate ALL rows (including header rows)
-            // Header rows are now included in SASheetData (absolute 0-based indexing)
             PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns);
 
-            // Set header row count (for now, always 1 - future: detect multi-row headers)
             const int headerRowCount = 1;
             sheetData.SetHeaderRowCount(headerRowCount);
 
-            // Trim excess capacity to save memory
             sheetData.TrimExcess();
-
-            // INTEGRATION: Analyze and enrich sheet data via orchestrator
-            // Orchestrator will apply MergedCellResolver BEFORE column analysis
             var enrichedData = await _analysisOrchestrator.EnrichAsync(sheetData, errors);
 
             return enrichedData;
@@ -245,17 +216,11 @@ namespace SheetAtlas.Infrastructure.External.Readers
         {
             foreach (var range in mergedRanges)
             {
-                // Use absolute row indices (no adjustment needed - range already has 0-based indices)
-                // Row 0 = header row, Row 1 = first data row, etc.
-
-                // Adjust column indices relative to first column
                 int adjustedStartCol = range.StartCol - firstCol;
                 int adjustedEndCol = range.EndCol - firstCol;
 
-                // Create adjusted range (only columns adjusted, rows stay absolute)
                 var adjustedRange = new MergedRange(range.StartRow, adjustedStartCol, range.EndRow, adjustedEndCol);
 
-                // Generate unique key for this range (e.g., "R0C1:R2C3")
                 string rangeKey = $"R{range.StartRow}C{adjustedStartCol}:R{range.EndRow}C{adjustedEndCol}";
 
                 sheetData.AddMergedCell(rangeKey, adjustedRange);
@@ -270,7 +235,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             var headerValues = new Dictionary<int, string>();
 
-            // Build cell lookup for header row
             var cellsByRef = firstRow.Elements<Cell>()
                 .Where(c => c.CellReference?.Value != null)
                 .ToDictionary(c => c.CellReference!.Value!, c => c);
@@ -282,7 +246,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
                 int columnIndex = _cellParser.GetColumnIndex(cellRef);
 
-                // Expand merged cells for header (necessary for column names)
                 string cellValue = GetHeaderCellValue(cell, cellsByRef, sharedStringTable, mergedRanges);
                 headerValues[columnIndex] = cellValue;
             }
@@ -331,8 +294,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
         {
             int firstCol = headerColumns.Keys.Min();
 
-            // NEW: Populate ALL rows including header (absolute 0-based indexing)
-            // Row 0 = header, Row 1+ = data rows
             foreach (var row in worksheetPart.Worksheet.Descendants<Row>())
             {
                 var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, firstCol);
@@ -348,7 +309,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var rowData = new SACellData[columnCount];
             bool hasData = false;
 
-            // Initialize all cells with Empty
             for (int i = 0; i < columnCount; i++)
             {
                 rowData[i] = new SACellData(SACellValue.Empty);
@@ -363,14 +323,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
                 if (columnIndex < 0 || columnIndex >= columnCount)
                     continue;
 
-                // Extract cell value (NO merge expansion - MergedCellResolver will handle it)
-                // Only top-left cells in merged ranges have values in OpenXML, others are empty
                 SACellValue cellValue = GetCellValue(cell, sharedStringTable);
 
-                // Extract number format (for foundation services)
                 string? numberFormat = GetNumberFormat(cell, workbookPart);
-
-                // Create metadata if numberFormat is present (memory optimization)
                 SheetAtlas.Core.Domain.ValueObjects.CellMetadata? metadata = null;
                 if (numberFormat != null)
                 {
@@ -398,29 +353,22 @@ namespace SheetAtlas.Infrastructure.External.Readers
             if (cellRef == null)
                 return string.Empty;
 
-            // Parse current cell coordinates
-            int row = _cellParser.GetRowIndex(cellRef) - 1; // 0-based
+            int row = _cellParser.GetRowIndex(cellRef) - 1;
             int col = _cellParser.GetColumnIndex(cellRef);
-
-            // Check if this cell is in a merged range
             var range = mergedRanges.FirstOrDefault(r =>
                 row >= r.StartRow && row <= r.EndRow &&
                 col >= r.StartCol && col <= r.EndCol);
 
             if (range != null && (row != range.StartRow || col != range.StartCol))
             {
-                // This is NOT the top-left cell - find top-left value
-                var topLeftRef = _cellParser.CreateCellReference(range.StartCol, range.StartRow + 1); // 1-based for Excel
+                var topLeftRef = _cellParser.CreateCellReference(range.StartCol, range.StartRow + 1);
                 if (cellsByRef.TryGetValue(topLeftRef, out var topLeftCell))
                 {
                     return GetCellValue(topLeftCell, sharedStringTable).ToString();
                 }
 
-                // Top-left not found (shouldn't happen), return empty
                 return string.Empty;
             }
-
-            // Not merged or is top-left cell - read normally
             return GetCellValue(cell, sharedStringTable).ToString();
         }
 
@@ -445,7 +393,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
         /// </summary>
         private string? GetNumberFormat(Cell cell, WorkbookPart workbookPart)
         {
-            // No StyleIndex = default style (General format)
             if (cell.StyleIndex == null)
                 return null;
 
@@ -453,7 +400,6 @@ namespace SheetAtlas.Infrastructure.External.Readers
             if (stylesPart?.Stylesheet == null)
                 return null;
 
-            // Get CellFormat from StyleIndex
             var cellFormats = stylesPart.Stylesheet.CellFormats;
             if (cellFormats == null)
                 return null;
@@ -468,13 +414,10 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             var numberFormatId = cellFormat.NumberFormatId.Value;
 
-            // Built-in formats (0-163): use predefined mapping
             if (numberFormatId < 164)
             {
                 return GetBuiltInNumberFormat(numberFormatId);
             }
-
-            // Custom formats (164+): lookup in NumberingFormats collection
             var numberingFormats = stylesPart.Stylesheet.NumberingFormats;
             if (numberingFormats == null)
                 return null;

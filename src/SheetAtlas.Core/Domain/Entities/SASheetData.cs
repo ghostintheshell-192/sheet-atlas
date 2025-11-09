@@ -53,7 +53,6 @@ namespace SheetAtlas.Core.Domain.Entities
         /// </summary>
         private const int DefaultInitialCapacity = 100;
 
-        // Optional metadata (lazy-loaded, not allocated until needed)
         private Dictionary<string, MergedRange>? _mergedCells;
         private Dictionary<int, ColumnMetadata>? _columnMetadata;
 
@@ -65,11 +64,8 @@ namespace SheetAtlas.Core.Domain.Entities
             if (columnNames.Length == 0)
                 throw new ArgumentException("Column names cannot be empty", nameof(columnNames));
 
-            // Allocate flat array: initialCapacity rows * columnCount columns
             _cells = new SACellData[initialCapacity * ColumnNames.Length];
             _rowCount = 0;
-
-            // Metadata collections NOT allocated until first use (lazy)
         }
 
         /// <summary>
@@ -99,13 +95,10 @@ namespace SheetAtlas.Core.Domain.Entities
             if (rowData.Length != ColumnNames.Length)
                 throw new ArgumentException($"Row has {rowData.Length} cells, expected {ColumnNames.Length}");
 
-            // Check if we need to grow the array
             if (_rowCount * ColumnNames.Length + ColumnNames.Length > _cells.Length)
             {
                 GrowCapacity();
             }
-
-            // Copy row data into flat array at correct offset
             int offset = _rowCount * ColumnNames.Length;
             Array.Copy(rowData, 0, _cells, offset, ColumnNames.Length);
             _rowCount++;
@@ -332,7 +325,6 @@ namespace SheetAtlas.Core.Domain.Entities
 
             if (disposing)
             {
-                // Clear flat array (single allocation, easy for GC)
                 _cells = Array.Empty<SACellData>();
                 _rowCount = 0;
 

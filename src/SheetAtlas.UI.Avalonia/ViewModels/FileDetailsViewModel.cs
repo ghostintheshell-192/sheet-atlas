@@ -71,11 +71,9 @@ public class FileDetailsViewModel : ViewModelBase
 
         if (SelectedFile == null) return;
 
-        // Notify property changes for basic info bindings
         OnPropertyChanged(nameof(FilePath));
         OnPropertyChanged(nameof(FileSize));
 
-        // Load error history asynchronously
         _ = LoadErrorHistoryAsync();
     }
 
@@ -101,7 +99,6 @@ public class FileDetailsViewModel : ViewModelBase
     {
         Properties.Add(new FileDetailProperty("Load Results", ""));
 
-        // Add separator with optional action link
         var separator = new FileDetailProperty("", "");
         if (SelectedFile?.File?.Errors?.Any() == true)
         {
@@ -144,7 +141,6 @@ public class FileDetailsViewModel : ViewModelBase
             // Flatten all errors from all attempts into a single list
             foreach (var entry in logEntries.OrderByDescending(e => e.LoadAttempt.Timestamp))
             {
-                // If no errors, add a success row
                 if (entry.Errors == null || entry.Errors.Count == 0)
                 {
                     ErrorLogs.Add(new ErrorLogRowViewModel(
@@ -155,7 +151,6 @@ public class FileDetailsViewModel : ViewModelBase
                 }
                 else
                 {
-                    // Add all errors from this attempt
                     foreach (var error in entry.Errors)
                     {
                         ErrorLogs.Add(new ErrorLogRowViewModel(
@@ -187,8 +182,6 @@ public class FileDetailsViewModel : ViewModelBase
 
         _logger.LogInfo($"Retry requested for file: {SelectedFile.FileName}", "FileDetailsViewModel");
 
-        // Trigger Try Again (reloads file from disk)
-        // Note: LoadErrorHistoryAsync will be called automatically by UpdateDetails() when SelectedFile changes
         TryAgainRequested?.Invoke(this, new FileActionEventArgs(SelectedFile));
         return Task.CompletedTask;
     }
@@ -201,10 +194,8 @@ public class FileDetailsViewModel : ViewModelBase
 
         try
         {
-            // Delete all JSON log files for this file
             await _fileLogService.DeleteFileLogsAsync(SelectedFile.FilePath);
 
-            // Refresh error history to show empty state
             ErrorLogs.Clear();
             OnPropertyChanged(nameof(HasErrorLogs));
 

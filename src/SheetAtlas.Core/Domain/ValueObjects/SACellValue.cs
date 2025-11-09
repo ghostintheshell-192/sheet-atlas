@@ -7,7 +7,6 @@ namespace SheetAtlas.Core.Domain.ValueObjects
     /// Efficient cell value storage using explicit union layout (NO BOXING).
     /// All value types are stored directly in overlapping memory using FieldOffset.
     /// Memory layout: 8 bytes (union of double/long/DateTime) + 8 bytes (string ref) + 1 byte (type) = 17 bytes (+ padding).
-    /// Previous implementation with object? caused boxing: 4.1M doubles = 99 MB wasted on heap.
     /// </summary>
     [StructLayout(LayoutKind.Explicit)]
     public readonly struct SACellValue : IEquatable<SACellValue>
@@ -26,7 +25,6 @@ namespace SheetAtlas.Core.Domain.ValueObjects
 
         private SACellValue(double value)
         {
-            // Zero-initialize all fields first (required for explicit layout)
             _numberValue = 0;
             _integerValue = 0;
             _dateTimeValue = default;
@@ -34,7 +32,6 @@ namespace SheetAtlas.Core.Domain.ValueObjects
             _textValue = null;
             _type = CellType.Empty;
 
-            // Now set the actual values
             _numberValue = value;
             _type = CellType.Number;
         }
@@ -101,7 +98,6 @@ namespace SheetAtlas.Core.Domain.ValueObjects
             _type = type;
         }
 
-        // Factory methods for type-safe construction
         public static SACellValue FromNumber(double value) => new(value);
         public static SACellValue FromInteger(long value) => new(value);
         public static SACellValue FromBoolean(bool value) => new(value);
@@ -109,29 +105,23 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         public static SACellValue FromText(string value) => new(value);
         public static SACellValue Empty => new(CellType.Empty);
 
-        // Smart factory that auto-detects type from string
         public static SACellValue FromString(string value, StringPool? stringPool = null)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return Empty;
 
-            // Try parse as integer first (most common for IDs, counts)
             if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long longValue))
                 return FromInteger(longValue);
 
-            // Try parse as number (decimal values)
             if (double.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double doubleValue))
                 return FromNumber(doubleValue);
 
-            // Try parse as boolean
             if (bool.TryParse(value, out bool boolValue))
                 return FromBoolean(boolValue);
 
-            // Try parse as date
             if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dateValue))
                 return FromDateTime(dateValue);
 
-            // Fallback to text - intern if pool provided
             if (stringPool != null)
             {
                 value = stringPool.Intern(value);
@@ -140,7 +130,6 @@ namespace SheetAtlas.Core.Domain.ValueObjects
             return FromText(value);
         }
 
-        // Type checking properties
         public CellType Type => _type;
         public bool IsEmpty => _type == CellType.Empty;
         public bool IsNumber => _type == CellType.Number;
@@ -149,14 +138,12 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         public bool IsDateTime => _type == CellType.DateTime;
         public bool IsText => _type == CellType.Text;
 
-        // Safe value extraction with defaults (NO BOXING - direct field access)
         public double AsNumber() => _type == CellType.Number ? _numberValue : 0.0;
         public long AsInteger() => _type == CellType.Integer ? _integerValue : 0L;
         public bool AsBoolean() => _type == CellType.Boolean && _booleanValue;
         public DateTime AsDateTime() => _type == CellType.DateTime ? _dateTimeValue : DateTime.MinValue;
         public string AsText() => _type == CellType.Text ? _textValue ?? string.Empty : string.Empty;
 
-        // Unified string representation (for display) - NO BOXING
         public override string ToString()
         {
             return _type switch
@@ -171,7 +158,6 @@ namespace SheetAtlas.Core.Domain.ValueObjects
             };
         }
 
-        // Equality implementation
         public bool Equals(SACellValue other)
         {
             if (_type != other._type)

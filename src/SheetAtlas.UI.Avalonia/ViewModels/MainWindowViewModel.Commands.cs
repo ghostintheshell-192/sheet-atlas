@@ -44,12 +44,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             ShowFileDetailsTabCommand = new RelayCommand(() =>
             {
-                // Select first file if none selected
                 if (SelectedFile == null && LoadedFiles.Any())
                 {
                     SelectedFile = LoadedFiles.First();
                 }
-                // File selection will automatically show FileDetails tab
                 return Task.CompletedTask;
             });
 
@@ -98,7 +96,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             ShowSearchResultsCommand = new RelayCommand(() =>
             {
-                // Deprecated - use ShowSearchTabCommand instead
                 IsSearchTabVisible = true;
                 SelectedTabIndex = GetTabIndex("Search");
                 return Task.CompletedTask;

@@ -10,17 +10,17 @@ namespace SheetAtlas.Core.Application.Services.Foundation
     /// </summary>
     public class CurrencyDetector : ICurrencyDetector
     {
-        // Pattern per formato Excel: [$€-407] #,##0.00
+        // Pattern for Excel format: [$€-407] #,##0.00
         private static readonly Regex _currencyFormatPattern = new(
             @"\[\$(?<symbol>[^\-\]]+)(?:-(?<locale>[^\]]+))?\]",
             RegexOptions.Compiled);
 
-        // Pattern per ISO code in brackets: [EUR]
+        // Pattern for ISO code in brackets: [EUR]
         private static readonly Regex _isoCodePattern = new(
             @"\[(?<code>[A-Z]{3})\]",
             RegexOptions.Compiled);
 
-        // Mappatura locale → codice valuta
+        // Locale to currency code mapping
         private static readonly Dictionary<string, string> _localeToCurrency = new()
         {
             // Euro locales
@@ -44,13 +44,13 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             { "404", "CNY" },   // Chinese
         };
 
-        // Mappatura simbolo → codice valuta (fallback senza locale)
+        // Symbol to currency code mapping (fallback without locale)
         private static readonly Dictionary<string, string> _symbolToCurrency = new()
         {
             { "€", "EUR" },
-            { "$", "USD" },  // Ambiguo senza locale
+            { "$", "USD" },  // Ambiguous without locale
             { "£", "GBP" },
-            { "¥", "JPY" },  // Ambiguo (usato anche per CNY), default JPY
+            { "¥", "JPY" },  // Ambiguous (also used for CNY), defaults to JPY
             { "₹", "INR" },
             { "₩", "KRW" },
         };
@@ -60,26 +60,26 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             if (string.IsNullOrWhiteSpace(numberFormat))
                 return null;
 
-            // Prova a estrarre da pattern Excel standard [$symbol-locale]
+            // Try to extract from standard Excel pattern [$symbol-locale]
             var match = _currencyFormatPattern.Match(numberFormat);
             if (match.Success)
             {
                 var symbol = match.Groups["symbol"].Value;
                 var locale = match.Groups["locale"].Value;
 
-                // Determina codice valuta
+                // Determine currency code
                 string? currencyCode = null;
                 ConfidenceLevel confidence;
 
                 if (!string.IsNullOrEmpty(locale))
                 {
-                    // Con locale → unambiguous
+                    // With locale → unambiguous
                     currencyCode = DetermineCurrencyFromLocale(locale, symbol);
                     confidence = ConfidenceLevel.Unambiguous;
                 }
                 else
                 {
-                    // Senza locale → low confidence
+                    // Without locale → low confidence
                     currencyCode = DetermineCurrencyFromSymbol(symbol);
                     confidence = ConfidenceLevel.Low;
                 }
@@ -87,7 +87,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 if (currencyCode == null)
                     return null;
 
-                // Estrai informazioni aggiuntive dal formato
+                // Extract additional information from format
                 var decimalPlaces = CountDecimalPlaces(numberFormat);
                 var (decimalSeparator, thousandSeparator) = DetectSeparators(numberFormat, locale);
                 var position = DetectPosition(numberFormat, symbol);
@@ -103,7 +103,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                     confidence);
             }
 
-            // Prova pattern ISO code [EUR]
+            // Try ISO code pattern [EUR]
             var isoMatch = _isoCodePattern.Match(numberFormat);
             if (isoMatch.Success)
             {
@@ -123,7 +123,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                     ConfidenceLevel.Unambiguous);
             }
 
-            // Prova a trovare simbolo senza brackets ($ #,##0.00 o #,##0.00 $)
+            // Try to find symbol without brackets ($ #,##0.00 or #,##0.00 $)
             foreach (var kvp in _symbolToCurrency)
             {
                 if (numberFormat.Contains(kvp.Key))
@@ -165,11 +165,11 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         private string? DetermineCurrencyFromLocale(string locale, string symbol)
         {
-            // Prova lookup diretto del locale
+            // Try direct locale lookup
             if (_localeToCurrency.TryGetValue(locale.ToUpperInvariant(), out var code))
                 return code;
 
-            // Fallback su simbolo
+            // Fallback to symbol
             return DetermineCurrencyFromSymbol(symbol);
         }
 
@@ -197,11 +197,11 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         private int CountDecimalPlaces(string format)
         {
-            // Cerca pattern .00 o ,00
+            // Search for pattern .00 or ,00
             var decimalMatch = Regex.Match(format, @"[.,]0+");
             if (decimalMatch.Success)
             {
-                var decimals = decimalMatch.Value.Substring(1); // Rimuovi . o ,
+                var decimals = decimalMatch.Value.Substring(1); // Remove . or ,
                 return decimals.Length;
             }
 
@@ -210,22 +210,22 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         private (char decimalSeparator, char thousandSeparator) DetectSeparators(string format, string? locale = null)
         {
-            // IMPORTANTE: Excel scrive SEMPRE i format string con convenzione US
-            // (comma per migliaia, period per decimale), INDIPENDENTEMENTE dal locale.
-            // Il locale code determina come il numero viene VISUALIZZATO all'utente.
+            // IMPORTANT: Excel ALWAYS writes format strings using US convention
+            // (comma for thousands, period for decimal), REGARDLESS of locale.
+            // The locale code determines how the number is DISPLAYED to the user.
             //
-            // Esempio: [$€-407] #,##0.00
-            // - Format string: #,##0.00 (convenzione US: comma=migliaia, period=decimale)
-            // - Locale 407 (tedesco): visualizzato come 1.234,56 (period=migliaia, comma=decimale)
+            // Example: [$€-407] #,##0.00
+            // - Format string: #,##0.00 (US convention: comma=thousands, period=decimal)
+            // - Locale 407 (German): displayed as 1.234,56 (period=thousands, comma=decimal)
             //
-            // Quindi dobbiamo:
-            // 1. Leggere separatori dal format string (sempre US convention)
-            // 2. Invertirli per locale europei che usano convenzione opposta
+            // Therefore we must:
+            // 1. Read separators from format string (always US convention)
+            // 2. Invert them for European locales that use opposite convention
 
             var thousandMatch = Regex.Match(format, @"#([.,])##");
             var decimalMatch = Regex.Match(format, @"0([.,])0");
 
-            // Default US convention dal format string
+            // Default US convention from format string
             char formatThousandSep = ',';
             char formatDecimalSep = '.';
 
@@ -245,21 +245,21 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 formatDecimalSep = formatThousandSep == ',' ? '.' : ',';
             }
 
-            // Il format string RIFLETTE GIÀ i separatori del locale!
-            // Tedesco: #,##0.00 → il formato SCRIVE thousand=, decimal=. MA il tedesco USA thousand=. decimal=,
-            // Quindi Excel scrive con US convention, ma SIGNIFICA i separatori del locale
-            // CONCLUSIONE: leggi thousand e decimal dal formato, poi inverti per locale non-US
+            // The format string ALREADY REFLECTS the locale's separators!
+            // German: #,##0.00 → format WRITES thousand=, decimal=. BUT German USES thousand=. decimal=,
+            // So Excel writes using US convention, but MEANS the locale's separators
+            // CONCLUSION: read thousand and decimal from format, then invert for non-US locales
 
             bool shouldInvert = ShouldInvertSeparators(locale);
 
             if (shouldInvert)
             {
-                // Excel scrive sempre US convention (#,##0.00)
-                // Ma per locale europei, thousand e decimal sono invertiti
+                // Excel always writes US convention (#,##0.00)
+                // But for European locales, thousand and decimal are inverted
                 return (formatThousandSep, formatDecimalSep);
             }
 
-            // Locale US/UK: i separatori nel formato corrispondono alla realtà
+            // US/UK locales: separators in format match reality
             return (formatDecimalSep, formatThousandSep);
         }
 
@@ -268,7 +268,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             if (string.IsNullOrEmpty(locale))
                 return false;
 
-            // Locale europei che usano virgola come decimale
+            // European locales that use comma as decimal separator
             var europeanLocales = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 "407",   // German
@@ -286,7 +286,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 "414",   // Norwegian
                 "422",   // Ukrainian
                 "419",   // Russian
-                // Aggiungi altri se necessario
+                // Add others if needed
             };
 
             return europeanLocales.Contains(locale.ToUpperInvariant());
@@ -294,7 +294,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         private CurrencyPosition DetectPosition(string format, string symbol)
         {
-            // Trova la posizione del simbolo rispetto ai numeri
+            // Find the position of symbol relative to numbers
             var symbolIndex = format.IndexOf(symbol);
             var numberIndex = format.IndexOfAny(new[] { '#', '0' });
 
@@ -314,8 +314,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             string? locale,
             ConfidenceLevel confidence)
         {
-            // Usa factory methods statici se disponibili per valute comuni
-            // ma solo se parametri corrispondono esattamente
+            // Use static factory methods if available for common currencies
+            // but only if parameters match exactly
             if (locale != null && confidence == ConfidenceLevel.Unambiguous)
             {
                 CurrencyInfo? baseInfo = code switch
@@ -333,12 +333,12 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
                 if (baseInfo != null)
                 {
-                    // Aggiungi locale usando with expression
+                    // Add locale using with expression
                     return baseInfo with { Locale = locale, ThousandSeparator = thousandSeparator };
                 }
             }
 
-            // Crea nuova istanza con tutti i parametri
+            // Create new instance with all parameters
             return new CurrencyInfo(
                 code,
                 symbol,

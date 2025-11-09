@@ -62,26 +62,22 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
         if (string.IsNullOrWhiteSpace(query) || !results.Any())
             return;
 
-        // Check if we already have this search in history
         var existing = SearchHistory.FirstOrDefault(s => s.Query.Equals(query, StringComparison.OrdinalIgnoreCase));
 
-        // Build selection state and expansion state maps from existing item BEFORE removing it
         var selectionStateMap = new Dictionary<SearchResult, bool>();
         var fileExpansionMap = new Dictionary<string, bool>();
         var sheetExpansionMap = new Dictionary<string, bool>();
-        bool wasSearchExpanded = true; // Default to expanded for new searches
+        bool wasSearchExpanded = true;
 
         if (existing != null)
         {
             wasSearchExpanded = existing.IsExpanded;
             foreach (var fileGroup in existing.FileGroups)
             {
-                // Save file expansion state
                 fileExpansionMap[fileGroup.FileName] = fileGroup.IsExpanded;
 
                 foreach (var sheetGroup in fileGroup.SheetGroups)
                 {
-                    // Save sheet expansion state (use fileName_sheetName as key for uniqueness)
                     var sheetKey = $"{fileGroup.FileName}_{sheetGroup.SheetName}";
                     sheetExpansionMap[sheetKey] = sheetGroup.IsExpanded;
 
@@ -94,13 +90,10 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
             SearchHistory.Remove(existing);
         }
 
-        // Create new search history item
         var searchItem = new SearchHistoryItem(query, results);
 
-        // Restore expansion state from previous version
         searchItem.IsExpanded = wasSearchExpanded;
 
-        // Setup selection change events BEFORE restoring selection state
         searchItem.SelectionChanged += (s, e) => NotifySelectionChanged();
         foreach (var fileGroup in searchItem.FileGroups)
         {
@@ -110,13 +103,11 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
             }
         }
 
-        // Restore expansion and selection state from previous version
         bool hasRestoredSelections = false;
         if (selectionStateMap.Count > 0 || fileExpansionMap.Count > 0 || sheetExpansionMap.Count > 0)
         {
             foreach (var fileGroup in searchItem.FileGroups)
             {
-                // Restore file expansion state
                 if (fileExpansionMap.TryGetValue(fileGroup.FileName, out var fileExpanded))
                 {
                     fileGroup.IsExpanded = fileExpanded;
@@ -124,14 +115,12 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
 
                 foreach (var sheetGroup in fileGroup.SheetGroups)
                 {
-                    // Restore sheet expansion state
                     var sheetKey = $"{fileGroup.FileName}_{sheetGroup.SheetName}";
                     if (sheetExpansionMap.TryGetValue(sheetKey, out var sheetExpanded))
                     {
                         sheetGroup.IsExpanded = sheetExpanded;
                     }
 
-                    // Restore selection state
                     foreach (var item in sheetGroup.Results)
                     {
                         if (selectionStateMap.TryGetValue(item.Result, out var wasSelected) && wasSelected)
@@ -144,16 +133,13 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
             }
         }
 
-        // Add to top of list
         SearchHistory.Insert(0, searchItem);
 
-        // Keep only last 5 searches
         while (SearchHistory.Count > 5)
         {
             SearchHistory.RemoveAt(SearchHistory.Count - 1);
         }
 
-        // If we restored selections, notify the UI to update counters and button states
         if (hasRestoredSelections)
         {
             NotifySelectionChanged();
@@ -173,14 +159,10 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
         if (file == null)
             return;
 
-        // Strategy: Modify existing SearchHistoryItems in place by removing FileResultGroups
-        // This preserves UI bindings and selection state for items that remain
-
         var searchItemsToRemove = new List<SearchHistoryItem>();
 
         foreach (var searchItem in SearchHistory.ToList())
         {
-            // Find file groups that reference the removed file
             var fileGroupsToRemove = searchItem.FileGroups
                 .Where(fg => fg.File == file)
                 .ToList();
@@ -188,26 +170,22 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
             if (!fileGroupsToRemove.Any())
                 continue;
 
-            // Remove those file groups from the search item (modifies in place)
             foreach (var fileGroup in fileGroupsToRemove)
             {
                 searchItem.FileGroups.Remove(fileGroup);
             }
 
-            // If search item has no more file groups, mark it for complete removal
             if (searchItem.FileGroups.Count == 0)
             {
                 searchItemsToRemove.Add(searchItem);
             }
         }
 
-        // Remove empty search items from history
         foreach (var item in searchItemsToRemove)
         {
             SearchHistory.Remove(item);
         }
 
-        // Notify UI that selection state may have changed (counters, button enable state)
         NotifySelectionChanged();
 
         _logger.LogInfo($"Removed search results for file: {file.FilePath}", "TreeSearchResultsViewModel");
@@ -253,7 +231,7 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
 
     private void NotifySelectionChanged()
     {
-        RefreshSelectionCache();   // Update cached selection state
+        RefreshSelectionCache();
         OnPropertyChanged(nameof(SelectedCount));
         OnPropertyChanged(nameof(CanCompareRows));
         OnPropertyChanged(nameof(SelectedItems));
@@ -272,7 +250,6 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
             return;
         if (disposing)
         {
-            // Dispose managed resources
             foreach (var searchItem in SearchHistory)
             {
                 searchItem.Dispose();

@@ -65,11 +65,10 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
 
         var comparisonViewModel = new RowComparisonViewModel(comparison, _comparisonViewModelLogger, _themeManager);
 
-        // Wire up close event
         comparisonViewModel.CloseRequested += OnComparisonCloseRequested;
 
         _rowComparisons.Add(comparisonViewModel);
-        SelectedComparison = comparisonViewModel; // Auto-select new comparison
+        SelectedComparison = comparisonViewModel;
 
         _logger.LogInfo($"Created row comparison: {comparison.Name} with {comparison.Rows.Count} rows", "RowComparisonCoordinator");
 
@@ -90,13 +89,11 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
             return;
         }
 
-        // Unsubscribe from events
         comparison.CloseRequested -= OnComparisonCloseRequested;
 
         _rowComparisons.Remove(comparison);
         _logger.LogInfo($"Removed row comparison: {comparison.Title}", "RowComparisonCoordinator");
 
-        // Clear selection if this was the selected comparison
         if (SelectedComparison == comparison)
         {
             SelectedComparison = null;
@@ -119,13 +116,11 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
             if (comparisonViewModel.Comparison == null)
                 continue;
 
-            // Check if this comparison contains rows from the removed file
             var hasRemovedFile = comparisonViewModel.Comparison.Rows.Any(row => row.SourceFile == file);
 
             if (!hasRemovedFile)
                 continue;
 
-            // Get rows NOT from the removed file
             var remainingRows = comparisonViewModel.Comparison.Rows
                 .Where(row => row.SourceFile != file)
                 .ToList();
@@ -138,21 +133,17 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
                     comparisonViewModel.Comparison.Name
                 );
 
-                // Create new ViewModel with updated comparison
                 var newViewModel = new RowComparisonViewModel(updatedComparison, _comparisonViewModelLogger, _themeManager);
                 newViewModel.CloseRequested += OnComparisonCloseRequested;
 
-                // Replace old with new
                 var index = _rowComparisons.IndexOf(comparisonViewModel);
                 _rowComparisons[index] = newViewModel;
 
-                // Update selection if needed
                 if (SelectedComparison == comparisonViewModel)
                 {
                     SelectedComparison = newViewModel;
                 }
 
-                // Unsubscribe from old
                 comparisonViewModel.CloseRequested -= OnComparisonCloseRequested;
 
                 _logger.LogInfo($"Updated comparison '{updatedComparison.Name}': removed rows from {file.FilePath}, {remainingRows.Count} rows remaining", "RowComparisonCoordinator");
@@ -164,7 +155,6 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
             }
         }
 
-        // Remove comparisons that don't have enough rows
         foreach (var comparison in comparisonsToRemove)
         {
             RemoveComparison(comparison);
@@ -200,7 +190,6 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
     {
         if (disposing)
         {
-            // Dispose managed resources here
             foreach (var comparison in _rowComparisons)
             {
                 comparison.CloseRequested -= OnComparisonCloseRequested;

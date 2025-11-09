@@ -70,7 +70,6 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
         {
             var loadedExcelFiles = await _excelReaderService.LoadFilesAsync(filePaths);
 
-            // Process each file individually, continuing even if one fails
             var successCount = 0;
             var failureCount = 0;
 
@@ -83,11 +82,9 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    // Log error but continue processing other files
                     _logger.LogError($"Error processing file {excelFile?.FilePath ?? "unknown"}", ex, "LoadedFilesManager");
                     failureCount++;
 
-                    // Still try to add the file with error status if possible
                     if (excelFile != null)
                     {
                         FileLoadFailed?.Invoke(this, new FileLoadFailedEventArgs(
@@ -101,14 +98,12 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
         }
         catch (OutOfMemoryException ex)
         {
-            // System resource exhaustion
             _logger.LogError("Out of memory while loading files", ex, "LoadedFilesManager");
 
             await _dialogService.ShowErrorAsync(OutOfMemoryMessage, OutOfMemoryTitle);
         }
         catch (Exception ex)
         {
-            // Unexpected errors - log and notify
             _logger.LogError($"Unexpected error loading files", ex, "LoadedFilesManager");
 
             await _dialogService.ShowErrorAsync(
@@ -151,7 +146,6 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
 
         try
         {
-            // Find existing file entry and its index
             var existingFile = _loadedFiles.FirstOrDefault(f =>
                 f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
 
@@ -179,7 +173,6 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
             {
                 try
                 {
-                    // Save log before UI update to minimize flicker
                     await SaveFileLogAsync(reloadedFile);
 
                     if (existingFile != null)
@@ -249,7 +242,6 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
     /// </summary>
     private async Task ProcessLoadedFileAsync(ExcelFile excelFile)
     {
-        // Check for duplicates
         if (LoadedFiles.Any(f => f.FilePath.Equals(excelFile.FilePath, StringComparison.OrdinalIgnoreCase)))
         {
             await _dialogService.ShowMessageAsync(
@@ -258,30 +250,25 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
             return;
         }
 
-        // Respect Core's LoadStatus to determine handling strategy
         bool hasErrors = excelFile.Status != LoadStatus.Success;
 
         switch (excelFile.Status)
         {
             case LoadStatus.Success:
-                // File loaded successfully - add to collection
                 await AddFileToCollectionCore(excelFile, insertIndex: null, hasErrors: false);
                 _logger.LogInfo($"File loaded successfully: {excelFile.FileName}", "LoadedFilesManager");
                 break;
 
             case LoadStatus.PartialSuccess:
-                // File loaded with warnings/errors but has usable data - add to collection
                 await AddFileToCollectionCore(excelFile, insertIndex: null, hasErrors: true);
                 _logger.LogWarning($"File loaded with errors: {excelFile.FileName} - {excelFile.Errors.Count} errors", "LoadedFilesManager");
                 break;
 
             case LoadStatus.Failed:
-                // File completely failed to load - add to collection so user can see error details
                 await AddFileToCollectionCore(excelFile, insertIndex: null, hasErrors: true);
 
                 _logger.LogError($"File failed to load: {excelFile.FileName} - {excelFile.Errors.Count} errors", "LoadedFilesManager");
 
-                // Notify listeners of the failure
                 TriggerFileLoadFailedEvent(excelFile);
                 break;
 
@@ -390,7 +377,6 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
     /// </summary>
     private FileLogEntry CreateFileLogEntry(ExcelFile excelFile)
     {
-        // Get file info
         FileInfo? fileInfo = null;
         try
         {
@@ -398,10 +384,8 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
         }
         catch
         {
-            // File might not exist anymore
         }
 
-        // Compute file hash
         string fileHash = "md5:unknown";
         try
         {
@@ -412,16 +396,12 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
         }
         catch
         {
-            // Hash computation failed
         }
 
-        // Get app version
         var appVersion = Assembly.GetExecutingAssembly()
             .GetName()
             .Version?
             .ToString() ?? "0.0.0";
-
-        // Create log entry
         var logEntry = new FileLogEntry
         {
             SchemaVersion = "1.0",
