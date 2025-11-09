@@ -181,15 +181,16 @@ public class FileDetailsViewModel : ViewModelBase
         }
     }
 
-    private async Task ExecuteRetryAsync()
+    private Task ExecuteRetryAsync()
     {
-        if (SelectedFile == null) return;
+        if (SelectedFile == null) return Task.CompletedTask;
 
         _logger.LogInfo($"Retry requested for file: {SelectedFile.FileName}", "FileDetailsViewModel");
 
         // Trigger Try Again (reloads file from disk)
         // Note: LoadErrorHistoryAsync will be called automatically by UpdateDetails() when SelectedFile changes
         TryAgainRequested?.Invoke(this, new FileActionEventArgs(SelectedFile));
+        return Task.CompletedTask;
     }
 
     private async Task ExecuteClearAsync()
@@ -215,7 +216,7 @@ public class FileDetailsViewModel : ViewModelBase
         }
     }
 
-    private async Task OpenErrorLogAsync()
+    private Task OpenErrorLogAsync()
     {
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var logDirectory = Path.Combine(appDataPath, "SheetAtlas", "Logs");
@@ -224,7 +225,7 @@ public class FileDetailsViewModel : ViewModelBase
         if (!File.Exists(logFile))
         {
             _logger.LogInfo("Error log viewer opened - no log file found", "FileDetailsViewModel");
-            return;
+            return Task.CompletedTask;
         }
 
         try
@@ -242,6 +243,8 @@ public class FileDetailsViewModel : ViewModelBase
         {
             _logger.LogError("Failed to open error log file", ex, "FileDetailsViewModel");
         }
+
+        return Task.CompletedTask;
     }
 
     private string GetFileFormat(string filePath)

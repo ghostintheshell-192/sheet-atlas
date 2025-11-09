@@ -56,13 +56,13 @@ public class FileDetailsCoordinator : IFileDetailsCoordinator
         onClearSelection(file);
 
         // Remove search results that reference this file (TreeView history)
-        treeSearchResults?.RemoveSearchResultsForFile(file.File);
+        treeSearchResults?.RemoveSearchResultsForFile(file.File!);
 
         // Remove current search results that reference this file (SearchViewModel)
-        searchViewModel?.RemoveResultsForFile(file.File);
+        searchViewModel?.RemoveResultsForFile(file.File!);
 
         // Remove row comparisons that reference this file
-        _comparisonCoordinator.RemoveComparisonsForFile(file.File);
+        _comparisonCoordinator.RemoveComparisonsForFile(file.File!);
 
         // Dispose ViewModel (which disposes ExcelFile and DataTables, then nulls the reference)
         file.Dispose();

@@ -21,7 +21,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
                 if (reloadedFile != null)
                 {
-                    FileDetailsViewModel.SelectedFile = reloadedFile;
+                    FileDetailsViewModel!.SelectedFile = reloadedFile;
                 }
 
                 _activityLog.LogInfo($"Retry completed: {file.FileName}", "FileRetry");

@@ -219,13 +219,13 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             }
 
             // Remove search results that reference this file (TreeView history)
-            TreeSearchResultsViewModel?.RemoveSearchResultsForFile(file.File);
+            TreeSearchResultsViewModel?.RemoveSearchResultsForFile(file.File!);
 
             // Remove current search results that reference this file (SearchViewModel)
-            SearchViewModel?.RemoveResultsForFile(file.File);
+            SearchViewModel?.RemoveResultsForFile(file.File!);
 
             // Remove row comparisons that reference this file
-            _comparisonCoordinator.RemoveComparisonsForFile(file.File);
+            _comparisonCoordinator.RemoveComparisonsForFile(file.File!);
 
             // Dispose ViewModel (which disposes ExcelFile and DataTables, then nulls the reference)
             file.Dispose();
