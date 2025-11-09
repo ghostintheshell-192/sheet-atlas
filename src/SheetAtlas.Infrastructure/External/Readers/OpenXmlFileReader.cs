@@ -198,7 +198,8 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var sharedStringTable = workbookPart.SharedStringTablePart?.SharedStringTable;
 
             // Extract merged cell ranges (structural information only)
-            var mergedRanges = _mergedRangeExtractor.ExtractMergedRanges(worksheetPart);
+            // Invalid ranges are reported as warnings in errors collection
+            var mergedRanges = _mergedRangeExtractor.ExtractMergedRanges(worksheetPart, sheetName, errors);
 
             // Process header row (expands merged cells for column names)
             var headerColumns = ProcessHeaderRow(worksheetPart, sharedStringTable, mergedRanges);
