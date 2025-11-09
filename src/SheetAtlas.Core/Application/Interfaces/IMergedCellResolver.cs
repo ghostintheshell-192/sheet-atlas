@@ -20,6 +20,7 @@ namespace SheetAtlas.Core.Application.Interfaces
     {
         /// <summary>
         /// Resolves merged cells in sheet data using selected strategy.
+        /// Performs synchronous in-memory operations (no I/O).
         /// </summary>
         /// <param name="sheetData">Sheet with existing MergedCells collection</param>
         /// <param name="strategy">Resolution strategy to apply</param>
@@ -29,7 +30,7 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// Returns new SASheetData, original unmodified (immutable pattern).
         /// If >20% cells merged, warns about potential data issues.
         /// </remarks>
-        Task<SASheetData> ResolveMergedCellsAsync(
+        SASheetData ResolveMergedCells(
             SASheetData sheetData,
             MergeStrategy strategy = MergeStrategy.ExpandValue,
             Action<MergeWarning>? warningCallback = null);

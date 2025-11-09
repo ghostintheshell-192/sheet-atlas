@@ -20,7 +20,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         #region Simple Merge Resolution Tests
 
         [Fact]
-        public async Task ResolveMergedCells_SimpleHeaderMerge_ExpandsValue()
+        public void ResolveMergedCells_SimpleHeaderMerge_ExpandsValue()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -32,7 +32,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 sheet,
                 MergeStrategy.ExpandValue);
 
@@ -42,7 +42,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Fact]
-        public async Task ResolveMergedCells_SimpleHeaderMerge_KeepTopLeftStrategy()
+        public void ResolveMergedCells_SimpleHeaderMerge_KeepTopLeftStrategy()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -54,7 +54,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 sheet,
                 MergeStrategy.KeepTopLeft);
 
@@ -64,7 +64,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Fact]
-        public async Task ResolveMergedCells_HorizontalMerge_PreservesStructure()
+        public void ResolveMergedCells_HorizontalMerge_PreservesStructure()
         {
             // Arrange - Merge across columns in a single row
             var sheet = new SASheetDataBuilder()
@@ -76,14 +76,14 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(sheet);
+            var result = _resolver.ResolveMergedCells(sheet);
 
             // Assert
             result.Should().NotBeNull();
         }
 
         [Fact]
-        public async Task ResolveMergedCells_VerticalMerge_PreservesStructure()
+        public void ResolveMergedCells_VerticalMerge_PreservesStructure()
         {
             // Arrange - Merge down rows in a single column
             var sheet = new SASheetDataBuilder()
@@ -95,7 +95,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(sheet);
+            var result = _resolver.ResolveMergedCells(sheet);
 
             // Assert
             result.Should().NotBeNull();
@@ -106,7 +106,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         #region Strategy-Specific Tests
 
         [Fact]
-        public async Task ResolveMergedCells_ExpandValueStrategy_ReplicatesValue()
+        public void ResolveMergedCells_ExpandValueStrategy_ReplicatesValue()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -118,7 +118,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 sheet,
                 MergeStrategy.ExpandValue);
 
@@ -128,7 +128,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Fact]
-        public async Task ResolveMergedCells_KeepTopLeftStrategy_OnlyTopLeftHasValue()
+        public void ResolveMergedCells_KeepTopLeftStrategy_OnlyTopLeftHasValue()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -140,7 +140,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 sheet,
                 MergeStrategy.KeepTopLeft);
 
@@ -150,7 +150,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Fact]
-        public async Task ResolveMergedCells_FlattenToStringStrategy_ConcatenatesValues()
+        public void ResolveMergedCells_FlattenToStringStrategy_ConcatenatesValues()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -163,7 +163,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 sheet,
                 MergeStrategy.FlattenToString);
 
@@ -173,7 +173,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Fact]
-        public async Task ResolveMergedCells_TreatAsHeaderStrategy_IdentifiesHeaderMerge()
+        public void ResolveMergedCells_TreatAsHeaderStrategy_IdentifiesHeaderMerge()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -185,7 +185,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 sheet,
                 MergeStrategy.TreatAsHeader);
 
@@ -270,7 +270,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         #region Warning Tests
 
         [Fact]
-        public async Task ResolveMergedCells_WithWarningCallback_ReportsWarnings()
+        public void ResolveMergedCells_WithWarningCallback_ReportsWarnings()
         {
             // Arrange
             var warnings = new List<MergeWarning>();
@@ -285,7 +285,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 sheet,
                 MergeStrategy.ExpandValue,
                 WarningCallback);
@@ -296,7 +296,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Fact]
-        public async Task ResolveMergedCells_HighMergePercentage_WarnsUser()
+        public void ResolveMergedCells_HighMergePercentage_WarnsUser()
         {
             // Arrange
             var warningCount = 0;
@@ -311,7 +311,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 sheet,
                 MergeStrategy.ExpandValue,
                 CountWarnings);
@@ -325,7 +325,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         #region Multiple Merge Tests
 
         [Fact]
-        public async Task ResolveMergedCells_MultipleMerges_HandlesAllCorrectly()
+        public void ResolveMergedCells_MultipleMerges_HandlesAllCorrectly()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -341,14 +341,14 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(sheet);
+            var result = _resolver.ResolveMergedCells(sheet);
 
             // Assert
             result.Should().NotBeNull();
         }
 
         [Fact]
-        public async Task ResolveMergedCells_OverlappingMerges_HandlesGracefully()
+        public void ResolveMergedCells_OverlappingMerges_HandlesGracefully()
         {
             // Arrange - Note: Real Excel doesn't allow overlapping merges, but we should handle edge case
             var sheet = new SASheetDataBuilder()
@@ -361,7 +361,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(sheet);
+            var result = _resolver.ResolveMergedCells(sheet);
 
             // Assert
             result.Should().NotBeNull();
@@ -372,7 +372,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         #region Empty Merge Tests
 
         [Fact]
-        public async Task ResolveMergedCells_EmptyMergedRange_PreservesEmptiness()
+        public void ResolveMergedCells_EmptyMergedRange_PreservesEmptiness()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -383,7 +383,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(sheet);
+            var result = _resolver.ResolveMergedCells(sheet);
 
             // Assert
             result.Should().NotBeNull();
@@ -394,7 +394,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         #region Immutability Tests
 
         [Fact]
-        public async Task ResolveMergedCells_OriginalUnmodified_ReturnsCopy()
+        public void ResolveMergedCells_OriginalUnmodified_ReturnsCopy()
         {
             // Arrange
             var original = new SASheetDataBuilder()
@@ -408,7 +408,7 @@ namespace SheetAtlas.Tests.Foundation.Services
             var originalMergedCount = original.MergedCells.Count;
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(
+            var result = _resolver.ResolveMergedCells(
                 original,
                 MergeStrategy.ExpandValue);
 
@@ -422,7 +422,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         #region Edge Cases
 
         [Fact]
-        public async Task ResolveMergedCells_SingleCellMerge_HandlesCorrectly()
+        public void ResolveMergedCells_SingleCellMerge_HandlesCorrectly()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -434,7 +434,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 .Build();
 
             // Act
-            var result = await _resolver.ResolveMergedCellsAsync(sheet);
+            var result = _resolver.ResolveMergedCells(sheet);
 
             // Assert
             result.Should().NotBeNull();
@@ -461,7 +461,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         #region Integration Tests
 
         [Fact]
-        public async Task ResolveMergedCells_FullWorkflow_AnalyzeThenResolve()
+        public void ResolveMergedCells_FullWorkflow_AnalyzeThenResolve()
         {
             // Arrange
             var sheet = new SASheetDataBuilder()
@@ -480,7 +480,7 @@ namespace SheetAtlas.Tests.Foundation.Services
             var analysis = _resolver.AnalyzeMergeComplexity(sheet.MergedCells);
 
             // Then resolve
-            var resolved = await _resolver.ResolveMergedCellsAsync(
+            var resolved = _resolver.ResolveMergedCells(
                 sheet,
                 analysis.RecommendedStrategy);
 
