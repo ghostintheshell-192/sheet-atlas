@@ -231,7 +231,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             // INTEGRATION: Analyze and enrich sheet data via orchestrator
             // Orchestrator will apply MergedCellResolver BEFORE column analysis
-            var enrichedData = await _analysisOrchestrator.EnrichAsync(sheetData, fileName, errors);
+            var enrichedData = await _analysisOrchestrator.EnrichAsync(sheetData, errors);
 
             return enrichedData;
         }

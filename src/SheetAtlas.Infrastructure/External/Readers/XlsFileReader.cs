@@ -226,7 +226,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             sheetData.TrimExcess();
 
             // INTEGRATION: Analyze and enrich sheet data via orchestrator
-            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, fileName, errors).Result;
+            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, errors).Result;
 
             return enrichedData;
         }
