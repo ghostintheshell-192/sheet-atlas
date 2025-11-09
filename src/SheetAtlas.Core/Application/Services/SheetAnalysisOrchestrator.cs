@@ -36,7 +36,7 @@ namespace SheetAtlas.Core.Application.Services
             _warnThreshold = warnThreshold;
         }
 
-        public async Task<SASheetData> EnrichAsync(SASheetData rawData, string fileName, List<ExcelError> errors)
+        public async Task<SASheetData> EnrichAsync(SASheetData rawData, List<ExcelError> errors)
         {
             if (rawData == null)
                 throw new ArgumentNullException(nameof(rawData));
@@ -48,10 +48,10 @@ namespace SheetAtlas.Core.Application.Services
 
             // STEP 1: Resolve merged cells (FIRST - before column analysis needs expanded data)
             // This is a synchronous in-memory operation (no I/O)
-            var resolvedData = ResolveMergedCells(rawData, fileName, errors);
+            var resolvedData = ResolveMergedCells(rawData, errors);
 
             // STEP 2: Column analysis (works on resolved data with merged cells expanded)
-            EnrichSheetWithColumnAnalysis(fileName, resolvedData, errors);
+            EnrichSheetWithColumnAnalysis(resolvedData, errors);
 
             return resolvedData;
         }
@@ -62,7 +62,7 @@ namespace SheetAtlas.Core.Application.Services
         /// MUST run BEFORE column analysis to ensure accurate type detection.
         /// Synchronous operation - all work is in-memory (no I/O).
         /// </summary>
-        private SASheetData ResolveMergedCells(SASheetData sheetData, string fileName, List<ExcelError> errors)
+        private SASheetData ResolveMergedCells(SASheetData sheetData, List<ExcelError> errors)
         {
             // Skip if no merged cells
             if (sheetData.MergedCells.Count == 0)
@@ -130,7 +130,7 @@ namespace SheetAtlas.Core.Application.Services
         /// Samples cells from each column, normalizes data, runs analysis, populates metadata, adds anomalies as ExcelErrors.
         /// NOTE: Only analyzes DATA rows (skips header rows).
         /// </summary>
-        private void EnrichSheetWithColumnAnalysis(string fileName, SASheetData sheetData, List<ExcelError> errors)
+        private void EnrichSheetWithColumnAnalysis(SASheetData sheetData, List<ExcelError> errors)
         {
             int maxSampleSize = Math.Min(100, sheetData.DataRowCount);
 
@@ -180,7 +180,7 @@ namespace SheetAtlas.Core.Application.Services
                 // Map sample row index to absolute row index
                 foreach (var anomaly in analysisResult.Anomalies)
                 {
-                    var error = CreateExcelErrorFromAnomaly(fileName, sheetData.SheetName, colIndex, anomaly, absoluteRowIndices);
+                    var error = CreateExcelErrorFromAnomaly(sheetData.SheetName, colIndex, anomaly, absoluteRowIndices);
                     errors.Add(error);
                 }
 
@@ -228,12 +228,11 @@ namespace SheetAtlas.Core.Application.Services
         /// Helper method: Maps CellAnomaly to ExcelError for structured file logging.
         /// Creates cell-level error with location reference (e.g., row=5, col=2) and appropriate severity.
         /// </summary>
-        /// <param name="fileName">Source file name</param>
         /// <param name="sheetName">Sheet name where anomaly was found</param>
         /// <param name="columnIndex">Column index (0-based)</param>
         /// <param name="anomaly">Cell anomaly with sample-relative row index</param>
         /// <param name="absoluteRowIndices">Mapping from sample index to absolute sheet row index</param>
-        private ExcelError CreateExcelErrorFromAnomaly(string fileName, string sheetName, int columnIndex, CellAnomaly anomaly, List<int> absoluteRowIndices)
+        private ExcelError CreateExcelErrorFromAnomaly(string sheetName, int columnIndex, CellAnomaly anomaly, List<int> absoluteRowIndices)
         {
             // Map sample row index to absolute sheet row index
             // anomaly.RowIndex is relative to the sample (0 = first cell in sample)

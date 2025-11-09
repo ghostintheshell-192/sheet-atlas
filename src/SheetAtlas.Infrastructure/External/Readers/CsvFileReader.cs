@@ -245,7 +245,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             _logger.LogInfo($"Sheet trimmed to exact size: {sheetData.RowCount} rows × {sheetData.ColumnCount} cols = {sheetData.CellCount} cells", "CsvFileReader");
 
             // INTEGRATION: Analyze and enrich sheet data via orchestrator
-            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, fileName, errors).Result;
+            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, errors).Result;
 
             return enrichedData;
         }

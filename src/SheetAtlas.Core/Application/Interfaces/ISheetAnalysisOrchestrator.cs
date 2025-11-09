@@ -18,7 +18,6 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// Runs foundation services pipeline and adds detected anomalies to errors list.
         /// </summary>
         /// <param name="rawData">Raw sheet data from file reader (values populated, metadata minimal)</param>
-        /// <param name="fileName">Source file name (for logging/error context)</param>
         /// <param name="errors">Error list to append detected anomalies</param>
         /// <returns>Enriched sheet data with column metadata and analysis results</returns>
         /// <remarks>
@@ -32,6 +31,6 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// - Detect headers automatically
         /// - Normalize data values
         /// </remarks>
-        Task<SASheetData> EnrichAsync(SASheetData rawData, string fileName, List<ExcelError> errors);
+        Task<SASheetData> EnrichAsync(SASheetData rawData, List<ExcelError> errors);
     }
 }
