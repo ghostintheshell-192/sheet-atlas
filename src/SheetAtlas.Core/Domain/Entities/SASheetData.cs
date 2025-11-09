@@ -89,8 +89,7 @@ namespace SheetAtlas.Core.Domain.Entities
         /// </summary>
         public void AddRow(SACellData[] rowData)
         {
-            if (rowData == null)
-                throw new ArgumentNullException(nameof(rowData));
+            ArgumentNullException.ThrowIfNull(rowData);
 
             if (rowData.Length != ColumnNames.Length)
                 throw new ArgumentException($"Row has {rowData.Length} cells, expected {ColumnNames.Length}");

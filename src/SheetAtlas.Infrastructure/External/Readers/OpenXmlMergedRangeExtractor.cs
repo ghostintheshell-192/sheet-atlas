@@ -26,10 +26,8 @@ namespace SheetAtlas.Infrastructure.External.Readers
         /// </summary>
         public MergedRange[] ExtractMergedRanges(WorksheetPart worksheetPart, string sheetName, List<ExcelError> errors)
         {
-            if (worksheetPart == null)
-                throw new ArgumentNullException(nameof(worksheetPart));
-            if (errors == null)
-                throw new ArgumentNullException(nameof(errors));
+            ArgumentNullException.ThrowIfNull(worksheetPart);
+            ArgumentNullException.ThrowIfNull(errors);
 
             var mergeCellsElement = worksheetPart.Worksheet.Elements<MergeCells>().FirstOrDefault();
             if (mergeCellsElement == null)

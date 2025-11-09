@@ -11,7 +11,7 @@ namespace SheetAtlas.Core.Shared.Helpers
     /// Utility class for file path operations and naming conventions
     /// Used for generating consistent folder names for file logging
     /// </summary>
-    public static class FilePathHelper
+    public static partial class FilePathHelper
     {
         /// <summary>
         /// Generates a folder name for file logging based on filename and path hash
@@ -52,7 +52,7 @@ namespace SheetAtlas.Core.Shared.Helpers
             sanitized = sanitized.Replace(' ', '-');
 
             // Remove special characters (keep only letters, digits, hyphens, underscores)
-            sanitized = Regex.Replace(sanitized, @"[^a-z0-9\-_]", "");
+            sanitized = MyRegex().Replace(sanitized, "");
 
             // Remove multiple consecutive hyphens
             sanitized = Regex.Replace(sanitized, @"-+", "-");
@@ -125,5 +125,8 @@ namespace SheetAtlas.Core.Shared.Helpers
         {
             return $"{timestamp:yyyyMMdd_HHmmss}.json";
         }
+
+        [GeneratedRegex(@"[^a-z0-9\-_]")]
+        private static partial Regex MyRegex();
     }
 }

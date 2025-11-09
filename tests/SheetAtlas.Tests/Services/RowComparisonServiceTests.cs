@@ -19,6 +19,7 @@ namespace SheetAtlas.Tests.Services
     {
         private readonly Mock<ILogService> _mockLogger;
         private readonly RowComparisonService _service;
+        private static readonly string[] _stringArray = new[] { "Name", "Age", "City" };
 
         public RowComparisonServiceTests()
         {
@@ -97,7 +98,7 @@ namespace SheetAtlas.Tests.Services
         public void GetColumnHeaders_ValidSheet_ReturnsColumnHeaders()
         {
             // Arrange
-            var excelFile = CreateExcelFileWithSheet("Sheet1", new[] { "Name", "Age", "City" });
+            var excelFile = CreateExcelFileWithSheet("Sheet1", _stringArray);
 
             // Act
             var headers = _service.GetColumnHeaders(excelFile, "Sheet1");
@@ -248,7 +249,7 @@ namespace SheetAtlas.Tests.Services
 
         #region Helper Methods
 
-        private ExcelFile CreateExcelFileWithSheet(string sheetName, string[]? columnNames = null)
+        private static ExcelFile CreateExcelFileWithSheet(string sheetName, string[]? columnNames = null)
         {
             var columns = columnNames ?? new[] { "Column1" };
             var sheetData = new SASheetData(sheetName, columns);
@@ -274,7 +275,7 @@ namespace SheetAtlas.Tests.Services
             );
         }
 
-        private IExcelReaderService CreateRealExcelReaderService()
+        private static IExcelReaderService CreateRealExcelReaderService()
         {
             var serviceLogger = new Mock<ILogService>();
             var readerLogger = new Mock<ILogService>();
@@ -311,7 +312,7 @@ namespace SheetAtlas.Tests.Services
             return new ExcelReaderService(readers, serviceLogger.Object, settingsMock.Object);
         }
 
-        private string GetTestFilePath(string category, string filename)
+        private static string GetTestFilePath(string category, string filename)
         {
             var testDataPath = Path.Combine(
                 Directory.GetCurrentDirectory(),

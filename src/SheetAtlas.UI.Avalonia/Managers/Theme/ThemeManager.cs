@@ -138,7 +138,7 @@ namespace SheetAtlas.UI.Avalonia.Managers
             }
         }
 
-        private bool IsThemeResource(object key)
+        private static bool IsThemeResource(object key)
         {
             var keyString = key?.ToString();
             if (string.IsNullOrEmpty(keyString))
@@ -182,7 +182,7 @@ namespace SheetAtlas.UI.Avalonia.Managers
                    keyString.Contains("Alt");
         }
 
-        private Theme LoadThemePreference()
+        private static Theme LoadThemePreference()
         {
             // TODO: Load from user settings or config file
             // For now, default to Light theme

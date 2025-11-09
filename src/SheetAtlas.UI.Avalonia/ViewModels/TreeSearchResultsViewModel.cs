@@ -167,7 +167,7 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
                 .Where(fg => fg.File == file)
                 .ToList();
 
-            if (!fileGroupsToRemove.Any())
+            if (fileGroupsToRemove.Count == 0)
                 continue;
 
             foreach (var fileGroup in fileGroupsToRemove)

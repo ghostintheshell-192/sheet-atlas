@@ -8,12 +8,12 @@ namespace SheetAtlas.Core.Application.Services.Foundation
     /// Extracts currency information from Excel number format strings.
     /// Implements ICurrencyDetector interface.
     /// </summary>
-    public class CurrencyDetector : ICurrencyDetector
+    public partial class CurrencyDetector : ICurrencyDetector
     {
+        private static readonly System.Buffers.SearchValues<char> s_myChars = System.Buffers.SearchValues.Create("#0");
+
         // Pattern for Excel format: [$€-407] #,##0.00
-        private static readonly Regex _currencyFormatPattern = new(
-            @"\[\$(?<symbol>[^\-\]]+)(?:-(?<locale>[^\]]+))?\]",
-            RegexOptions.Compiled);
+        private static readonly Regex _currencyFormatPattern = MyRegex();
 
         // Pattern for ISO code in brackets: [EUR]
         private static readonly Regex _isoCodePattern = new(
@@ -149,14 +149,14 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         public IReadOnlyList<CurrencyInfo> DetectMixedCurrencies(IEnumerable<string> cellFormats)
         {
-            var currencies = new Dictionary<string, CurrencyInfo>();
+            Dictionary<string, CurrencyInfo> currencies = new();
 
             foreach (var format in cellFormats)
             {
                 var currency = DetectCurrency(format);
-                if (currency != null && !currencies.ContainsKey(currency.Code))
+                if (currency != null)
                 {
-                    currencies[currency.Code] = currency;
+                    currencies.TryAdd(currency.Code, currency);
                 }
             }
 
@@ -173,12 +173,12 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return DetermineCurrencyFromSymbol(symbol);
         }
 
-        private string? DetermineCurrencyFromSymbol(string symbol)
+        private static string? DetermineCurrencyFromSymbol(string symbol)
         {
             return _symbolToCurrency.TryGetValue(symbol, out var code) ? code : null;
         }
 
-        private string GetSymbolForCode(string code)
+        private static string GetSymbolForCode(string code)
         {
             return code switch
             {
@@ -195,7 +195,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             };
         }
 
-        private int CountDecimalPlaces(string format)
+        private static int CountDecimalPlaces(string format)
         {
             // Search for pattern .00 or ,00
             var decimalMatch = Regex.Match(format, @"[.,]0+");
@@ -263,7 +263,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return (formatDecimalSep, formatThousandSep);
         }
 
-        private bool ShouldInvertSeparators(string? locale)
+        private static bool ShouldInvertSeparators(string? locale)
         {
             if (string.IsNullOrEmpty(locale))
                 return false;
@@ -292,11 +292,11 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return europeanLocales.Contains(locale.ToUpperInvariant());
         }
 
-        private CurrencyPosition DetectPosition(string format, string symbol)
+        private static CurrencyPosition DetectPosition(string format, string symbol)
         {
             // Find the position of symbol relative to numbers
             var symbolIndex = format.IndexOf(symbol);
-            var numberIndex = format.IndexOfAny(new[] { '#', '0' });
+            var numberIndex = format.AsSpan().IndexOfAny(s_myChars);
 
             if (symbolIndex < 0 || numberIndex < 0)
                 return CurrencyPosition.Prefix;
@@ -304,7 +304,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return symbolIndex < numberIndex ? CurrencyPosition.Prefix : CurrencyPosition.Suffix;
         }
 
-        private CurrencyInfo CreateCurrencyInfo(
+        private static CurrencyInfo CreateCurrencyInfo(
             string code,
             string symbol,
             CurrencyPosition position,
@@ -351,5 +351,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 Locale = locale
             };
         }
+
+        [GeneratedRegex(@"\[\$(?<symbol>[^\-\]]+)(?:-(?<locale>[^\]]+))?\]", RegexOptions.Compiled)]
+        private static partial Regex MyRegex();
     }
 }

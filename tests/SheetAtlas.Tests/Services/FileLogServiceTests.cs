@@ -618,7 +618,7 @@ namespace SheetAtlas.Tests.Services
 
         #region Helper Methods
 
-        private FileLogEntry CreateValidFileLogEntry(string? filePath = null)
+        private static FileLogEntry CreateValidFileLogEntry(string? filePath = null)
         {
             filePath ??= "/home/user/test-file.xlsx";
 

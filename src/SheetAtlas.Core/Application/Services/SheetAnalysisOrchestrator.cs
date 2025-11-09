@@ -38,10 +38,8 @@ namespace SheetAtlas.Core.Application.Services
 
         public Task<SASheetData> EnrichAsync(SASheetData rawData, List<ExcelError> errors)
         {
-            if (rawData == null)
-                throw new ArgumentNullException(nameof(rawData));
-            if (errors == null)
-                throw new ArgumentNullException(nameof(errors));
+            ArgumentNullException.ThrowIfNull(rawData);
+            ArgumentNullException.ThrowIfNull(errors);
 
             // NOTE: HeaderRowCount is set by file reader (default=1)
             // Future: UI will allow manual configuration for multi-row headers
@@ -225,7 +223,7 @@ namespace SheetAtlas.Core.Application.Services
         /// <param name="columnIndex">Column index (0-based)</param>
         /// <param name="anomaly">Cell anomaly with sample-relative row index</param>
         /// <param name="absoluteRowIndices">Mapping from sample index to absolute sheet row index</param>
-        private ExcelError CreateExcelErrorFromAnomaly(string sheetName, int columnIndex, CellAnomaly anomaly, List<int> absoluteRowIndices)
+        private static ExcelError CreateExcelErrorFromAnomaly(string sheetName, int columnIndex, CellAnomaly anomaly, List<int> absoluteRowIndices)
         {
             // Map sample row index to absolute sheet row index
             // anomaly.RowIndex is relative to the sample (0 = first cell in sample)

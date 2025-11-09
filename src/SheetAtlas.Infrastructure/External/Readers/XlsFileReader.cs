@@ -29,8 +29,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
             RegisterEncodingProvider();
         }
 
-        public IReadOnlyList<string> SupportedExtensions =>
-            new[] { ".xls", ".xlt" }.AsReadOnly();
+        public IReadOnlyList<string> SupportedExtensions => list.AsReadOnly();
+
+        private static readonly string[] list = new[] { ".xls", ".xlt" };
 
         public async Task<ExcelFile> ReadAsync(string filePath, CancellationToken cancellationToken = default)
         {
@@ -231,26 +232,27 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return enrichedData;
         }
 
-        private string EnsureUniqueColumnName(string baseName, Dictionary<string, int> columnNameCounts)
+        private static string EnsureUniqueColumnName(string baseName, Dictionary<string, int> columnNameCounts)
         {
-            if (!columnNameCounts.ContainsKey(baseName))
+            if (!columnNameCounts.TryGetValue(baseName, out int value))
             {
-                columnNameCounts[baseName] = 1;
+                value = 1;
+                columnNameCounts[baseName] = value;
                 return baseName;
             }
 
-            columnNameCounts[baseName]++;
-            return $"{baseName}_{columnNameCounts[baseName]}";
+            columnNameCounts[baseName] = ++value;
+            return $"{baseName}_{value}";
         }
 
-        private LoadStatus DetermineLoadStatus(Dictionary<string, SASheetData> sheets, List<ExcelError> errors)
+        private static LoadStatus DetermineLoadStatus(Dictionary<string, SASheetData> sheets, List<ExcelError> errors)
         {
             var hasErrors = errors.Any(e => e.Level == LogSeverity.Error || e.Level == LogSeverity.Critical);
 
             if (!hasErrors)
                 return LoadStatus.Success;
 
-            return sheets.Any() ? LoadStatus.PartialSuccess : LoadStatus.Failed;
+            return sheets.Count != 0 ? LoadStatus.PartialSuccess : LoadStatus.Failed;
         }
 
         private void RegisterEncodingProvider()

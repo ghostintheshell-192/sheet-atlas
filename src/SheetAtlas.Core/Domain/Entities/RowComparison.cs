@@ -161,12 +161,12 @@ namespace SheetAtlas.Core.Domain.Entities
                     }
                 }
 
-                if (filesWithMissingHeader.Any())
+                if (filesWithMissingHeader.Count != 0)
                 {
                     warnings.Add(RowComparisonWarning.CreateMissingHeaderWarning(headerName, filesWithMissingHeader));
                 }
 
-                if (filesWithDifferentPosition.Any())
+                if (filesWithDifferentPosition.Count != 0)
                 {
                     warnings.Add(RowComparisonWarning.CreateStructureMismatchWarning(headerName, filesWithDifferentPosition));
                 }
