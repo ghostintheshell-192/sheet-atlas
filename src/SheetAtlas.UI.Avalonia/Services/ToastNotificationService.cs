@@ -21,7 +21,6 @@ namespace SheetAtlas.UI.Avalonia.Services
             _logService.AddLogMessage(new LogMessage(level, title, message));
 
             // TODO: Show visual Avalonia toast (Phase 2 - UI implementation)
-            // ShowAvaloniaToast(level, title, message, durationMs);
         }
     }
 }

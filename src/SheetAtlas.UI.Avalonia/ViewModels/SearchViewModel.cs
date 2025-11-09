@@ -122,32 +122,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
         _selectionManager.SelectionChanged += OnSelectionChanged;
         _selectionManager.VisibilityChanged += OnVisibilityChanged;
 
-
-        // Wire up events from managers to notify UI of changes
-        // _searchResultsManager.ResultsChanged += (s, e) =>
-        // {
-        //     base.OnPropertyChanged(nameof(SearchResults));
-        //     base.OnPropertyChanged(nameof(GroupedResults));
-        // };
-
-        // _searchResultsManager.SuggestionsChanged += (s, e) =>
-        // {
-        //     base.OnPropertyChanged(nameof(Suggestions));
-        //     UpdateSearchSuggestions();
-        // };
-
-        // _searchResultsManager.GroupedResultsUpdated += (s, e) =>
-        //     _selectionManager.UpdateGroupedResults(e.GroupedResults);
-
-        // _selectionManager.SelectionChanged += (s, e) =>
-        // {
-        //     base.OnPropertyChanged(nameof(SelectedCells));
-        //     base.OnPropertyChanged(nameof(SelectedSheets));
-        // };
-
-        // _selectionManager.VisibilityChanged += (s, e) =>
-        //     base.OnPropertyChanged(nameof(GroupedResults));
-
         // Initialize commands
         SearchCommand = new RelayCommand(async () => await PerformSearchAsync(SearchQuery), () => !string.IsNullOrWhiteSpace(SearchQuery));
         ClearSearchCommand = new RelayCommand(() => Task.Run(ClearSearch));
