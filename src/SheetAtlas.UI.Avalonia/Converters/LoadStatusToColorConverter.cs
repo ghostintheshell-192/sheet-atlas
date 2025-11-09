@@ -24,7 +24,6 @@ public class LoadStatusToColorConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        // Not needed for one-way binding
         return LoadStatus.Success;
     }
 }

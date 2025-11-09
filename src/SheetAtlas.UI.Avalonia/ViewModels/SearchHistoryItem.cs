@@ -28,8 +28,6 @@ public class SearchHistoryItem : ViewModelBase, IDisposable
         set => SetField(ref _fileGroups, value);
     }
 
-    // Properties for per-search selection management
-    // O(n) instead of O(n³) - uses flat cache
     public int SelectedCount => _flattenedItems
         .Count(item => item.IsSelected && item.CanBeCompared);
 
@@ -42,7 +40,6 @@ public class SearchHistoryItem : ViewModelBase, IDisposable
 
     public ICommand ClearSelectionCommand { get; private set; }
 
-    // Event to notify when selection changes for this specific search
     public event EventHandler? SelectionChanged;
 
     public SearchHistoryItem(string query, IReadOnlyList<SearchResult> results)

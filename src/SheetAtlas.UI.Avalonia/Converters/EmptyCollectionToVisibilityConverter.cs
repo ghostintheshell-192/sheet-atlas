@@ -30,7 +30,6 @@ public class EmptyCollectionToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        // Not needed for one-way binding
         return false;
     }
 }
