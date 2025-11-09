@@ -30,9 +30,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
             _options = CsvReaderOptions.Default;
         }
 
-        public IReadOnlyList<string> SupportedExtensions => list.AsReadOnly();
+        private static readonly string[] _supportedExtensions = new[] { ".csv" };
 
-        private static readonly string[] list = new[] { ".csv" };
+        public IReadOnlyList<string> SupportedExtensions => _supportedExtensions.AsReadOnly();
 
         public void Configure(IReaderOptions options)
         {

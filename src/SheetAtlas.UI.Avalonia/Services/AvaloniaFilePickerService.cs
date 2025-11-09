@@ -7,7 +7,7 @@ namespace SheetAtlas.UI.Avalonia.Services;
 public class AvaloniaFilePickerService : IFilePickerService
 {
     private readonly ILogService _logger;
-    private static readonly string[] item = new[] { "*.xlsx", "*.xlsm", "*.xltx", "*.xltm", "*.xls", "*.xlt", "*.csv" };
+    private static readonly string[] _excelFileFilters = new[] { "*.xlsx", "*.xlsm", "*.xltx", "*.xltm", "*.xls", "*.xlt", "*.csv" };
 
     public AvaloniaFilePickerService(ILogService logger)
     {
@@ -50,7 +50,7 @@ public class AvaloniaFilePickerService : IFilePickerService
                     // All supported spreadsheet formats
                     fileTypes.Add(new FilePickerFileType("All Supported Formats")
                     {
-                        Patterns = item
+                        Patterns = _excelFileFilters
                     });
 
                     // Modern Excel formats

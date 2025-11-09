@@ -35,9 +35,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
         }
 
-        public IReadOnlyList<string> SupportedExtensions => list.AsReadOnly();
+        private static readonly string[] _supportedExtensions = new[] { ".xlsx", ".xlsm", ".xltx", ".xltm" };
 
-        private static readonly string[] list = new[] { ".xlsx", ".xlsm", ".xltx", ".xltm" };
+        public IReadOnlyList<string> SupportedExtensions => _supportedExtensions.AsReadOnly();
 
         public async Task<ExcelFile> ReadAsync(string filePath, CancellationToken cancellationToken = default)
         {
