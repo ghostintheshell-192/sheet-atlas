@@ -8,7 +8,6 @@ namespace SheetAtlas.Core.Application.Services.Foundation
     /// <summary>
     /// Resolves merged cells using configurable strategies.
     /// Implements IMergedCellResolver interface.
-    /// REPLACES old IMergedCellProcessor.
     /// </summary>
     public class MergedCellResolver : IMergedCellResolver
     {

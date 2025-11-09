@@ -6,7 +6,6 @@ namespace SheetAtlas.Core.Application.Interfaces
 {
     /// <summary>
     /// Resolves merged cells using configurable strategies.
-    /// REPLACES IMergedCellProcessor (old interface - deprecated).
     /// Handles horizontal/vertical merges, warns on complex patterns.
     /// </summary>
     /// <remarks>
