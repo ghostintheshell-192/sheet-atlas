@@ -180,6 +180,22 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     }
 
                     sheetData = new SASheetData(sheetName, columnNames.ToArray());
+
+                    // IMPORTANT: CsvHelper behavior differs from XLS/XLSX readers
+                    // - XLS/XLSX: DataTable/Worksheet INCLUDE header row → we iterate from row 0
+                    // - CSV: CsvHelper with HasHeaderRecord=true SKIPS header → GetRecords() returns only data
+                    //
+                    // Solution: Manually reconstruct header row from columnNames
+                    // Trade-off: Header cells are always Text (acceptable - headers are typically text anyway)
+                    // Benefit: Simpler than switching to HasHeaderRecord=false and parsing manually
+                    //
+                    // Row indexing after this: absolute 0-based (row 0 = header, row 1+ = data)
+                    var headerRow = new SACellData[columnNames.Count];
+                    for (int i = 0; i < columnNames.Count; i++)
+                    {
+                        headerRow[i] = new SACellData(SACellValue.FromString(columnNames[i], stringPool));
+                    }
+                    sheetData.AddRow(headerRow);
                 }
 
                 // Process row data
@@ -219,6 +235,10 @@ namespace SheetAtlas.Infrastructure.External.Readers
             // Log interning statistics
             var memorySaved = stringPool.EstimatedMemorySaved(totalStrings);
             _logger.LogInfo($"String interning: {stringPool.Count} unique from {totalStrings} total (~{memorySaved / 1024} KB saved)", "CsvFileReader");
+
+            // Set header row count (currently single-row headers only)
+            const int headerRowCount = 1;
+            sheetData.SetHeaderRowCount(headerRowCount);
 
             // Trim excess capacity to save memory
             sheetData.TrimExcess();

@@ -172,8 +172,11 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             var sheetData = new SASheetData(sheetName, columnNames.ToArray());
 
-            // Add data rows (skip first row which is header)
-            for (int rowIndex = 1; rowIndex < sourceTable.Rows.Count; rowIndex++)
+            // Populate ALL rows (including header row at index 0)
+            // NOTE: ExcelDataReader returns DataTable with ALL rows (header included at index 0)
+            // This is simpler than CSV where CsvHelper skips the header when HasHeaderRecord=true
+            // Row indexing: absolute 0-based (row 0 = header, row 1+ = data)
+            for (int rowIndex = 0; rowIndex < sourceTable.Rows.Count; rowIndex++)
             {
                 var sourceRow = sourceTable.Rows[rowIndex];
                 var rowData = new SACellData[columnNames.Count];
@@ -214,6 +217,10 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     sheetData.AddRow(rowData);
                 }
             }
+
+            // Set header row count (currently single-row headers only)
+            const int headerRowCount = 1;
+            sheetData.SetHeaderRowCount(headerRowCount);
 
             // Trim excess capacity to save memory
             sheetData.TrimExcess();
