@@ -53,11 +53,16 @@ namespace SheetAtlas.Core.Application.Services
             if (sheet == null)
                 throw ComparisonException.MissingSheet(searchResult.SheetName, searchResult.FileName);
 
-            if (searchResult.Row >= sheet.RowCount)
+            // SearchResult.Row uses DATA-RELATIVE indexing (0 = first data row)
+            // Validate against DataRowCount, not total RowCount
+            if (searchResult.Row >= sheet.DataRowCount)
                 throw new ArgumentOutOfRangeException(nameof(searchResult), $"Row index {searchResult.Row} is out of range for sheet '{searchResult.SheetName}'");
 
+            // Convert data-relative index to absolute index for SASheetData access
+            int absoluteRow = sheet.HeaderRowCount + searchResult.Row;
+
             // Extract complete row data
-            var rowCells = sheet.GetRow(searchResult.Row);
+            var rowCells = sheet.GetRow(absoluteRow);
             // Convert SACellData[] to object[] for compatibility with ExcelRow
             var cells = rowCells.Select(cell => (object?)cell.Value.ToString()).ToArray();
 

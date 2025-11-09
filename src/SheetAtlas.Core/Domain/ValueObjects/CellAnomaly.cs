@@ -9,7 +9,10 @@ namespace SheetAtlas.Core.Domain.ValueObjects
     public record CellAnomaly
     {
         /// <summary>
-        /// Row index where anomaly was found (0-based).
+        /// Row index where anomaly was found WITHIN THE SAMPLE provided to ColumnAnalysisService.
+        /// Uses SAMPLE-RELATIVE 0-based indexing (0 = first cell in sample array).
+        /// NOTE: This is NOT absolute row position in sheet!
+        /// The caller (SheetAnalysisOrchestrator) must map this to absolute row using sample tracking.
         /// </summary>
         public int RowIndex { get; init; }
 

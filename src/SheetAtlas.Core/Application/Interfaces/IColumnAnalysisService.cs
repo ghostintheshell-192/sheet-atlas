@@ -10,7 +10,8 @@ namespace SheetAtlas.Core.Application.Interfaces
     /// <remarks>
     /// Samples ~100 cells, calculates type distribution and confidence.
     /// Confidence > 0.8 = strong type, else = mixed.
-    /// Detects headers, currency, warnings.
+    /// Detects currency, data type anomalies.
+    /// NOTE: Header detection is manual via UI (future feature).
     /// </remarks>
     public interface IColumnAnalysisService
     {
@@ -28,18 +29,6 @@ namespace SheetAtlas.Core.Application.Interfaces
             string columnName,
             IReadOnlyList<SACellValue> sampleCells,
             IReadOnlyList<string?> numberFormats,
-            DataRegion? customRegion = null);
-
-        /// <summary>
-        /// Detects header rows in sheet data (not-yet-normalized).
-        /// </summary>
-        /// <param name="firstRows">First 10-20 rows of sheet data</param>
-        /// <param name="columnCount">Number of columns</param>
-        /// <param name="customRegion">Optional user-defined region (overrides auto-detect)</param>
-        /// <returns>Header analysis: row indices that are headers, confidence</returns>
-        HeaderDetectionResult DetectHeaders(
-            IReadOnlyList<SACellData[]> firstRows,
-            int columnCount,
             DataRegion? customRegion = null);
     }
 }

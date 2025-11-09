@@ -213,15 +213,20 @@ namespace SheetAtlas.Infrastructure.External.Readers
                 return null;
             }
 
-            // Create SASheetData with column names
+            // Create SASheetData with temporary column names (will be updated after header population)
             var columnNames = CreateColumnNamesArray(headerColumns);
             var sheetData = new SASheetData(sheetName, columnNames);
 
             // Populate SASheetData.MergedCells for Foundation Layer processing
             PopulateMergedCells(sheetData, mergedRanges, headerColumns.Keys.Min());
 
-            // Populate rows (data rows do NOT expand merged cells - left to MergedCellResolver)
+            // NEW: Populate ALL rows (including header rows)
+            // Header rows are now included in SASheetData (absolute 0-based indexing)
             PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns);
+
+            // Set header row count (for now, always 1 - future: detect multi-row headers)
+            const int headerRowCount = 1;
+            sheetData.SetHeaderRowCount(headerRowCount);
 
             // Trim excess capacity to save memory
             sheetData.TrimExcess();
@@ -327,16 +332,11 @@ namespace SheetAtlas.Infrastructure.External.Readers
         private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, MergedRange[] mergedRanges, Dictionary<int, string> headerColumns)
         {
             int firstCol = headerColumns.Keys.Min();
-            bool isFirstRow = true;
 
+            // NEW: Populate ALL rows including header (absolute 0-based indexing)
+            // Row 0 = header, Row 1+ = data rows
             foreach (var row in worksheetPart.Worksheet.Descendants<Row>())
             {
-                if (isFirstRow)
-                {
-                    isFirstRow = false;
-                    continue; // Skip header row
-                }
-
                 var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, firstCol);
                 if (rowData != null)
                 {
