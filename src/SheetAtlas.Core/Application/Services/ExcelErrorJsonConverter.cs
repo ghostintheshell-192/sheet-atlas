@@ -136,40 +136,33 @@ namespace SheetAtlas.Core.Application.Services
         private CellReference? ParseCellReference(string cellNotation)
         {
             // Parse Excel notation like "A1", "B2", etc.
-            // Simple implementation - assumes valid notation
+            // Returns null for invalid formats (validation handled explicitly below)
             if (string.IsNullOrEmpty(cellNotation))
                 return null;
 
-            try
-            {
-                // Extract column letters and row number
-                int i = 0;
-                while (i < cellNotation.Length && char.IsLetter(cellNotation[i]))
-                    i++;
+            // Extract column letters and row number
+            int i = 0;
+            while (i < cellNotation.Length && char.IsLetter(cellNotation[i]))
+                i++;
 
-                if (i == 0 || i == cellNotation.Length)
-                    return null;
-
-                string columnLetters = cellNotation.Substring(0, i);
-                string rowString = cellNotation.Substring(i);
-
-                if (!int.TryParse(rowString, out int row))
-                    return null;
-
-                // Convert column letters to 0-based index (A=0, B=1, Z=25, AA=26, etc.)
-                int column = 0;
-                for (int j = 0; j < columnLetters.Length; j++)
-                {
-                    column = column * 26 + (char.ToUpperInvariant(columnLetters[j]) - 'A');
-                }
-
-                // Convert Excel 1-based row to 0-based absolute index
-                return new CellReference(row - 1, column);
-            }
-            catch
-            {
+            if (i == 0 || i == cellNotation.Length)
                 return null;
+
+            string columnLetters = cellNotation.Substring(0, i);
+            string rowString = cellNotation.Substring(i);
+
+            if (!int.TryParse(rowString, out int row))
+                return null;
+
+            // Convert column letters to 0-based index (A=0, B=1, Z=25, AA=26, etc.)
+            int column = 0;
+            for (int j = 0; j < columnLetters.Length; j++)
+            {
+                column = column * 26 + (char.ToUpperInvariant(columnLetters[j]) - 'A');
             }
+
+            // Convert Excel 1-based row to 0-based absolute index
+            return new CellReference(row - 1, column);
         }
 
         public override void Write(Utf8JsonWriter writer, ExcelError value, JsonSerializerOptions options)
