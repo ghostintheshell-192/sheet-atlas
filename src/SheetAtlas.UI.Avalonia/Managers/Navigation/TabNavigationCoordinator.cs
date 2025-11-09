@@ -102,7 +102,7 @@ public class TabNavigationCoordinator : ITabNavigationCoordinator
     /// IMPORTANT: These are absolute indices in the XAML markup, NOT relative to visible tabs.
     /// Avalonia TabControl uses absolute indices regardless of TabItem visibility.
     /// </summary>
-    private int GetTabIndex(string tabName)
+    private static int GetTabIndex(string tabName)
     {
         return tabName switch
         {

@@ -11,10 +11,8 @@ public interface IGroupedSearchResult : IToggleable
     bool HasVisibleDifferences { get; }
     IReadOnlyList<IFileOccurrence> FileOccurrences { get; }
 
-    // Methods to update statistics
     void UpdateStats(int totalFileCount);
     void UpdateVisibilityStats();
 
-    // Method to add a file occurrence
     void AddFileOccurrence(IFileOccurrence fileOccurrence);
 }

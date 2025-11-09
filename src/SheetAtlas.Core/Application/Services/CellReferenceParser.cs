@@ -3,9 +3,9 @@ using SheetAtlas.Core.Application.Interfaces;
 
 namespace SheetAtlas.Core.Application.Services
 {
-    public class CellReferenceParser : ICellReferenceParser
+    public partial class CellReferenceParser : ICellReferenceParser
     {
-        private static readonly Regex _columnRegex = new("[A-Za-z]+", RegexOptions.Compiled);
+        private static readonly Regex _columnRegex = MyRegex();
         private static readonly Regex _rowRegex = new("[0-9]+", RegexOptions.Compiled);
 
         public string GetColumnName(string cellReference)
@@ -57,5 +57,8 @@ namespace SheetAtlas.Core.Application.Services
 
             return columnName;
         }
+
+        [GeneratedRegex("[A-Za-z]+", RegexOptions.Compiled)]
+        private static partial Regex MyRegex();
     }
 }

@@ -36,9 +36,9 @@ namespace SheetAtlas.Core.Application.Utilities
             if (string.IsNullOrEmpty(format))
                 return false;
 
-            return format.Contains("$") || format.Contains("€") ||
-                   format.Contains("£") || format.Contains("¥") ||
-                   format.Contains("₹") || format.Contains("₽");
+            return format.Contains('$') || format.Contains('€') ||
+                   format.Contains('£') || format.Contains('¥') ||
+                   format.Contains('₹') || format.Contains('₽');
         }
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace SheetAtlas.Core.Application.Utilities
             if (string.IsNullOrEmpty(format))
                 return false;
 
-            return format.Contains("%");
+            return format.Contains('%');
         }
     }
 }

@@ -53,8 +53,7 @@ namespace SheetAtlas.Logging.Services
 
         public void AddLogMessage(LogMessage message)
         {
-            if (message == null)
-                throw new ArgumentNullException(nameof(message));
+            ArgumentNullException.ThrowIfNull(message);
 
             lock (_lock)
             {
@@ -137,7 +136,7 @@ namespace SheetAtlas.Logging.Services
         /// <summary>
         /// Formats a log message for file output with improved readability
         /// </summary>
-        private string FormatLogLine(LogMessage message)
+        private static string FormatLogLine(LogMessage message)
         {
             var timestamp = message.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
             var level = message.Level.ToString().ToUpperInvariant().PadRight(8);

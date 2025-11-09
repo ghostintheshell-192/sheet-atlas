@@ -52,22 +52,16 @@ public class FileDetailsCoordinator : IFileDetailsCoordinator
 
         _logger.LogInfo($"Clean all data requested for: {file.FileName}", "FileDetailsCoordinator");
 
-        // Clear selection if this file is currently selected (prevent memory leak)
         onClearSelection(file);
 
-        // Remove search results that reference this file (TreeView history)
-        treeSearchResults?.RemoveSearchResultsForFile(file.File);
+        treeSearchResults?.RemoveSearchResultsForFile(file.File!);
 
-        // Remove current search results that reference this file (SearchViewModel)
-        searchViewModel?.RemoveResultsForFile(file.File);
+        searchViewModel?.RemoveResultsForFile(file.File!);
 
-        // Remove row comparisons that reference this file
-        _comparisonCoordinator.RemoveComparisonsForFile(file.File);
+        _comparisonCoordinator.RemoveComparisonsForFile(file.File!);
 
-        // Dispose ViewModel (which disposes ExcelFile and DataTables, then nulls the reference)
         file.Dispose();
 
-        // Finally, remove the file from the loaded files list
         _filesManager.RemoveFile(file);
 
         _logger.LogInfo($"Cleaned all data for file: {file.FileName}", "FileDetailsCoordinator");
@@ -76,14 +70,10 @@ public class FileDetailsCoordinator : IFileDetailsCoordinator
         // REASON: DataTable objects (100-500 MB each) end up in Large Object Heap (LOH)
         // ISSUE: .NET GC is lazy for Gen 2/LOH - can wait minutes before collection
         // IMPACT: Without this, memory stays high even after Dispose() until GC decides to run
-        // TODO: When DataTable is replaced with lightweight structures, this can be removed
-        //       or changed to standard GC.Collect() without aggressive mode
         Task.Run(() =>
         {
-            // Enable LOH compaction for this collection cycle
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 
-            // Force Gen 2 + LOH collection with compaction (blocking in background thread)
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
             GC.WaitForPendingFinalizers();
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
@@ -117,11 +107,10 @@ public class FileDetailsCoordinator : IFileDetailsCoordinator
             _activityLog.LogInfo($"Retrying file load: {file.FileName}", "FileRetry");
             _logger.LogInfo($"Retrying file load for: {file.FilePath}", "FileDetailsCoordinator");
 
-            var filePath = file.FilePath; // Save path before removal
+            var filePath = file.FilePath;
 
             await _filesManager.RetryLoadAsync(filePath);
 
-            // Re-select the file after retry to maintain focus
             var reloadedFile = _filesManager.LoadedFiles.FirstOrDefault(f =>
                 f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
 

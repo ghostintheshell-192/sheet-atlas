@@ -31,17 +31,12 @@ public class SearchViewModel : ViewModelBase, IDisposable
         {
             if (SetField(ref _searchQuery, value))
             {
-                // If the search query is empty or only whitespace, clear results immediately
                 if (string.IsNullOrWhiteSpace(value))
                 {
                     _ = SafeClearResultsAsync();
                 }
 
-                // Notify search command that CanExecute state may have changed
                 SearchCommand.RaiseCanExecuteChanged();
-
-                // Search is now triggered only by button click or Enter key
-                // No automatic search on every character typed
             }
         }
     }
@@ -49,31 +44,19 @@ public class SearchViewModel : ViewModelBase, IDisposable
     public bool CaseSensitive
     {
         get => _caseSensitive;
-        set
-        {
-            SetField(ref _caseSensitive, value);
-            // Search options changed, but search will be triggered only by button click
-        }
+        set => SetField(ref _caseSensitive, value);
     }
 
     public bool ExactMatch
     {
         get => _exactMatch;
-        set
-        {
-            SetField(ref _exactMatch, value);
-            // Search options changed, but search will be triggered only by button click
-        }
+        set => SetField(ref _exactMatch, value);
     }
 
     public bool UseRegexSearch
     {
         get => _useRegexSearch;
-        set
-        {
-            SetField(ref _useRegexSearch, value);
-            // Search options changed, but search will be triggered only by button click
-        }
+        set => SetField(ref _useRegexSearch, value);
     }
 
     public bool IsDropDownOpen
@@ -122,33 +105,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
         _selectionManager.SelectionChanged += OnSelectionChanged;
         _selectionManager.VisibilityChanged += OnVisibilityChanged;
 
-
-        // Wire up events from managers to notify UI of changes
-        // _searchResultsManager.ResultsChanged += (s, e) =>
-        // {
-        //     base.OnPropertyChanged(nameof(SearchResults));
-        //     base.OnPropertyChanged(nameof(GroupedResults));
-        // };
-
-        // _searchResultsManager.SuggestionsChanged += (s, e) =>
-        // {
-        //     base.OnPropertyChanged(nameof(Suggestions));
-        //     UpdateSearchSuggestions();
-        // };
-
-        // _searchResultsManager.GroupedResultsUpdated += (s, e) =>
-        //     _selectionManager.UpdateGroupedResults(e.GroupedResults);
-
-        // _selectionManager.SelectionChanged += (s, e) =>
-        // {
-        //     base.OnPropertyChanged(nameof(SelectedCells));
-        //     base.OnPropertyChanged(nameof(SelectedSheets));
-        // };
-
-        // _selectionManager.VisibilityChanged += (s, e) =>
-        //     base.OnPropertyChanged(nameof(GroupedResults));
-
-        // Initialize commands
         SearchCommand = new RelayCommand(async () => await PerformSearchAsync(SearchQuery), () => !string.IsNullOrWhiteSpace(SearchQuery));
         ClearSearchCommand = new RelayCommand(() => Task.Run(ClearSearch));
         ShowAllFilesCommand = new RelayCommand(() => Task.Run(() => _selectionManager.ShowAllFiles()));
@@ -204,8 +160,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     private async Task PerformSearchAsync(string query)
     {
-        // SearchResultsManager handles all error cases internally
-        // No need for try-catch here
         if (string.IsNullOrWhiteSpace(query))
         {
             await _searchResultsManager.PerformSearchAsync("");
@@ -224,12 +178,9 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     private void ClearSearch()
     {
-        // Execute on UI thread to avoid threading issues
         Dispatcher.UIThread.Post(() =>
         {
             SearchQuery = string.Empty;
-            // The SearchQuery setter will automatically trigger clearing of results
-            // But let's also explicitly clear to be sure
             _ = SafeClearResultsAsync();
         });
     }
@@ -252,7 +203,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
     private void UpdateSearchSuggestions()
     {
         SearchSuggestions.Clear();
-        foreach (var suggestion in Suggestions.Take(10)) // Limit to top 10 suggestions
+        foreach (var suggestion in Suggestions.Take(10))
         {
             SearchSuggestions.Add(suggestion);
         }
@@ -263,7 +214,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            // Clear suggestions if text is empty
             if (string.IsNullOrWhiteSpace(text))
             {
                 SearchSuggestions.Clear();
@@ -271,17 +221,14 @@ public class SearchViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            // Generate suggestions based on current search text
             var potentialSuggestions = new List<string>();
 
-            // Add suggestions from previous searches
             if (Suggestions != null)
             {
                 potentialSuggestions.AddRange(Suggestions.Where(s =>
                     s != null && s.Contains(text, StringComparison.OrdinalIgnoreCase)));
             }
 
-            // Add suggestions from file names
             if (_searchResultsManager.GroupedResults != null)
             {
                 var fileNames = _searchResultsManager.GroupedResults
@@ -331,7 +278,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
         if (disposing)
         {
-            // Currently, there are no managed resources to dispose
             _searchResultsManager.ResultsChanged -= OnResultsChanged;
             _searchResultsManager.SuggestionsChanged -= OnSuggestionsChanged;
             _searchResultsManager.GroupedResultsUpdated -= OnGroupedResultsUpdated;

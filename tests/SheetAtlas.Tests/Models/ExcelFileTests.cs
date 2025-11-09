@@ -6,6 +6,8 @@ namespace SheetAtlas.Tests.Models
 {
     public class ExcelFileTests
     {
+        private static readonly string[] _columnNames = new[] { "Column1" };
+
         [Fact]
         public void Constructor_WithValidData_SetsPropertiesCorrectly()
         {
@@ -14,7 +16,7 @@ namespace SheetAtlas.Tests.Models
             var status = LoadStatus.Success;
             var sheets = new Dictionary<string, SASheetData>
             {
-                ["Sheet1"] = new SASheetData("Sheet1", new[] { "Column1" })
+                ["Sheet1"] = new SASheetData("Sheet1", _columnNames)
             };
             var errors = new List<ExcelError>();
 
@@ -34,7 +36,7 @@ namespace SheetAtlas.Tests.Models
         public void GetSheet_WithExistingSheet_ReturnsSASheetData()
         {
             // Arrange
-            var sheet = new SASheetData("TestSheet", new[] { "Column1" });
+            var sheet = new SASheetData("TestSheet", _columnNames);
             var sheets = new Dictionary<string, SASheetData> { ["TestSheet"] = sheet };
             var excelFile = new ExcelFile("/test/file.xlsx", LoadStatus.Success, sheets, new List<ExcelError>());
 

@@ -522,7 +522,7 @@ namespace SheetAtlas.Tests.Foundation.Services
 
             // Assert
             result.DetectedType.Should().Be(DataType.Number);
-            result.Anomalies.Should().ContainSingle(a => a.CellValue.AsText().Contains("#"));
+            result.Anomalies.Should().ContainSingle(a => a.CellValue.AsText().Contains('#'));
             var anomaly = result.Anomalies.First();
             anomaly.Severity.Should().Be(LogSeverity.Warning, "formula errors are warnings, not errors");
             anomaly.Message.ToLowerInvariant().Should().Contain("formula error");

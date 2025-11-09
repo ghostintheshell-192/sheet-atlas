@@ -43,7 +43,7 @@ namespace SheetAtlas.Core.Application.Services
 
         public List<SearchResult> Search(ExcelFile file, string query, SearchOptions? options = null)
         {
-            var results = new List<SearchResult>();
+            List<SearchResult> results = new();
 
             if (string.IsNullOrWhiteSpace(query))
                 return results;
@@ -74,7 +74,7 @@ namespace SheetAtlas.Core.Application.Services
 
         public List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null)
         {
-            var results = new List<SearchResult>();
+            List<SearchResult> results = new();
             var sheet = file.GetSheet(sheetName);
 
             if (sheet == null) return results;

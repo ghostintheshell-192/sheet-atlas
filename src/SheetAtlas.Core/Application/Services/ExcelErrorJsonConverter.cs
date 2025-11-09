@@ -133,7 +133,7 @@ namespace SheetAtlas.Core.Application.Services
             return ExcelError.FromJson(severity, message, context, timestamp, location, exception);
         }
 
-        private CellReference? ParseCellReference(string cellNotation)
+        private static CellReference? ParseCellReference(string cellNotation)
         {
             // Parse Excel notation like "A1", "B2", etc.
             // Returns null for invalid formats (validation handled explicitly below)
@@ -224,7 +224,7 @@ namespace SheetAtlas.Core.Application.Services
             writer.WriteEndObject();
         }
 
-        private string GetErrorCode(ExcelError error)
+        private static string GetErrorCode(ExcelError error)
         {
             // Generate error code based on context category
             // Simple categorization: FILE, SHEET, CELL
@@ -238,7 +238,7 @@ namespace SheetAtlas.Core.Application.Services
             return "UNKNOWN";
         }
 
-        private string? ExtractSheetName(string context)
+        private static string? ExtractSheetName(string context)
         {
             // Context format: "Sheet:SheetName" or "Cell:SheetName"
             if (string.IsNullOrEmpty(context))
@@ -253,7 +253,7 @@ namespace SheetAtlas.Core.Application.Services
             return null;
         }
 
-        private bool IsRecoverable(Exception? exception)
+        private static bool IsRecoverable(Exception? exception)
         {
             // Delegate to centralized exception recovery logic
             // This ensures consistency across the application

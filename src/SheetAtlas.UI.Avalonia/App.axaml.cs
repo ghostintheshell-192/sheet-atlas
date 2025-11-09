@@ -37,25 +37,20 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // Create and configure the host
         _host = CreateHostBuilder().Build();
 
-        // Initialize LogService immediately to create log directory
         _ = _host.Services.GetRequiredService<ILogService>();
 
-        // Initialize theme manager
         var themeManager = _host.Services.GetRequiredService<IThemeManager>();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Get the main window and view model from DI container
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             var mainViewModel = _host.Services.GetRequiredService<MainWindowViewModel>();
             var searchViewModel = _host.Services.GetRequiredService<SearchViewModel>();
             var fileDetailsViewModel = _host.Services.GetRequiredService<FileDetailsViewModel>();
             var treeSearchResultsViewModel = _host.Services.GetRequiredService<TreeSearchResultsViewModel>();
 
-            // Wire up ViewModels to MainViewModel
             mainViewModel.SetSearchViewModel(searchViewModel);
             mainViewModel.SetFileDetailsViewModel(fileDetailsViewModel);
             mainViewModel.SetTreeSearchResultsViewModel(treeSearchResultsViewModel);
@@ -63,7 +58,6 @@ public partial class App : Application
             mainWindow.DataContext = mainViewModel;
             desktop.MainWindow = mainWindow;
 
-            // Handle application exit
             desktop.Exit += (_, _) => _host?.Dispose();
         }
 
@@ -91,18 +85,15 @@ public partial class App : Application
                 services.AddSingleton<IColumnAnalysisService, SheetAtlas.Core.Application.Services.Foundation.ColumnAnalysisService>();
                 services.AddSingleton<IMergedCellResolver, SheetAtlas.Core.Application.Services.Foundation.MergedCellResolver>();
 
-                // Register Sheet Analysis Orchestrator with configuration
                 services.AddSingleton<ISheetAnalysisOrchestrator>(sp =>
                 {
                     var settings = sp.GetRequiredService<IOptions<AppSettings>>().Value;
 
-                    // Parse merge strategy from configuration
                     var strategyStr = settings.FoundationLayer.MergedCells.DefaultStrategy;
                     var strategy = Enum.TryParse<SheetAtlas.Core.Domain.ValueObjects.MergeStrategy>(strategyStr, out var parsed)
                         ? parsed
                         : SheetAtlas.Core.Domain.ValueObjects.MergeStrategy.ExpandValue;
 
-                    // Get warn threshold (convert percentage to decimal)
                     double warnThreshold = settings.FoundationLayer.MergedCells.WarnThresholdPercentage / 100.0;
 
                     return new SheetAnalysisOrchestrator(

@@ -13,7 +13,6 @@ namespace SheetAtlas.Core.Domain.Entities
         public IReadOnlyList<object?> Cells { get; }
         public IReadOnlyList<string> ColumnHeaders { get; }
 
-        // Calculated properties
         public string FileName => SourceFile?.FileName ?? string.Empty;
         public string DisplayName => $"{FileName} - {SheetName} - Row {RowIndex + 1}";
 
@@ -57,8 +56,6 @@ namespace SheetAtlas.Core.Domain.Entities
                 return GetCellAsString(headerIndex);
             }
 
-            // If exact header match not found, try some intelligent fallbacks
-            // This handles cases where headers might have slight variations
             var normalizedTargetHeader = headerName.Trim().ToLowerInvariant();
 
             for (int i = 0; i < ColumnHeaders.Count; i++)
@@ -70,7 +67,6 @@ namespace SheetAtlas.Core.Domain.Entities
                 }
             }
 
-            // If still not found, return empty - this will be flagged as a warning
             return string.Empty;
         }
     }
@@ -139,7 +135,6 @@ namespace SheetAtlas.Core.Domain.Entities
             var warnings = new List<RowComparisonWarning>();
             var allHeaders = GetAllColumnHeaders();
 
-            // Group rows by their file to analyze consistency
             var rowsByFile = Rows.GroupBy(r => r.FileName).ToList();
 
             foreach (var headerName in allHeaders)
@@ -154,12 +149,10 @@ namespace SheetAtlas.Core.Domain.Entities
 
                     if (headerIndex == -1)
                     {
-                        // Header is missing in this file
                         filesWithMissingHeader.Add(sampleRow.FileName);
                     }
                     else
                     {
-                        // Check if header is in different position across files
                         var expectedPosition = allHeaders.ToList().IndexOf(headerName);
                         if (headerIndex != expectedPosition)
                         {
@@ -168,13 +161,12 @@ namespace SheetAtlas.Core.Domain.Entities
                     }
                 }
 
-                // Generate warnings based on analysis
-                if (filesWithMissingHeader.Any())
+                if (filesWithMissingHeader.Count != 0)
                 {
                     warnings.Add(RowComparisonWarning.CreateMissingHeaderWarning(headerName, filesWithMissingHeader));
                 }
 
-                if (filesWithDifferentPosition.Any())
+                if (filesWithDifferentPosition.Count != 0)
                 {
                     warnings.Add(RowComparisonWarning.CreateStructureMismatchWarning(headerName, filesWithDifferentPosition));
                 }

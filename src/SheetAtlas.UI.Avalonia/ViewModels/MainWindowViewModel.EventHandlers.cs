@@ -14,13 +14,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         public void SubscribeToEvents()
         {
-            // Subscribe to file manager events
             _filesManager.FileLoaded += OnFileLoaded;
             _filesManager.FileRemoved += OnFileRemoved;
             _filesManager.FileLoadFailed += OnFileLoadFailed;
             _filesManager.FileReloaded += OnFileReloaded;
 
-            // Subscribe to comparison coordinator events
             _comparisonCoordinator.SelectionChanged += OnComparisonSelectionChanged;
             _comparisonCoordinator.ComparisonRemoved += OnComparisonRemoved;
             _comparisonCoordinator.PropertyChanged += OnComparisonCoordinatorPropertyChanged;
@@ -36,14 +34,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             _comparisonCoordinator.ComparisonRemoved -= OnComparisonRemoved;
             _comparisonCoordinator.PropertyChanged -= OnComparisonCoordinatorPropertyChanged;
 
-            // Unsubscribe from SearchViewModel PropertyChanged to prevent memory leak
             if (SearchViewModel != null && _searchViewModelPropertyChangedHandler != null)
             {
                 SearchViewModel.PropertyChanged -= _searchViewModelPropertyChangedHandler;
                 _searchViewModelPropertyChangedHandler = null;
             }
 
-            // Unsubscribe from FileDetailsViewModel events to prevent memory leak
             if (FileDetailsViewModel != null)
             {
                 FileDetailsViewModel.RemoveFromListRequested -= OnRemoveFromListRequested;
@@ -57,10 +53,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             _logger.LogInfo($"File loaded: {e.File.FileName} (HasErrors: {e.HasErrors})", "MainWindowViewModel");
 
-            // Notify that HasLoadedFiles changed
             OnPropertyChanged(nameof(HasLoadedFiles));
 
-            // Auto-open sidebar when first file is loaded
             if (LoadedFiles.Count == 1)
             {
                 IsSidebarExpanded = true;
@@ -71,10 +65,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             _logger.LogInfo($"File reloaded: {e.NewFile.FileName}", "MainWindowViewModel");
 
-            // Auto-select the reloaded file to show updated details
             SelectedFile = e.NewFile;
 
-            // Show File Details tab to display the updated log
             IsFileDetailsTabVisible = true;
             SelectedTabIndex = GetTabIndex("FileDetails");
         }
@@ -103,7 +95,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         private void OnComparisonCoordinatorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            // Propagate PropertyChanged from Coordinator to ViewModel
             if (e.PropertyName == nameof(IRowComparisonCoordinator.SelectedComparison))
             {
                 OnPropertyChanged(nameof(SelectedComparison));
@@ -112,10 +103,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         private void OnComparisonRemoved(object? sender, ComparisonRemovedEventArgs e)
         {
-            // Clear all selections in TreeSearchResultsViewModel
             TreeSearchResultsViewModel?.ClearSelection();
 
-            // If Search tab is visible, switch to it; otherwise just deselect
             if (IsSearchTabVisible)
             {
                 SelectedTabIndex = GetTabIndex("Search");
@@ -130,10 +119,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         private void OnComparisonSelectionChanged(object? sender, ComparisonSelectionChangedEventArgs e)
         {
-            // Show/hide comparison tab based on selection
             if (e.NewSelection != null)
             {
-                // Comparison created/selected - show and switch to Comparison tab
                 IsComparisonTabVisible = true;
                 SelectedTabIndex = GetTabIndex("Comparison");
             }
@@ -145,10 +132,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             SearchViewModel.Initialize(LoadedFiles);
             OnPropertyChanged(nameof(ShowAllFilesCommand));
 
-            // Wire up search results to tree view
             if (SearchViewModel != null)
             {
-                // Store handler as field to enable proper cleanup
                 _searchViewModelPropertyChangedHandler = (s, e) =>
                 {
                     if (e.PropertyName == nameof(SearchViewModel.SearchResults) && TreeSearchResultsViewModel != null)
@@ -159,14 +144,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                         {
                             TreeSearchResultsViewModel.AddSearchResults(query, results.ToList());
 
-                            // Show and switch to Search tab to display results
                             IsSearchTabVisible = true;
                             SelectedTabIndex = GetTabIndex("Search");
                         }
                     }
                 };
 
-                // Subscribe to search results changes
                 SearchViewModel.PropertyChanged += _searchViewModelPropertyChangedHandler;
             }
         }
@@ -175,13 +158,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             FileDetailsViewModel = fileDetailsViewModel ?? throw new ArgumentNullException(nameof(fileDetailsViewModel));
 
-            // Wire up events from FileDetailsViewModel
             FileDetailsViewModel.RemoveFromListRequested += OnRemoveFromListRequested;
             FileDetailsViewModel.CleanAllDataRequested += OnCleanAllDataRequested;
             FileDetailsViewModel.RemoveNotificationRequested += OnRemoveNotificationRequested;
             FileDetailsViewModel.TryAgainRequested += OnTryAgainRequested;
 
-            // Set current selection if any
             FileDetailsViewModel.SelectedFile = SelectedFile;
         }
 
@@ -189,7 +170,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             TreeSearchResultsViewModel = treeSearchResultsViewModel ?? throw new ArgumentNullException(nameof(treeSearchResultsViewModel));
 
-            // Wire up row comparison creation
             TreeSearchResultsViewModel.RowComparisonCreated += OnRowComparisonCreated;
         }
 
@@ -212,25 +192,19 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             _logger.LogInfo($"Clean all data requested for: {file.FileName}", "MainWindowViewModel");
 
-            // Clear selection if this file is currently selected (prevent memory leak)
             if (SelectedFile == file)
             {
                 SelectedFile = null;
             }
 
-            // Remove search results that reference this file (TreeView history)
-            TreeSearchResultsViewModel?.RemoveSearchResultsForFile(file.File);
+            TreeSearchResultsViewModel?.RemoveSearchResultsForFile(file.File!);
 
-            // Remove current search results that reference this file (SearchViewModel)
-            SearchViewModel?.RemoveResultsForFile(file.File);
+            SearchViewModel?.RemoveResultsForFile(file.File!);
 
-            // Remove row comparisons that reference this file
-            _comparisonCoordinator.RemoveComparisonsForFile(file.File);
+            _comparisonCoordinator.RemoveComparisonsForFile(file.File!);
 
-            // Dispose ViewModel (which disposes ExcelFile and DataTables, then nulls the reference)
             file.Dispose();
 
-            // Finally, remove the file from the loaded files list
             _filesManager.RemoveFile(file);
 
             _logger.LogInfo($"Cleaned all data for file: {file.FileName}", "MainWindowViewModel");
@@ -239,14 +213,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // REASON: DataTable objects (100-500 MB each) end up in Large Object Heap (LOH)
             // ISSUE: .NET GC is lazy for Gen 2/LOH - can wait minutes before collection
             // IMPACT: Without this, memory stays high even after Dispose() until GC decides to run
-            // TODO: When DataTable is replaced with lightweight structures, this can be removed
-            //       or changed to standard GC.Collect() without aggressive mode
             Task.Run(() =>
             {
-                // Enable LOH compaction for this collection cycle
                 System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
 
-                // Force Gen 2 + LOH collection with compaction (blocking in background thread)
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
                 GC.WaitForPendingFinalizers();
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
@@ -303,7 +273,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 _ => Array.Empty<string>()
             };
 
-            // Find first visible tab from priority list
             foreach (var tabName in tabPriorities)
             {
                 bool isVisible = tabName switch
@@ -321,7 +290,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 }
             }
 
-            // No tabs visible - show welcome screen
             SelectedTabIndex = -1;
         }
     }

@@ -88,7 +88,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             IReadOnlyList<SACellValue> cells,
             IReadOnlyList<string?> numberFormats)
         {
-            var distribution = new Dictionary<DataType, int>();
+            Dictionary<DataType, int> distribution = new();
 
             for (int i = 0; i < cells.Count; i++)
             {
@@ -97,8 +97,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
                 var type = InferCellType(cell, format);
 
-                if (distribution.ContainsKey(type))
-                    distribution[type]++;
+                if (distribution.TryGetValue(type, out int value))
+                    distribution[type] = ++value;
                 else
                     distribution[type] = 1;
             }
@@ -106,7 +106,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return distribution;
         }
 
-        private DataType InferCellType(SACellValue cell, string? numberFormat)
+        private static DataType InferCellType(SACellValue cell, string? numberFormat)
         {
             // Empty cells
             if (cell.IsEmpty)
@@ -144,7 +144,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 var text = cell.AsText();
 
                 // Excel formula errors
-                if (text.StartsWith("#"))
+                if (text.StartsWith('#'))
                     return DataType.Error;
 
                 return DataType.Text;
@@ -153,7 +153,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return DataType.Unknown;
         }
 
-        private DataType DetermineDominantType(Dictionary<DataType, int> distribution)
+        private static DataType DetermineDominantType(Dictionary<DataType, int> distribution)
         {
             if (distribution.Count == 0)
                 return DataType.Unknown;
@@ -178,7 +178,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 numberFormats.Where(f => f != null).Cast<string>());
 
             // Return first currency found, or null if none
-            return currencies.FirstOrDefault();
+            return currencies.Count > 0 ? currencies[0] : null;
         }
 
         #endregion
@@ -190,7 +190,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             IReadOnlyList<string?> numberFormats,
             DataType dominantType)
         {
-            var anomalies = new List<CellAnomaly>();
+            List<CellAnomaly> anomalies = new();
 
             for (int i = 0; i < cells.Count; i++)
             {
@@ -247,13 +247,13 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return anomalies.AsReadOnly();
         }
 
-        private LocalContext GetLocalContext(
+        private static LocalContext GetLocalContext(
             IReadOnlyList<SACellValue> cells,
             IReadOnlyList<string?> numberFormats,
             int currentIndex)
         {
-            var context = new LocalContext();
-            var types = new List<DataType>();
+            LocalContext context = new();
+            List<DataType> types = new();
 
             int startIndex = Math.Max(0, currentIndex - ContextWindowSize);
             int endIndex = Math.Min(cells.Count - 1, currentIndex + ContextWindowSize);
@@ -278,7 +278,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return context;
         }
 
-        private CellAnomaly? ClassifyAnomaly(
+        private static CellAnomaly? ClassifyAnomaly(
             SACellValue cell,
             string? format,
             DataType actualType,
@@ -313,7 +313,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             IReadOnlyList<SACellValue> cells,
             IReadOnlyList<string?> numberFormats)
         {
-            var currencies = new Dictionary<string, int>();
+            Dictionary<string, int> currencies = new();
 
             for (int i = 0; i < numberFormats.Count; i++)
             {
@@ -323,8 +323,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 var currency = _currencyDetector.DetectCurrency(format);
                 if (currency != null)
                 {
-                    if (currencies.ContainsKey(currency.Code))
-                        currencies[currency.Code]++;
+                    if (currencies.TryGetValue(currency.Code, out int value))
+                        currencies[currency.Code] = ++value;
                     else
                         currencies[currency.Code] = 1;
                 }
@@ -333,7 +333,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             // If more than one currency found → flag as inconsistent
             if (currencies.Count > 1)
             {
-                var anomalies = new List<CellAnomaly>();
+                List<CellAnomaly> anomalies = new();
                 var dominantCurrency = currencies.OrderByDescending(kvp => kvp.Value).First().Key;
 
                 for (int i = 0; i < numberFormats.Count; i++)
@@ -366,7 +366,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         #region Confidence Calculation
 
-        private double CalculateTypeConfidence(
+        private static double CalculateTypeConfidence(
             Dictionary<DataType, int> distribution,
             DataType dominantType,
             IReadOnlyList<CellAnomaly> anomalies)
@@ -376,7 +376,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
             // Base confidence from type distribution
             int totalCells = distribution.Sum(kvp => kvp.Value);
-            int dominantCount = distribution.ContainsKey(dominantType) ? distribution[dominantType] : 0;
+            int dominantCount = distribution.TryGetValue(dominantType, out int value) ? value : 0;
 
             double baseConfidence = (double)dominantCount / totalCells;
 

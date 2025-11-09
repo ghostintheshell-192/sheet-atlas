@@ -76,7 +76,7 @@ namespace SheetAtlas.UI.Avalonia.Managers
                 ApplyTheme(savedTheme);
                 CurrentTheme = savedTheme;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _logger.LogWarning("Failed to initialize theme, using Light theme as fallback", "ThemeManager");
                 ApplyTheme(Theme.Light);
@@ -138,7 +138,7 @@ namespace SheetAtlas.UI.Avalonia.Managers
             }
         }
 
-        private bool IsThemeResource(object key)
+        private static bool IsThemeResource(object key)
         {
             var keyString = key?.ToString();
             if (string.IsNullOrEmpty(keyString))
@@ -182,7 +182,7 @@ namespace SheetAtlas.UI.Avalonia.Managers
                    keyString.Contains("Alt");
         }
 
-        private Theme LoadThemePreference()
+        private static Theme LoadThemePreference()
         {
             // TODO: Load from user settings or config file
             // For now, default to Light theme

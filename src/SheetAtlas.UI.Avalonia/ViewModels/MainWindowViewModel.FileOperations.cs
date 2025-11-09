@@ -21,7 +21,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
                 if (reloadedFile != null)
                 {
-                    FileDetailsViewModel.SelectedFile = reloadedFile;
+                    FileDetailsViewModel!.SelectedFile = reloadedFile;
                 }
 
                 _activityLog.LogInfo($"Retry completed: {file.FileName}", "FileRetry");
@@ -39,13 +39,15 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             }
         }
 
+        private static readonly string[] _fileTypeFilters = new[] { "*.xlsx", "*.xls" };
+
         private async Task LoadFileAsync()
         {
             try
             {
                 _activityLog.LogInfo("Opening file selection...", "FileLoad");
 
-                var files = await _filePickerService.OpenFilesAsync("Select Excel Files", new[] { "*.xlsx", "*.xls" });
+                var files = await _filePickerService.OpenFilesAsync("Select Excel Files", _fileTypeFilters);
 
                 if (files?.Any() != true)
                 {

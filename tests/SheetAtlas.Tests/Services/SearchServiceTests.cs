@@ -11,6 +11,7 @@ namespace SheetAtlas.Tests.Services
     {
         private readonly Mock<ILogService> _mockLogger;
         private readonly SearchService _searchService;
+        private static readonly string[] _columnNames = new[] { "A" };
 
         public SearchServiceTests()
         {
@@ -166,9 +167,9 @@ namespace SheetAtlas.Tests.Services
 
         #region Helper Methods
 
-        private ExcelFile CreateTestFile(string fileName, string sheetName, string cellValue)
+        private static ExcelFile CreateTestFile(string fileName, string sheetName, string cellValue)
         {
-            var sheet = new SASheetData(sheetName, new[] { "A" });
+            var sheet = new SASheetData(sheetName, _columnNames);
             var rowData = new SACellData[]
             {
                 new SACellData(SACellValue.FromText(cellValue))

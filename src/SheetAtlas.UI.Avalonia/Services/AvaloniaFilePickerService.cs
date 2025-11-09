@@ -7,13 +7,14 @@ namespace SheetAtlas.UI.Avalonia.Services;
 public class AvaloniaFilePickerService : IFilePickerService
 {
     private readonly ILogService _logger;
+    private static readonly string[] _excelFileFilters = new[] { "*.xlsx", "*.xlsm", "*.xltx", "*.xltm", "*.xls", "*.xlt", "*.csv" };
 
     public AvaloniaFilePickerService(ILogService logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    private IStorageProvider? GetStorageProvider()
+    private static IStorageProvider? GetStorageProvider()
     {
         if (App.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -49,7 +50,7 @@ public class AvaloniaFilePickerService : IFilePickerService
                     // All supported spreadsheet formats
                     fileTypes.Add(new FilePickerFileType("All Supported Formats")
                     {
-                        Patterns = new[] { "*.xlsx", "*.xlsm", "*.xltx", "*.xltm", "*.xls", "*.xlt", "*.csv" }
+                        Patterns = _excelFileFilters
                     });
 
                     // Modern Excel formats

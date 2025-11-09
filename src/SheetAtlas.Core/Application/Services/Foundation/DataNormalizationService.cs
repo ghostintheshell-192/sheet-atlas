@@ -12,7 +12,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
     /// Normalizes cell values: dates, numbers, text, booleans.
     /// Implements IDataNormalizationService interface.
     /// </summary>
-    public class DataNormalizationService : IDataNormalizationService
+    public partial class DataNormalizationService : IDataNormalizationService
     {
         // Date system epochs
         private static readonly DateTime _epoch1900 = new DateTime(1899, 12, 30);
@@ -117,7 +117,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return NormalizationResult.Success(original, cleaned, DataType.Date);
         }
 
-        private DateTime ConvertSerial1900(double serial)
+        private static DateTime ConvertSerial1900(double serial)
         {
             // Handle Excel 1900 leap year bug
             if (serial == Excel1900LeapYearBugSerial)
@@ -133,7 +133,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return _epoch1900.AddDays(serial);
         }
 
-        private DateTime ConvertSerial1904(double serial)
+        private static DateTime ConvertSerial1904(double serial)
         {
             return _epoch1904.AddDays(serial);
         }
@@ -142,7 +142,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         #region Number Normalization
 
-        private NormalizationResult NormalizeNumber(SACellValue original, string? numberFormat)
+        private static NormalizationResult NormalizeNumber(SACellValue original, string? numberFormat)
         {
             double value = original.AsNumber();
 
@@ -189,17 +189,17 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
             // Check if format suggests a number (contains #,##0 or 0.00 patterns)
             bool formatSuggestsNumber = numberFormat != null &&
-                (numberFormat.Contains("#") || numberFormat.Contains("0")) &&
+                (numberFormat.Contains('#') || numberFormat.Contains('0')) &&
                 !NumberFormatHelper.IsDateFormat(numberFormat);
 
             // Check if it's a percentage
-            bool isPercentage = text.Contains("%") || NumberFormatHelper.IsPercentageFormat(numberFormat);
+            bool isPercentage = text.Contains('%') || NumberFormatHelper.IsPercentageFormat(numberFormat);
 
             // If format suggests number, try number BEFORE date to avoid false date parsing (e.g., "1,234" → Jan 1, 234 AD)
             if (formatSuggestsNumber && TryParseNumber(text, out double numberValue))
             {
                 // Convert percentage to decimal if needed (50 → 0.5 for percentages without %)
-                if (isPercentage && !text.Contains("%") && numberValue > 1)
+                if (isPercentage && !text.Contains('%') && numberValue > 1)
                     numberValue /= 100.0;
 
                 var cleaned = SACellValue.FromNumber(numberValue);
@@ -218,7 +218,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             if (!formatSuggestsNumber && TryParseNumber(text, out numberValue))
             {
                 // Convert percentage to decimal if needed (50 → 0.5 for percentages without %)
-                if (isPercentage && !text.Contains("%") && numberValue > 1)
+                if (isPercentage && !text.Contains('%') && numberValue > 1)
                     numberValue /= 100.0;
 
                 var cleaned = SACellValue.FromNumber(numberValue);
@@ -253,7 +253,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             text = RemoveZeroWidthCharacters(text);
 
             // Remove control characters (U+0000 to U+001F except tab, CR, LF)
-            text = Regex.Replace(text, @"[\u0000-\u0008\u000B-\u000C\u000E-\u001F]", "");
+            text = MyRegex().Replace(text, "");
 
             // Normalize line endings
             text = text.Replace("\r\n", "\n").Replace("\r", "\n");
@@ -264,7 +264,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return text;
         }
 
-        private string RemoveZeroWidthCharacters(string text)
+        private static string RemoveZeroWidthCharacters(string text)
         {
             // Remove common zero-width characters
             // U+200B: Zero-width space
@@ -282,7 +282,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         #region Boolean Normalization
 
-        private bool TryParseBoolean(string text, out bool result)
+        private static bool TryParseBoolean(string text, out bool result)
         {
             text = text.Trim().ToLowerInvariant();
 
@@ -310,7 +310,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         #region Parsing Helpers
 
-        private bool TryParseDate(string text, out DateTime result)
+        private static bool TryParseDate(string text, out DateTime result)
         {
             // Only validate SYNTACTIC correctness, not semantic validity
             // Let ColumnAnalysisService handle semantic validation using context from adjacent cells
@@ -335,7 +335,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return false;
         }
 
-        private bool TryParseNumber(string text, out double result)
+        private static bool TryParseNumber(string text, out double result)
         {
             // Remove currency symbols and codes
             text = text.Trim();
@@ -345,7 +345,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             text = text.Trim();
 
             // Remove percentage sign and remember to divide by 100
-            bool isPercentage = text.Contains("%");
+            bool isPercentage = text.Contains('%');
             text = text.Replace("%", "");
             text = text.Trim();
 
@@ -386,7 +386,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         #region Conversion Helpers
 
-        private SACellValue ConvertToSACellValue(object rawValue)
+        private static SACellValue ConvertToSACellValue(object rawValue)
         {
             return rawValue switch
             {
@@ -401,6 +401,9 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 _ => SACellValue.Empty
             };
         }
+
+        [GeneratedRegex(@"[\u0000-\u0008\u000B-\u000C\u000E-\u001F]")]
+        private static partial Regex MyRegex();
 
         #endregion
     }

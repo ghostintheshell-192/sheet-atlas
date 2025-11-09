@@ -23,7 +23,6 @@ namespace SheetAtlas.Tests.Foundation.Builders
         private CurrencyInfo? _currency = null;
         private DataType? _detectedType = null;
         private string? _comment = null;
-        private bool _isError = false;
 
         public SACellDataBuilder WithValue(object? value)
         {
@@ -63,7 +62,6 @@ namespace SheetAtlas.Tests.Foundation.Builders
 
         public SACellDataBuilder AsError()
         {
-            _isError = true;
             _dataType = CellDataType.Error;
             return this;
         }

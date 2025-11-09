@@ -49,22 +49,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             if (SetField(ref _selectedFile, value))
             {
-                // Update FileDetailsViewModel when selection changes
                 if (FileDetailsViewModel != null)
                 {
                     FileDetailsViewModel.SelectedFile = value;
                 }
 
-                // Show/hide File Details tab based on selection
                 if (value != null)
                 {
-                    // File selected - show and switch to File Details tab
                     IsFileDetailsTabVisible = true;
                     SelectedTabIndex = GetTabIndex("FileDetails");
                 }
                 else
                 {
-                    // No file selected - hide File Details tab
                     IsFileDetailsTabVisible = false;
                 }
             }
@@ -155,7 +151,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         ThemeManager = themeManager;
 
-        // Initialize with no tab selected (clean start)
         _selectedTabIndex = -1;
 
         _isSidebarExpanded = false;

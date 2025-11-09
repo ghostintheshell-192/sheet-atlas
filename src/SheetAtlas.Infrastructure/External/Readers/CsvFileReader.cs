@@ -30,13 +30,13 @@ namespace SheetAtlas.Infrastructure.External.Readers
             _options = CsvReaderOptions.Default;
         }
 
-        public IReadOnlyList<string> SupportedExtensions =>
-            new[] { ".csv" }.AsReadOnly();
+        private static readonly string[] _supportedExtensions = new[] { ".csv" };
+
+        public IReadOnlyList<string> SupportedExtensions => _supportedExtensions.AsReadOnly();
 
         public void Configure(IReaderOptions options)
         {
-            if (options == null)
-                throw new ArgumentNullException(nameof(options));
+            ArgumentNullException.ThrowIfNull(options);
 
             if (options is not CsvReaderOptions csvOptions)
                 throw new ArgumentException($"Expected CsvReaderOptions but got {options.GetType().Name}", nameof(options));
@@ -290,7 +290,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                 }
 
                 // Return delimiter with highest consistent count
-                if (delimiterCounts.Any())
+                if (delimiterCounts.Count != 0)
                 {
                     var bestDelimiter = delimiterCounts.OrderByDescending(kvp => kvp.Value).First().Key;
                     return bestDelimiter;
@@ -308,26 +308,27 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
         }
 
-        private string EnsureUniqueColumnName(string baseName, Dictionary<string, int> columnNameCounts)
+        private static string EnsureUniqueColumnName(string baseName, Dictionary<string, int> columnNameCounts)
         {
-            if (!columnNameCounts.ContainsKey(baseName))
+            if (!columnNameCounts.TryGetValue(baseName, out int value))
             {
-                columnNameCounts[baseName] = 1;
+                value = 1;
+                columnNameCounts[baseName] = value;
                 return baseName;
             }
 
-            columnNameCounts[baseName]++;
-            return $"{baseName}_{columnNameCounts[baseName]}";
+            columnNameCounts[baseName] = ++value;
+            return $"{baseName}_{value}";
         }
 
-        private LoadStatus DetermineLoadStatus(Dictionary<string, SASheetData> sheets, List<ExcelError> errors)
+        private static LoadStatus DetermineLoadStatus(Dictionary<string, SASheetData> sheets, List<ExcelError> errors)
         {
             var hasErrors = errors.Any(e => e.Level == LogSeverity.Error || e.Level == LogSeverity.Critical);
 
             if (!hasErrors)
                 return LoadStatus.Success;
 
-            return sheets.Any() ? LoadStatus.PartialSuccess : LoadStatus.Failed;
+            return sheets.Count != 0 ? LoadStatus.PartialSuccess : LoadStatus.Failed;
         }
     }
 }

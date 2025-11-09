@@ -88,7 +88,7 @@ namespace SheetAtlas.UI.Avalonia.Services
         public async Task ShowErrorsAsync(IEnumerable<ExcelError> errors, string title)
         {
             var errorList = errors.ToList();
-            if (!errorList.Any())
+            if (errorList.Count == 0)
                 return;
 
             // Group by level
@@ -98,7 +98,7 @@ namespace SheetAtlas.UI.Avalonia.Services
 
             var message = BuildMultiErrorMessage(criticalErrors, regularErrors, warnings);
 
-            if (criticalErrors.Any() || regularErrors.Any())
+            if (criticalErrors.Count != 0 || regularErrors.Count != 0)
             {
                 await _dialogService.ShowErrorAsync(message, title);
             }
@@ -108,7 +108,7 @@ namespace SheetAtlas.UI.Avalonia.Services
             }
         }
 
-        private string FormatErrorMessage(ExcelError error)
+        private static string FormatErrorMessage(ExcelError error)
         {
             var message = error.Message;
 
@@ -125,28 +125,28 @@ namespace SheetAtlas.UI.Avalonia.Services
             return message;
         }
 
-        private string BuildMultiErrorMessage(
+        private static string BuildMultiErrorMessage(
             List<ExcelError> criticalErrors,
             List<ExcelError> regularErrors,
             List<ExcelError> warnings)
         {
             var lines = new List<string>();
 
-            if (criticalErrors.Any())
+            if (criticalErrors.Count != 0)
             {
                 lines.Add("❌ Errori Critici:");
                 lines.AddRange(criticalErrors.Select(e => $"  • {e.Message}"));
                 lines.Add("");
             }
 
-            if (regularErrors.Any())
+            if (regularErrors.Count != 0)
             {
                 lines.Add("⚠️ Errori:");
                 lines.AddRange(regularErrors.Select(e => $"  • {e.Message}"));
                 lines.Add("");
             }
 
-            if (warnings.Any())
+            if (warnings.Count != 0)
             {
                 lines.Add("ℹ️ Avvisi:");
                 lines.AddRange(warnings.Select(e => $"  • {e.Message}"));
