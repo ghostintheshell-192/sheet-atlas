@@ -1,5 +1,6 @@
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Application.DTOs;
+using SheetAtlas.Core.Application.Utilities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Logging.Models;
 
@@ -125,13 +126,13 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             if (cell.IsInteger || cell.IsNumber)
             {
                 // Check format for specific type
-                if (IsPercentageFormat(numberFormat))
+                if (NumberFormatHelper.IsPercentageFormat(numberFormat))
                     return DataType.Percentage;
 
-                if (IsCurrencyFormat(numberFormat))
+                if (NumberFormatHelper.IsCurrencyFormat(numberFormat))
                     return DataType.Currency;
 
-                if (IsDateFormat(numberFormat))
+                if (NumberFormatHelper.IsDateFormat(numberFormat))
                     return DataType.Date;
 
                 return DataType.Number;
@@ -398,38 +399,6 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         #endregion
 
-        #region Format Helpers
-
-        private bool IsDateFormat(string? format)
-        {
-            if (string.IsNullOrEmpty(format))
-                return false;
-
-            var lower = format.ToLowerInvariant();
-            return lower.Contains("mm") || lower.Contains("dd") ||
-                   lower.Contains("yyyy") || lower.Contains("yy") ||
-                   lower.Contains("m/d") || lower.Contains("d/m");
-        }
-
-        private bool IsCurrencyFormat(string? format)
-        {
-            if (string.IsNullOrEmpty(format))
-                return false;
-
-            return format.Contains("$") || format.Contains("€") ||
-                   format.Contains("£") || format.Contains("¥") ||
-                   format.Contains("₹") || format.Contains("₽");
-        }
-
-        private bool IsPercentageFormat(string? format)
-        {
-            if (string.IsNullOrEmpty(format))
-                return false;
-
-            return format.Contains("%");
-        }
-
-        #endregion
 
         #region Helper Classes
 

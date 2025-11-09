@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Application.DTOs;
+using SheetAtlas.Core.Application.Utilities;
 using SheetAtlas.Core.Domain.ValueObjects;
 
 namespace SheetAtlas.Core.Application.Services.Foundation
@@ -37,7 +38,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 return NormalizationResult.Empty;
 
             // Detect if value is a date based on format or type
-            bool isPotentialDate = IsDateFormat(numberFormat);
+            bool isPotentialDate = NumberFormatHelper.IsDateFormat(numberFormat);
 
             // Normalize based on detected type
             if (isPotentialDate && original.IsNumber)
@@ -146,14 +147,14 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             double value = original.AsNumber();
 
             // Detect if it's currency
-            if (IsCurrencyFormat(numberFormat))
+            if (NumberFormatHelper.IsCurrencyFormat(numberFormat))
             {
                 var cleaned = SACellValue.FromNumber(value);
                 return NormalizationResult.Success(original, cleaned, DataType.Currency);
             }
 
             // Detect if it's percentage
-            if (IsPercentageFormat(numberFormat))
+            if (NumberFormatHelper.IsPercentageFormat(numberFormat))
             {
                 var cleaned = SACellValue.FromNumber(value);
                 return NormalizationResult.Success(original, cleaned, DataType.Percentage);
@@ -189,10 +190,10 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             // Check if format suggests a number (contains #,##0 or 0.00 patterns)
             bool formatSuggestsNumber = numberFormat != null &&
                 (numberFormat.Contains("#") || numberFormat.Contains("0")) &&
-                !IsDateFormat(numberFormat);
+                !NumberFormatHelper.IsDateFormat(numberFormat);
 
             // Check if it's a percentage
-            bool isPercentage = text.Contains("%") || IsPercentageFormat(numberFormat);
+            bool isPercentage = text.Contains("%") || NumberFormatHelper.IsPercentageFormat(numberFormat);
 
             // If format suggests number, try number BEFORE date to avoid false date parsing (e.g., "1,234" → Jan 1, 234 AD)
             if (formatSuggestsNumber && TryParseNumber(text, out double numberValue))
@@ -382,40 +383,6 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         #endregion
 
-        #region Format Detection
-
-        private bool IsDateFormat(string? format)
-        {
-            if (string.IsNullOrEmpty(format))
-                return false;
-
-            var lower = format.ToLowerInvariant();
-
-            return lower.Contains("mm") || lower.Contains("dd") ||
-                   lower.Contains("yyyy") || lower.Contains("yy") ||
-                   lower.Contains("m/d") || lower.Contains("d/m") ||
-                   lower.Contains("h:") || lower.Contains("am/pm");
-        }
-
-        private bool IsCurrencyFormat(string? format)
-        {
-            if (string.IsNullOrEmpty(format))
-                return false;
-
-            return format.Contains("$") || format.Contains("€") ||
-                   format.Contains("£") || format.Contains("¥") ||
-                   format.Contains("₹") || format.Contains("₽");
-        }
-
-        private bool IsPercentageFormat(string? format)
-        {
-            if (string.IsNullOrEmpty(format))
-                return false;
-
-            return format.Contains("%");
-        }
-
-        #endregion
 
         #region Conversion Helpers
 
