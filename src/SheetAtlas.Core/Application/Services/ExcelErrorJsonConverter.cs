@@ -255,14 +255,9 @@ namespace SheetAtlas.Core.Application.Services
 
         private bool IsRecoverable(Exception? exception)
         {
-            // Same logic as ExceptionHandler.IsRecoverable()
-            // Recoverable = user can take action to fix the issue
-            if (exception == null)
-                return false;
-
-            return exception is System.IO.FileNotFoundException
-                || exception is UnauthorizedAccessException
-                || exception is System.IO.IOException;
+            // Delegate to centralized exception recovery logic
+            // This ensures consistency across the application
+            return ExceptionHandler.IsRecoverableException(exception);
         }
     }
 }
