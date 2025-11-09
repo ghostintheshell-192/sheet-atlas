@@ -27,7 +27,6 @@ public class LogSeverityToColorConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        // Not needed for one-way binding
         return LogSeverity.Info;
     }
 }

@@ -27,12 +27,10 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
     public ICommand CompareSelectedRowsCommand { get; }
     public ICommand ClearSelectionCommand { get; }
 
-    // Properties for UI binding
     public IReadOnlyList<SearchResultItem> SelectedItems => _cachedSelectedItems;
     public int SelectedCount => _cachedSelectedCount;
     public bool CanCompareRows => _cachedSelectedCount >= 2;
 
-    // Event for notifying about row comparison creation
     public event EventHandler<RowComparison>? RowComparisonCreated;
 
     public TreeSearchResultsViewModel(ILogService logger, IRowComparisonService rowComparisonService)

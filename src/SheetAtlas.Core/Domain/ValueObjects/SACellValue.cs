@@ -24,7 +24,6 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         // Type discriminator at offset 16 (after 8-byte union + 8-byte string ref)
         [FieldOffset(16)] private readonly CellType _type;
 
-        // Private constructors for each type
         private SACellValue(double value)
         {
             // Zero-initialize all fields first (required for explicit layout)

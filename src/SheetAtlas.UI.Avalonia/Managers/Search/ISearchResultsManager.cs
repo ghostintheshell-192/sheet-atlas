@@ -9,26 +9,20 @@ namespace SheetAtlas.UI.Avalonia.Managers.Search;
 /// </summary>
 public interface ISearchResultsManager
 {
-    // Properties for accessing results
     IReadOnlyList<SearchResult> Results { get; }
     IReadOnlyList<IGroupedSearchResult> GroupedResults { get; }
     IReadOnlyList<string> Suggestions { get; }
 
-    // Search methods
     Task PerformSearchAsync(string query, SearchOptions? options = null);
     void GenerateSuggestions(string query);
 
-    // Method to set the files to search in
     void SetSearchableFiles(IReadOnlyCollection<IFileLoadResultViewModel> files);
 
-    // Cleanup method to remove results referencing a removed file
     void RemoveResultsForFile(ExcelFile file);
 
-    // Events for change notifications
     event EventHandler<EventArgs> ResultsChanged;
     event EventHandler<EventArgs> SuggestionsChanged;
 
-    // Event for grouped results changes
     event EventHandler<GroupedResultsEventArgs> GroupedResultsUpdated;
 }
 

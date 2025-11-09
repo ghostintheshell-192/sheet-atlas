@@ -29,14 +29,12 @@ namespace SheetAtlas.Core.Domain.Entities
         public string Value { get; set; }
         public Dictionary<string, string> Context { get; set; }
 
-        // Calculated properties for compatibility
         public string FileName => SourceFile?.FileName ?? string.Empty;
         public string CellAddress => $"{GetColumnName(Column)}{Row + 1}";
 
         private SearchResult()
         {
             Context = new Dictionary<string, string>();
-            // Non-nullable properties will be initialized by public constructor
             SourceFile = null!;
             SheetName = null!;
             Value = null!;
