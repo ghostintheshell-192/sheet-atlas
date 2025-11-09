@@ -15,8 +15,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
     public class DataNormalizationService : IDataNormalizationService
     {
         // Date system epochs
-        private static readonly DateTime Epoch1900 = new DateTime(1899, 12, 30);
-        private static readonly DateTime Epoch1904 = new DateTime(1904, 1, 1);
+        private static readonly DateTime _epoch1900 = new DateTime(1899, 12, 30);
+        private static readonly DateTime _epoch1904 = new DateTime(1904, 1, 1);
 
         // Excel's 1900 leap year bug: serial 60 = Feb 29, 1900 (doesn't exist)
         private const double Excel1900LeapYearBugSerial = 60.0;
@@ -130,12 +130,12 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             if (serial > Excel1900LeapYearBugSerial)
                 serial -= 1;
 
-            return Epoch1900.AddDays(serial);
+            return _epoch1900.AddDays(serial);
         }
 
         private DateTime ConvertSerial1904(double serial)
         {
-            return Epoch1904.AddDays(serial);
+            return _epoch1904.AddDays(serial);
         }
 
         #endregion
