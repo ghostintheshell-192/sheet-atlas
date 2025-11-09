@@ -111,22 +111,19 @@ namespace SheetAtlas.Infrastructure.External.Readers
                         }
                         catch (InvalidCastException ex)
                         {
-                            // GetPartById could return different type
+                            // GetPartById could return different type (sheet-specific error)
                             _logger.LogError($"Invalid sheet part type for {sheetName}", ex, "OpenXmlFileReader");
                             errors.Add(ExcelError.SheetError(sheetName, $"Invalid sheet structure", ex));
                         }
                         catch (XmlException ex)
                         {
-                            // XML parsing errors: malformed XML in worksheet
+                            // XML parsing errors: malformed XML in worksheet (sheet-specific error)
                             _logger.LogError($"Malformed XML in sheet {sheetName}", ex, "OpenXmlFileReader");
                             errors.Add(ExcelError.SheetError(sheetName, $"Sheet contains invalid XML: {ex.Message}", ex));
                         }
-                        catch (OpenXmlPackageException ex)
-                        {
-                            // OpenXML-specific errors for single sheet
-                            _logger.LogError($"Corrupted sheet {sheetName}", ex, "OpenXmlFileReader");
-                            errors.Add(ExcelError.SheetError(sheetName, $"Sheet corrupted: {ex.Message}", ex));
-                        }
+                        // NOTE: OpenXmlPackageException removed from here (Issue #7 fix)
+                        // This is typically a file-level corruption, not sheet-specific.
+                        // Let it propagate to the file-level catch block below.
                     }
 
                     var status = DetermineLoadStatus(sheets, errors);
