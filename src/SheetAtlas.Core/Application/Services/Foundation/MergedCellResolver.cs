@@ -12,7 +12,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
     /// </summary>
     public class MergedCellResolver : IMergedCellResolver
     {
-        public Task<SASheetData> ResolveMergedCellsAsync(
+        public SASheetData ResolveMergedCells(
             SASheetData sheetData,
             MergeStrategy strategy = MergeStrategy.ExpandValue,
             Action<MergeWarning>? warningCallback = null)
@@ -22,7 +22,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
             // If no merged cells, return original
             if (sheetData.MergedCells.Count == 0)
-                return Task.FromResult(sheetData);
+                return sheetData;
 
             // Analyze complexity first
             var analysis = AnalyzeMergeComplexity(sheetData.MergedCells);
@@ -39,7 +39,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             // Create new SASheetData with resolved merges
             var resolvedSheet = ApplyMergeStrategy(sheetData, strategy, warningCallback);
 
-            return Task.FromResult(resolvedSheet);
+            return resolvedSheet;
         }
 
         public MergeComplexityAnalysis AnalyzeMergeComplexity(

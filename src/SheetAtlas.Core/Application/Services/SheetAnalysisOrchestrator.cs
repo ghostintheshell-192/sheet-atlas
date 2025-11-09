@@ -47,7 +47,8 @@ namespace SheetAtlas.Core.Application.Services
             // Future: UI will allow manual configuration for multi-row headers
 
             // STEP 1: Resolve merged cells (FIRST - before column analysis needs expanded data)
-            var resolvedData = await ResolveMergedCells(rawData, fileName, errors);
+            // This is a synchronous in-memory operation (no I/O)
+            var resolvedData = ResolveMergedCells(rawData, fileName, errors);
 
             // STEP 2: Column analysis (works on resolved data with merged cells expanded)
             EnrichSheetWithColumnAnalysis(fileName, resolvedData, errors);
@@ -59,8 +60,9 @@ namespace SheetAtlas.Core.Application.Services
         /// Resolves merged cells using MergedCellResolver if any merged cells exist.
         /// Analyzes complexity, applies configured strategy, generates warnings.
         /// MUST run BEFORE column analysis to ensure accurate type detection.
+        /// Synchronous operation - all work is in-memory (no I/O).
         /// </summary>
-        private async Task<SASheetData> ResolveMergedCells(SASheetData sheetData, string fileName, List<ExcelError> errors)
+        private SASheetData ResolveMergedCells(SASheetData sheetData, string fileName, List<ExcelError> errors)
         {
             // Skip if no merged cells
             if (sheetData.MergedCells.Count == 0)
@@ -90,8 +92,8 @@ namespace SheetAtlas.Core.Application.Services
             // Use configured default strategy
             var strategy = _defaultMergeStrategy;
 
-            // Apply merge resolution with warning callback
-            var resolvedData = await _mergedCellResolver.ResolveMergedCellsAsync(
+            // Apply merge resolution with warning callback (synchronous in-memory operation)
+            var resolvedData = _mergedCellResolver.ResolveMergedCells(
                 sheetData,
                 strategy,
                 warning => HandleMergeWarning(sheetData.SheetName, warning, errors));
