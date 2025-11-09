@@ -36,7 +36,7 @@ public interface ILoadedFilesManager : IDisposable
     /// <param name="filePath">Path of the file to retry loading</param>
     /// <returns>Task representing the async operation</returns>
     Task RetryLoadAsync(string filePath);
-    void Dispose();
+    new void Dispose();
 
     /// <summary>
     /// Raised when a file is successfully loaded (or loaded with errors).

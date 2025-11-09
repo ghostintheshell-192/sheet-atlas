@@ -12,7 +12,11 @@ namespace SheetAtlas.Logging.Services
         /// </summary>
         public static void LogInfo(this ILogService logService, string message, string? context = null)
         {
-            logService.AddLogMessage(new LogMessage(LogSeverity.Info, message, context));
+            logService?.AddLogMessage(new LogMessage(
+                level: LogSeverity.Info,
+                title: "Info",
+                message: message,
+                context: context));
         }
 
         /// <summary>
@@ -20,7 +24,11 @@ namespace SheetAtlas.Logging.Services
         /// </summary>
         public static void LogWarning(this ILogService logService, string message, string? context = null)
         {
-            logService.AddLogMessage(new LogMessage(LogSeverity.Warning, message, context));
+            logService?.AddLogMessage(new LogMessage(
+                level: LogSeverity.Warning,
+                title: "Warning",
+                message: message,
+                context: context));
         }
 
         /// <summary>
@@ -28,7 +36,11 @@ namespace SheetAtlas.Logging.Services
         /// </summary>
         public static void LogError(this ILogService logService, string message, string? context = null)
         {
-            logService.AddLogMessage(new LogMessage(LogSeverity.Error, message, context));
+            logService?.AddLogMessage(new LogMessage(
+                level: LogSeverity.Error,
+                title: "Error",
+                message: message,
+                context: context));
         }
 
         /// <summary>
@@ -36,7 +48,11 @@ namespace SheetAtlas.Logging.Services
         /// </summary>
         public static void LogCritical(this ILogService logService, string message, string? context = null)
         {
-            logService.AddLogMessage(new LogMessage(LogSeverity.Critical, message, context));
+            logService?.AddLogMessage(new LogMessage(
+                level: LogSeverity.Critical,
+                title: "Critical",
+                message: message,
+                context: context));
         }
 
         /// <summary>
@@ -44,8 +60,13 @@ namespace SheetAtlas.Logging.Services
         /// </summary>
         public static void LogError(this ILogService logService, string message, Exception exception, string? context = null)
         {
-            var fullMessage = $"{message}: {exception.Message}";
-            logService.AddLogMessage(new LogMessage(LogSeverity.Error, fullMessage, context));
+            var fullMessage = $"{message}: {exception?.Message}";
+            logService?.AddLogMessage(new LogMessage(
+                level: LogSeverity.Error,
+                title: "Error",
+                message: fullMessage,
+                context: context,
+                exception: exception));
         }
 
         /// <summary>
@@ -53,8 +74,13 @@ namespace SheetAtlas.Logging.Services
         /// </summary>
         public static void LogCritical(this ILogService logService, string message, Exception exception, string? context = null)
         {
-            var fullMessage = $"{message}: {exception.Message}";
-            logService.AddLogMessage(new LogMessage(LogSeverity.Critical, fullMessage, context));
+            var fullMessage = $"{message}: {exception?.Message}";
+            logService?.AddLogMessage(new LogMessage(
+                level: LogSeverity.Critical,
+                title: "Critical",
+                message: fullMessage,
+                context: context,
+                exception: exception));
         }
     }
 }

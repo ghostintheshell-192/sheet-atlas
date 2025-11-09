@@ -342,6 +342,9 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
     /// Adds a file to the collection, optionally at a specific index.
     /// Used by both initial load and retry scenarios.
     /// </summary>
+    /// <param name="excelFile">The Excel file to add to the collection</param>
+    /// <param name="insertIndex">Optional index where to insert the file; if null or out of range, appends to end</param>
+    /// <param name="hasErrors">Whether the file has any errors or warnings</param>
     /// <param name="skipLogSave">If true, skips saving the log (used when log was already saved before calling this method)</param>
     private async Task AddFileToCollectionCore(ExcelFile excelFile, int? insertIndex, bool hasErrors, bool skipLogSave = false)
     {

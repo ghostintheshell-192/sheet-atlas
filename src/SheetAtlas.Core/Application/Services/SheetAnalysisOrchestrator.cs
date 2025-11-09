@@ -36,7 +36,7 @@ namespace SheetAtlas.Core.Application.Services
             _warnThreshold = warnThreshold;
         }
 
-        public async Task<SASheetData> EnrichAsync(SASheetData rawData, List<ExcelError> errors)
+        public Task<SASheetData> EnrichAsync(SASheetData rawData, List<ExcelError> errors)
         {
             if (rawData == null)
                 throw new ArgumentNullException(nameof(rawData));
@@ -53,7 +53,7 @@ namespace SheetAtlas.Core.Application.Services
             // STEP 2: Column analysis (works on resolved data with merged cells expanded)
             EnrichSheetWithColumnAnalysis(resolvedData, errors);
 
-            return resolvedData;
+            return Task.FromResult(resolvedData);
         }
 
         /// <summary>

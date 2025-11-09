@@ -76,7 +76,7 @@ namespace SheetAtlas.UI.Avalonia.Managers
                 ApplyTheme(savedTheme);
                 CurrentTheme = savedTheme;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _logger.LogWarning("Failed to initialize theme, using Light theme as fallback", "ThemeManager");
                 ApplyTheme(Theme.Light);
