@@ -124,11 +124,13 @@ namespace SheetAtlas.Core.Domain.ValueObjects
     }
 
     /// <summary>
-    /// Represents a specific cell location within a sheet using zero-based row and column indices.
+    /// Represents a specific cell location within a sheet using absolute 0-based indices.
+    /// Row 0 = first row in sheet (typically header), Row 1 = first data row, etc.
+    /// Column 0 = first column (A), Column 1 = second column (B), etc.
     /// </summary>
     public class CellReference
     {
-        /// <summary>Zero-based row index.</summary>
+        /// <summary>Zero-based absolute row index (0 = first row in sheet, typically header).</summary>
         public int Row { get; }
 
         /// <summary>Zero-based column index.</summary>
@@ -146,7 +148,8 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         public override string ToString() => $"R{Row}C{Column}";
 
         /// <summary>
-        /// Converts to Excel A1 notation (e.g., "B6" for row=5, col=1).
+        /// Converts to Excel A1 notation (e.g., "A1" for row=0/col=0, "B2" for row=1/col=1).
+        /// Simply converts 0-based indices to 1-based Excel notation.
         /// </summary>
         public string ToExcelNotation()
         {
@@ -157,7 +160,9 @@ namespace SheetAtlas.Core.Domain.ValueObjects
                 columnName = (char)('A' + (col % 26)) + columnName;
                 col = col / 26 - 1;
             }
-            return $"{columnName}{Row + 1}";
+            // Convert 0-based to 1-based Excel row
+            int excelRow = Row + 1;
+            return $"{columnName}{excelRow}";
         }
     }
 }

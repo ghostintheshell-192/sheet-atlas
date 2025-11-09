@@ -103,6 +103,26 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         /// </summary>
         public CellStyle? Style { get; set; }
 
+        // === Foundation Layer Support ===
+
+        /// <summary>
+        /// Currency context for numeric cells (from parent column analysis).
+        /// Used during normalization for proper currency parsing.
+        /// </summary>
+        public CurrencyInfo? Currency { get; set; }
+
+        /// <summary>
+        /// Detected data type after normalization (cached for performance).
+        /// Faster than re-analyzing on each comparison.
+        /// </summary>
+        public DataType? DetectedType { get; set; }
+
+        /// <summary>
+        /// Excel number format string (e.g., "mm/dd/yyyy", "[$€-407] #,##0.00").
+        /// Used by CurrencyDetector and type inference for accurate analysis.
+        /// </summary>
+        public string? NumberFormat { get; set; }
+
         // === Extensibility ===
 
         /// <summary>

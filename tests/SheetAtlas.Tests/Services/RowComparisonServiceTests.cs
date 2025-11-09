@@ -1,5 +1,6 @@
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Application.Services;
+using SheetAtlas.Core.Application.Services.Foundation;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.Exceptions;
 using SheetAtlas.Core.Domain.ValueObjects;
@@ -10,6 +11,7 @@ using Moq;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Core.Configuration;
 using Microsoft.Extensions.Options;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace SheetAtlas.Tests.Services
 {
@@ -278,10 +280,24 @@ namespace SheetAtlas.Tests.Services
             var readerLogger = new Mock<ILogService>();
             var cellParser = new CellReferenceParser();
             var cellValueReader = new CellValueReader();
-            var mergedCellProcessor = new MergedCellProcessor(cellParser, cellValueReader);
+            var mergedRangeExtractor = new OpenXmlMergedRangeExtractor(cellParser);
 
-            // Create OpenXmlFileReader with its dependencies
-            var openXmlReader = new OpenXmlFileReader(readerLogger.Object, cellParser, mergedCellProcessor, cellValueReader);
+            // Foundation services (real implementations for integration tests)
+            var currencyDetector = new CurrencyDetector();
+            var normalizationService = new DataNormalizationService();
+            var columnAnalysisService = new ColumnAnalysisService(currencyDetector);
+            var mergedCellResolver = new MergedCellResolver();
+
+            // Create orchestrator (with MergedCellResolver as first parameter)
+            var orchestrator = new SheetAnalysisOrchestrator(mergedCellResolver, columnAnalysisService, normalizationService, readerLogger.Object);
+
+            // Create OpenXmlFileReader with orchestrator
+            var openXmlReader = new OpenXmlFileReader(
+                readerLogger.Object,
+                cellParser,
+                mergedRangeExtractor,
+                cellValueReader,
+                orchestrator);
             var readers = new List<IFileFormatReader> { openXmlReader };
 
             // Create settings mock

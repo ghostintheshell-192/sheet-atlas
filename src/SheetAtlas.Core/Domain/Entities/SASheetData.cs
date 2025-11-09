@@ -7,6 +7,12 @@ namespace SheetAtlas.Core.Domain.Entities
     /// Uses single contiguous SACellData[] instead of List of arrays.
     /// Benefits: zero fragmentation, cache-friendly, GC can release memory properly.
     /// Memory: ~2-3x overhead instead of 10-14x like DataTable.
+    ///
+    /// ROW INDEXING:
+    /// - All row indices are 0-based ABSOLUTE (row 0 = first row in sheet)
+    /// - Header rows are INCLUDED in the data array (rows 0 to HeaderRowCount-1)
+    /// - Data rows start at row HeaderRowCount
+    /// - Excel Row N corresponds to SASheetData row (N-1)
     /// </summary>
     public class SASheetData : IDisposable
     {
@@ -18,18 +24,27 @@ namespace SheetAtlas.Core.Domain.Entities
         public string SheetName { get; }
 
         /// <summary>
-        /// Column names (headers from first row).
+        /// Column names extracted from header row(s).
+        /// For multi-row headers, column names are concatenated with newline separator.
         /// </summary>
-        public string[] ColumnNames { get; }
+        public string[] ColumnNames { get; private set; }
+
+        /// <summary>
+        /// Number of header rows at the beginning of the sheet (default: 1).
+        /// Header rows are included in _cells array (rows 0 to HeaderRowCount-1).
+        /// Data rows start at row HeaderRowCount.
+        /// </summary>
+        public int HeaderRowCount { get; private set; } = 1;
 
         /// <summary>
         /// Flat array of all cells: cells[row * ColumnCount + col].
         /// Single contiguous allocation = zero fragmentation, excellent cache locality.
+        /// INCLUDES header rows (rows 0 to HeaderRowCount-1) AND data rows.
         /// </summary>
         private SACellData[] _cells;
 
         /// <summary>
-        /// Current number of rows stored.
+        /// Current number of rows stored (includes header rows + data rows).
         /// </summary>
         private int _rowCount;
 
@@ -55,6 +70,21 @@ namespace SheetAtlas.Core.Domain.Entities
             _rowCount = 0;
 
             // Metadata collections NOT allocated until first use (lazy)
+        }
+
+        /// <summary>
+        /// Set the number of header rows in this sheet.
+        /// Must be called during sheet construction before data processing.
+        /// Header rows must already be added via AddRow().
+        /// </summary>
+        public void SetHeaderRowCount(int headerRowCount)
+        {
+            if (headerRowCount < 0)
+                throw new ArgumentException("Header row count cannot be negative", nameof(headerRowCount));
+            if (headerRowCount > _rowCount)
+                throw new ArgumentException($"Header row count ({headerRowCount}) cannot exceed total row count ({_rowCount})", nameof(headerRowCount));
+
+            HeaderRowCount = headerRowCount;
         }
 
         /// <summary>
@@ -171,6 +201,7 @@ namespace SheetAtlas.Core.Domain.Entities
         /// <summary>
         /// Enumerate all rows without allocation (yields row by row).
         /// Preferred over GetRow() for iteration.
+        /// INCLUDES header rows.
         /// </summary>
         public IEnumerable<RowView> EnumerateRows()
         {
@@ -181,9 +212,35 @@ namespace SheetAtlas.Core.Domain.Entities
         }
 
         /// <summary>
-        /// Number of rows in sheet (excluding header).
+        /// Enumerate only data rows without allocation (yields row by row).
+        /// Skips header rows (rows 0 to HeaderRowCount-1).
+        /// Use this for data processing loops.
+        /// </summary>
+        public IEnumerable<RowView> EnumerateDataRows()
+        {
+            for (int row = HeaderRowCount; row < _rowCount; row++)
+            {
+                yield return new RowView(this, row);
+            }
+        }
+
+        /// <summary>
+        /// Check if a row is a header row.
+        /// Returns true for rows 0 to HeaderRowCount-1.
+        /// </summary>
+        public bool IsHeaderRow(int row) => row >= 0 && row < HeaderRowCount;
+
+        /// <summary>
+        /// Total number of rows in sheet (includes header rows + data rows).
+        /// To get only data rows: use DataRowCount property.
         /// </summary>
         public int RowCount => _rowCount;
+
+        /// <summary>
+        /// Number of data rows in sheet (excludes header rows).
+        /// Equal to: RowCount - HeaderRowCount
+        /// </summary>
+        public int DataRowCount => _rowCount - HeaderRowCount;
 
         /// <summary>
         /// Number of columns in sheet.
@@ -313,12 +370,35 @@ namespace SheetAtlas.Core.Domain.Entities
     public record MergedRange(int StartRow, int StartCol, int EndRow, int EndCol);
 
     /// <summary>
-    /// Column-level metadata (width, hidden state, etc.).
+    /// Column-level metadata (width, hidden state, detected type, etc.).
     /// Shared for all cells in the column.
+    /// Extended by Foundation Layer for type detection and quality analysis.
     /// </summary>
     public record ColumnMetadata
     {
+        // Original fields
         public double? Width { get; init; }
         public bool IsHidden { get; init; }
+
+        // Foundation Layer extensions
+        /// <summary>
+        /// Detected data type for column (from Foundation Layer analysis).
+        /// </summary>
+        public ValueObjects.DataType? DetectedType { get; init; }
+
+        /// <summary>
+        /// Type confidence score (0.0 - 1.0). >0.8 = strong type.
+        /// </summary>
+        public double? TypeConfidence { get; init; }
+
+        /// <summary>
+        /// Currency info if column contains monetary values.
+        /// </summary>
+        public ValueObjects.CurrencyInfo? Currency { get; init; }
+
+        /// <summary>
+        /// Number of data quality warnings in column sample.
+        /// </summary>
+        public int QualityWarningCount { get; init; }
     }
 }

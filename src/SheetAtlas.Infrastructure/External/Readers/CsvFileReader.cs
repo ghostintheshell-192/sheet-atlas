@@ -20,11 +20,13 @@ namespace SheetAtlas.Infrastructure.External.Readers
     public class CsvFileReader : IConfigurableFileReader
     {
         private readonly ILogService _logger;
+        private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
         private CsvReaderOptions _options;
 
-        public CsvFileReader(ILogService logger)
+        public CsvFileReader(ILogService logger, ISheetAnalysisOrchestrator analysisOrchestrator)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
             _options = CsvReaderOptions.Default;
         }
 
@@ -82,7 +84,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     SASheetData sheetData;
                     try
                     {
-                        sheetData = ConvertToSASheetDataStreaming(Path.GetFileNameWithoutExtension(filePath), csv);
+                        sheetData = ConvertToSASheetDataStreaming(Path.GetFileNameWithoutExtension(filePath), csv, errors);
                     }
                     catch (Exception ex)
                     {
@@ -130,7 +132,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
         }
 
-        private SASheetData ConvertToSASheetDataStreaming(string fileName, CsvReader csv)
+        private SASheetData ConvertToSASheetDataStreaming(string fileName, CsvReader csv, List<ExcelError> errors)
         {
             var sheetName = "Data";
 
@@ -178,6 +180,22 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     }
 
                     sheetData = new SASheetData(sheetName, columnNames.ToArray());
+
+                    // IMPORTANT: CsvHelper behavior differs from XLS/XLSX readers
+                    // - XLS/XLSX: DataTable/Worksheet INCLUDE header row → we iterate from row 0
+                    // - CSV: CsvHelper with HasHeaderRecord=true SKIPS header → GetRecords() returns only data
+                    //
+                    // Solution: Manually reconstruct header row from columnNames
+                    // Trade-off: Header cells are always Text (acceptable - headers are typically text anyway)
+                    // Benefit: Simpler than switching to HasHeaderRecord=false and parsing manually
+                    //
+                    // Row indexing after this: absolute 0-based (row 0 = header, row 1+ = data)
+                    var headerRow = new SACellData[columnNames.Count];
+                    for (int i = 0; i < columnNames.Count; i++)
+                    {
+                        headerRow[i] = new SACellData(SACellValue.FromString(columnNames[i], stringPool));
+                    }
+                    sheetData.AddRow(headerRow);
                 }
 
                 // Process row data
@@ -190,8 +208,16 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     {
                         // Use FromString for auto-type detection with string interning
                         string cellText = kvp.Value?.ToString() ?? string.Empty;
-                        totalStrings++;
-                        rowData[columnIndex] = new SACellData(SACellValue.FromString(cellText, stringPool));
+
+                        // FIX: Treat empty/whitespace strings as Empty cells, not Text
+                        SACellValue cellValue = string.IsNullOrWhiteSpace(cellText)
+                            ? SACellValue.Empty
+                            : SACellValue.FromString(cellText, stringPool);
+
+                        if (!string.IsNullOrWhiteSpace(cellText))
+                            totalStrings++;
+
+                        rowData[columnIndex] = new SACellData(cellValue);
                         columnIndex++;
                     }
                 }
@@ -210,11 +236,18 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var memorySaved = stringPool.EstimatedMemorySaved(totalStrings);
             _logger.LogInfo($"String interning: {stringPool.Count} unique from {totalStrings} total (~{memorySaved / 1024} KB saved)", "CsvFileReader");
 
+            // Set header row count (currently single-row headers only)
+            const int headerRowCount = 1;
+            sheetData.SetHeaderRowCount(headerRowCount);
+
             // Trim excess capacity to save memory
             sheetData.TrimExcess();
             _logger.LogInfo($"Sheet trimmed to exact size: {sheetData.RowCount} rows × {sheetData.ColumnCount} cols = {sheetData.CellCount} cells", "CsvFileReader");
 
-            return sheetData;
+            // INTEGRATION: Analyze and enrich sheet data via orchestrator
+            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, errors).Result;
+
+            return enrichedData;
         }
 
         private char DetectDelimiter(string filePath)
