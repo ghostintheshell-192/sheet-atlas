@@ -156,14 +156,15 @@ namespace SheetAtlas.Core.Application.Services
                 if (!int.TryParse(rowString, out int row))
                     return null;
 
-                // Convert column letters to number (A=0, B=1, Z=25, AA=26, etc.)
+                // Convert column letters to 0-based index (A=0, B=1, Z=25, AA=26, etc.)
                 int column = 0;
                 for (int j = 0; j < columnLetters.Length; j++)
                 {
                     column = column * 26 + (char.ToUpperInvariant(columnLetters[j]) - 'A');
                 }
 
-                return new CellReference(row - 1, column); // Excel is 1-based, CellReference is 0-based
+                // Convert Excel 1-based row to 0-based absolute index
+                return new CellReference(row - 1, column);
             }
             catch
             {

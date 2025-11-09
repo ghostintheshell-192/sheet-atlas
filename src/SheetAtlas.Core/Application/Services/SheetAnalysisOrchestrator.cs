@@ -1,6 +1,7 @@
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
+using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Logging.Models;
 
@@ -8,36 +9,115 @@ namespace SheetAtlas.Core.Application.Services
 {
     /// <summary>
     /// Orchestrates the analysis and enrichment pipeline for sheet data.
-    /// Coordinates foundation services: column analysis, currency detection, data normalization.
+    /// Coordinates foundation services: merged cell resolution, column analysis, currency detection, data normalization.
     /// </summary>
     public class SheetAnalysisOrchestrator : ISheetAnalysisOrchestrator
     {
+        private readonly IMergedCellResolver _mergedCellResolver;
         private readonly IColumnAnalysisService _columnAnalysisService;
         private readonly IDataNormalizationService _normalizationService;
         private readonly ILogService _logger;
+        private readonly MergeStrategy _defaultMergeStrategy;
+        private readonly double _warnThreshold;
 
         public SheetAnalysisOrchestrator(
+            IMergedCellResolver mergedCellResolver,
             IColumnAnalysisService columnAnalysisService,
             IDataNormalizationService normalizationService,
-            ILogService logger)
+            ILogService logger,
+            MergeStrategy defaultMergeStrategy = MergeStrategy.ExpandValue,
+            double warnThreshold = 0.20)
         {
+            _mergedCellResolver = mergedCellResolver ?? throw new ArgumentNullException(nameof(mergedCellResolver));
             _columnAnalysisService = columnAnalysisService ?? throw new ArgumentNullException(nameof(columnAnalysisService));
             _normalizationService = normalizationService ?? throw new ArgumentNullException(nameof(normalizationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _defaultMergeStrategy = defaultMergeStrategy;
+            _warnThreshold = warnThreshold;
         }
 
-        public Task<SASheetData> EnrichAsync(SASheetData rawData, string fileName, List<ExcelError> errors)
+        public async Task<SASheetData> EnrichAsync(SASheetData rawData, string fileName, List<ExcelError> errors)
         {
             if (rawData == null)
                 throw new ArgumentNullException(nameof(rawData));
             if (errors == null)
                 throw new ArgumentNullException(nameof(errors));
 
-            // Run enrichment pipeline
-            EnrichSheetWithColumnAnalysis(fileName, rawData, errors);
+            // STEP 1: Resolve merged cells (FIRST - before column analysis needs expanded data)
+            var resolvedData = await ResolveMergedCells(rawData, fileName, errors);
 
-            // Return enriched data (Task.FromResult for now - async for future steps)
-            return Task.FromResult(rawData);
+            // STEP 2: Column analysis (works on resolved data with merged cells expanded)
+            EnrichSheetWithColumnAnalysis(fileName, resolvedData, errors);
+
+            return resolvedData;
+        }
+
+        /// <summary>
+        /// Resolves merged cells using MergedCellResolver if any merged cells exist.
+        /// Analyzes complexity, applies configured strategy, generates warnings.
+        /// MUST run BEFORE column analysis to ensure accurate type detection.
+        /// </summary>
+        private async Task<SASheetData> ResolveMergedCells(SASheetData sheetData, string fileName, List<ExcelError> errors)
+        {
+            // Skip if no merged cells
+            if (sheetData.MergedCells.Count == 0)
+            {
+                _logger.LogInfo($"[MERGE RESOLUTION] No merged cells detected in {sheetData.SheetName}", "SheetAnalysisOrchestrator");
+                return sheetData;
+            }
+
+            // Analyze merge complexity first
+            var analysis = _mergedCellResolver.AnalyzeMergeComplexity(sheetData.MergedCells);
+
+            // Log analysis (always)
+            _logger.LogInfo(
+                $"[MERGE RESOLUTION] {sheetData.SheetName}: {analysis.Explanation} " +
+                $"(Level={analysis.Level}, Percentage={analysis.MergedCellPercentage:P1}, " +
+                $"Ranges={analysis.TotalMergeRanges}, Vertical={analysis.VerticalMergeCount}, Horizontal={analysis.HorizontalMergeCount})",
+                "SheetAnalysisOrchestrator");
+
+            // Add ExcelError if merge density exceeds configured threshold
+            if (analysis.MergedCellPercentage > _warnThreshold)
+            {
+                errors.Add(ExcelError.Warning(
+                    $"Sheet:{sheetData.SheetName}",
+                    $"High merge density detected ({analysis.MergedCellPercentage:P0}, threshold: {_warnThreshold:P0}) - {analysis.Explanation}"));
+            }
+
+            // Use configured default strategy
+            var strategy = _defaultMergeStrategy;
+
+            // Apply merge resolution with warning callback
+            var resolvedData = await _mergedCellResolver.ResolveMergedCellsAsync(
+                sheetData,
+                strategy,
+                warning => HandleMergeWarning(sheetData.SheetName, warning, errors));
+
+            _logger.LogInfo(
+                $"[MERGE RESOLUTION] Applied strategy {strategy} to {sheetData.SheetName}",
+                "SheetAnalysisOrchestrator");
+
+            return resolvedData;
+        }
+
+        /// <summary>
+        /// Callback for merge warnings from MergedCellResolver.
+        /// Logs all warnings, adds ExcelError for high-complexity warnings.
+        /// </summary>
+        private void HandleMergeWarning(string sheetName, MergeWarning warning, List<ExcelError> errors)
+        {
+            // Always log
+            _logger.LogWarning(
+                $"[MERGE WARNING] {sheetName} {warning.RangeRef}: {warning.Message} (Complexity={warning.Complexity})",
+                "SheetAnalysisOrchestrator");
+
+            // Add ExcelError only for Chaos level (hybrid approach)
+            if (warning.Complexity == MergeComplexity.Chaos)
+            {
+                errors.Add(ExcelError.Warning(
+                    $"Sheet:{sheetName}",
+                    $"Merge range {warning.RangeRef}: {warning.Message}"));
+            }
         }
 
         /// <summary>
@@ -138,8 +218,9 @@ namespace SheetAtlas.Core.Application.Services
         /// </summary>
         private ExcelError CreateExcelErrorFromAnomaly(string fileName, string sheetName, int columnIndex, CellAnomaly anomaly)
         {
-            // Create cell reference (0-based indices)
-            var cellRef = new CellReference(anomaly.RowIndex, columnIndex);
+            // Create cell reference with absolute row index
+            // anomaly.RowIndex is relative to data (0 = first data row), so add 1 for header row
+            var cellRef = new CellReference(anomaly.RowIndex + 1, columnIndex);
 
             // Message includes sheet name and cell location in Excel notation (e.g., "Sheet1!B2")
             string cellAddress = cellRef.ToExcelNotation();

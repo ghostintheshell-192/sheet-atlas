@@ -178,8 +178,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 return NormalizationResult.Empty;
             }
 
-            // Try parse as boolean FIRST (before numbers, to catch "1" and "0")
-            // But AFTER empty check to avoid treating "" as false
+            // Try parse as boolean (explicit values like "true", "yes", "y")
+            // Note: "1" and "0" are NOT treated as boolean - too ambiguous with numeric data
             if (TryParseBoolean(text, out bool boolValue))
             {
                 var cleaned = SACellValue.FromBoolean(boolValue);
@@ -285,16 +285,16 @@ namespace SheetAtlas.Core.Application.Services.Foundation
         {
             text = text.Trim().ToLowerInvariant();
 
-            // True values
-            if (text == "true" || text == "yes" || text == "y" || text == "1" ||
+            // True values (NOTE: "1" removed - too ambiguous, often used as numeric IDs)
+            if (text == "true" || text == "yes" || text == "y" ||
                 text == "x" || text == "✓" || text == "✔" || text == "☑")
             {
                 result = true;
                 return true;
             }
 
-            // False values (empty string handled separately in NormalizeText)
-            if (text == "false" || text == "no" || text == "n" || text == "0" ||
+            // False values (NOTE: "0" removed - too ambiguous, often used as numeric values)
+            if (text == "false" || text == "no" || text == "n" ||
                 text == "✗" || text == "✘" || text == "☐")
             {
                 result = false;

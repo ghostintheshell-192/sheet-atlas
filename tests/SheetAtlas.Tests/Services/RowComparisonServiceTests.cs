@@ -11,6 +11,7 @@ using Moq;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Core.Configuration;
 using Microsoft.Extensions.Options;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace SheetAtlas.Tests.Services
 {
@@ -279,7 +280,7 @@ namespace SheetAtlas.Tests.Services
             var readerLogger = new Mock<ILogService>();
             var cellParser = new CellReferenceParser();
             var cellValueReader = new CellValueReader();
-            var mergedCellProcessor = new MergedCellProcessor(cellParser, cellValueReader);
+            var mergedRangeExtractor = new OpenXmlMergedRangeExtractor(cellParser);
 
             // Foundation services (real implementations for integration tests)
             var currencyDetector = new CurrencyDetector();
@@ -287,14 +288,14 @@ namespace SheetAtlas.Tests.Services
             var columnAnalysisService = new ColumnAnalysisService(currencyDetector);
             var mergedCellResolver = new MergedCellResolver();
 
-            // Create orchestrator
-            var orchestrator = new SheetAnalysisOrchestrator(columnAnalysisService, normalizationService, readerLogger.Object);
+            // Create orchestrator (with MergedCellResolver as first parameter)
+            var orchestrator = new SheetAnalysisOrchestrator(mergedCellResolver, columnAnalysisService, normalizationService, readerLogger.Object);
 
             // Create OpenXmlFileReader with orchestrator
             var openXmlReader = new OpenXmlFileReader(
                 readerLogger.Object,
                 cellParser,
-                mergedCellProcessor,
+                mergedRangeExtractor,
                 cellValueReader,
                 orchestrator);
             var readers = new List<IFileFormatReader> { openXmlReader };
