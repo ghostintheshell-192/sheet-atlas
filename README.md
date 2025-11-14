@@ -38,8 +38,8 @@ A powerful cross-platform desktop application for searching across multiple Exce
 ### Supported Operating Systems
 
 - **Windows**: Windows 10 1903+ (x64, Arm64) - **Installer Available**
-- **Linux**: Planned (x64, Arm64) - **Coming Soon**
-- **macOS**: Planned (x64, Apple Silicon) - **Coming Soon**
+- **Linux**: Ubuntu 20.04+, Debian 11+ (x64, Arm64) - **Installer Available**
+- **macOS**: macOS 10.15 Catalina+ (x64, Apple Silicon) - **Installer Available**
 
 ### Runtime Requirements
 
@@ -54,10 +54,10 @@ A powerful cross-platform desktop application for searching across multiple Exce
 Visit the **[Releases page](https://github.com/ghostintheshell-192/sheet-atlas/releases/latest)** to download the latest version:
 
 - **Windows**: Installer available (`.exe`)
-- **Linux**: Coming soon
-- **macOS**: Coming soon
+- **Linux**: Tarball (`.tar.gz`) and Debian package (`.deb`)
+- **macOS**: DMG installer (`.dmg`) for easy drag-and-drop installation
 
-For Linux and macOS, you can currently [build from source](#build-from-source).
+You can also [build from source](#build-from-source) if preferred.
 
 ### Build from Source
 
@@ -197,8 +197,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ Multi-file loading and cross-file search
 - ✅ Advanced search with regex support
 - ✅ Row comparison with visual highlighting
-- ✅ Windows installer available
-- 🚧 Linux and macOS installers (in progress)
+- ✅ Windows installer available (.exe)
+- ✅ Linux packages available (.tar.gz, .deb)
+- ✅ macOS installer available (.dmg)
 
 ### Upcoming Features
 
