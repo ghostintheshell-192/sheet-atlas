@@ -149,12 +149,12 @@ ${ALPHA_BANNER}
                         <span>Debian Package (.deb)</span>
                     </div>
                 </a>
-                <div class="download-btn disabled">
+                <a href="https://github.com/ghostintheshell-192/sheet-atlas/releases/download/${VERSION}/SheetAtlas-macos-x64.dmg" class="download-btn">
                     <div class="download-info">
                         <h3>macOS</h3>
-                        <span>Coming Soon</span>
+                        <span>DMG Installer for macOS 10.15+</span>
                     </div>
-                </div>
+                </a>
             </div>
             <div class="download-notes">
                 <p><strong>Other Linux distributions:</strong> Download the .tar.gz archive from the <a href="https://github.com/ghostintheshell-192/sheet-atlas/releases/tag/${VERSION}" target="_blank">releases page</a>.</p>
