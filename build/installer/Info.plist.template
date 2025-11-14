@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Application Identity -->
+    <key>CFBundleName</key>
+    <string>SheetAtlas</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>SheetAtlas</string>
+
+    <key>CFBundleExecutable</key>
+    <string>SheetAtlas.UI.Avalonia</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>com.sheetatlas.app</string>
+
+    <!-- Version Information -->
+    <key>CFBundleVersion</key>
+    <string>VERSION_PLACEHOLDER</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>VERSION_PLACEHOLDER</string>
+
+    <!-- Icon -->
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
+
+    <!-- Package Type -->
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <key>CFBundleSignature</key>
+    <string>????</string>
+
+    <!-- Supported OS -->
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+
+    <!-- High Resolution Support -->
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <!-- Application Category -->
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+
+    <!-- Info -->
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2024-2025 SheetAtlas Team. MIT License.</string>
+
+    <!-- UI Configuration -->
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+
+    <!-- Document Types (optional) -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Excel Spreadsheet</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.openxmlformats.spreadsheetml.sheet</string>
+                <string>com.microsoft.excel.xls</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- Security (unsigned app) -->
+    <key>NSAppleEventsUsageDescription</key>
+    <string>SheetAtlas needs access to open Excel files.</string>
+</dict>
+</plist>

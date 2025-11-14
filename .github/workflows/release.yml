@@ -232,19 +232,20 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Publish macOS x64 self-contained
+      - name: Extract version number
+        id: version
         run: |
-          dotnet publish ${{ env.PROJECT_PATH }} \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --runtime osx-x64 \
-            --self-contained true \
-            --output build/publish/osx-x64 \
-            /p:PublishSingleFile=false \
-            /p:PublishReadyToRun=true \
-            /p:PublishTrimmed=true \
-            /p:TrimMode=partial
+          VERSION="${{ github.ref_name }}"
+          VERSION_NUMBER="${VERSION#v}"  # Remove 'v' prefix
+          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION_NUMBER"
 
-      - name: Create tarball
+      - name: Build .app bundle and .dmg installer
+        run: |
+          chmod +x build/build-macos-installer.sh
+          ./build/build-macos-installer.sh ${{ steps.version.outputs.version_number }}
+
+      - name: Create tarball (legacy format)
         run: |
           cd build/publish/osx-x64
           tar -czf ../../../SheetAtlas-macos-x64.tar.gz .
@@ -253,7 +254,29 @@ jobs:
           echo "Tarball created:"
           ls -lh SheetAtlas-macos-x64.tar.gz
 
-      - name: Upload macOS tarball
+      - name: Verify outputs
+        run: |
+          echo "=== Build Outputs ==="
+          ls -lh build/SheetAtlas-macos-x64.dmg
+          ls -lh build/SheetAtlas.app
+          ls -lh SheetAtlas-macos-x64.tar.gz
+          echo "====================="
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: build/SheetAtlas-macos-x64.dmg
+          if-no-files-found: error
+
+      - name: Upload macOS .app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: build/SheetAtlas.app
+          if-no-files-found: error
+
+      - name: Upload macOS tarball (legacy)
         uses: actions/upload-artifact@v4
         with:
           name: macos-tarball
@@ -346,7 +369,9 @@ jobs:
           echo "- Windows Installer (.exe)" >> $GITHUB_STEP_SUMMARY
           echo "- Linux Tarball (.tar.gz)" >> $GITHUB_STEP_SUMMARY
           echo "- Linux Debian Package (.deb)" >> $GITHUB_STEP_SUMMARY
-          echo "- macOS Tarball (.tar.gz)" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS DMG Installer (.dmg)" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS App Bundle (.app)" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS Tarball - Legacy (.tar.gz)" >> $GITHUB_STEP_SUMMARY
 
   # ============================================
   # UPDATE WEBSITE

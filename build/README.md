@@ -133,10 +133,23 @@ sudo apt install libx11-6 libice6 libsm6 libfontconfig1
 
 ## 🍎 macOS Package
 
-### Build Application Bundle
+### Build DMG Installer
+
+**Automated Build (Recommended):**
 
 ```bash
-# Publish for macOS
+# Run the build script
+./build/build-macos-installer.sh 0.3.0
+```
+
+This creates:
+- **SheetAtlas.app** - Complete .app bundle
+- **SheetAtlas-macos-x64.dmg** - DMG installer with drag-and-drop
+
+**Manual Build:**
+
+```bash
+# 1. Publish for macOS
 dotnet publish src/SheetAtlas.UI.Avalonia/SheetAtlas.UI.Avalonia.csproj \
   --configuration Release \
   --runtime osx-x64 \
@@ -144,28 +157,35 @@ dotnet publish src/SheetAtlas.UI.Avalonia/SheetAtlas.UI.Avalonia.csproj \
   --output build/publish/osx-x64 \
   /p:PublishTrimmed=true
 
-# Create tarball
-cd build/publish
-tar -czf SheetAtlas-macos-x64.tar.gz osx-x64/
+# 2. Run the installer script
+chmod +x build/build-macos-installer.sh
+./build/build-macos-installer.sh 0.3.0
 ```
 
 ### Installation
 
+**From DMG (Recommended):**
+1. Open `SheetAtlas-macos-x64.dmg`
+2. Drag `SheetAtlas.app` to the `Applications` folder
+3. Launch from Launchpad or Applications folder
+4. On first launch: Right-click → Open (to bypass Gatekeeper for unsigned apps)
+
+**From Tarball (Legacy):**
 ```bash
 # Extract
 tar -xzf SheetAtlas-macos-x64.tar.gz
 
-# Move to Applications (optional)
-sudo mv osx-x64 /Applications/SheetAtlas.app
+# Move to Applications
+sudo mv osx-x64 /Applications/SheetAtlas
 
 # Run application
-/Applications/SheetAtlas.app/SheetAtlas.UI.Avalonia
+/Applications/SheetAtlas/SheetAtlas.UI.Avalonia
 ```
 
 ### System Requirements
 
 - **macOS 10.15 Catalina** or later
-- **Intel or Apple Silicon** (M1/M2/M3)
+- **Intel (x64) or Apple Silicon (M1/M2/M3)** - Universal build coming soon
 
 ---
 
