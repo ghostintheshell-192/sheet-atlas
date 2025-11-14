@@ -142,8 +142,8 @@ PLIST_TEMPLATE="$BUILD_DIR/installer/Info.plist.template"
 PLIST_OUTPUT="$APP_BUNDLE/Contents/Info.plist"
 
 if [ -f "$PLIST_TEMPLATE" ]; then
-  # Replace VERSION_PLACEHOLDER with actual version
-  sed "s/VERSION_PLACEHOLDER/$VERSION/g" "$PLIST_TEMPLATE" > "$PLIST_OUTPUT"
+  # Replace VERSION_PLACEHOLDER with actual version (use | as delimiter to avoid issues with / in version)
+  sed "s|VERSION_PLACEHOLDER|$VERSION|g" "$PLIST_TEMPLATE" > "$PLIST_OUTPUT"
   echo "  ✓ Info.plist created from template"
 else
   # Create basic Info.plist

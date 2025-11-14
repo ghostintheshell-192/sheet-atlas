@@ -235,7 +235,12 @@ jobs:
       - name: Extract version number
         id: version
         run: |
-          VERSION="${{ github.ref_name }}"
+          # Use manual input if available, otherwise use ref_name
+          if [ -n "${{ inputs.tag }}" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
           VERSION_NUMBER="${VERSION#v}"  # Remove 'v' prefix
           echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION_NUMBER"
@@ -318,7 +323,12 @@ jobs:
       - name: Detect if prerelease
         id: prerelease
         run: |
-          VERSION="${{ github.ref_name }}"
+          # Use manual input if available, otherwise use ref_name
+          if [ -n "${{ inputs.tag }}" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
           if [[ "$VERSION" == v0.* ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
             echo "This is a pre-release (v0.x)"
@@ -329,7 +339,12 @@ jobs:
 
       - name: Extract version-specific changelog
         run: |
-          VERSION="${{ github.ref_name }}"
+          # Use manual input if available, otherwise use ref_name
+          if [ -n "${{ inputs.tag }}" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
           VERSION_NUMBER="${VERSION#v}"
 
           echo "Extracting changelog for version: $VERSION_NUMBER"
@@ -395,7 +410,12 @@ jobs:
 
       - name: Generate website from template
         run: |
-          VERSION="${{ github.ref_name }}"
+          # Use manual input if available, otherwise use ref_name
+          if [ -n "${{ inputs.tag }}" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
           VERSION_NUMBER="${VERSION#v}"  # Remove 'v' prefix
           RELEASE_DATE="$(date +%Y-%m-%d)"
 
