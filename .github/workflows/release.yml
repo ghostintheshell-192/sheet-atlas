@@ -154,7 +154,12 @@ jobs:
 
       - name: Create .deb package
         run: |
-          VERSION="${{ github.ref_name }}"
+          # Use manual input if available, otherwise use ref_name
+          if [ -n "${{ inputs.tag }}" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
           VERSION_NUMBER="${VERSION#v}"  # Remove 'v' prefix
 
           # Create Debian package structure
@@ -375,9 +380,11 @@ jobs:
 
       - name: Release summary
         run: |
+          # Use manual input if available for display
+          VERSION_DISPLAY="${{ inputs.tag || github.ref_name }}"
           echo "### Release Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** $VERSION_DISPLAY" >> $GITHUB_STEP_SUMMARY
           echo "**Type:** ${{ steps.prerelease.outputs.is_prerelease == 'true' && 'Pre-release' || 'Stable' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Artifacts:**" >> $GITHUB_STEP_SUMMARY
@@ -449,6 +456,9 @@ jobs:
 
       - name: Commit and push website update
         run: |
+          # Use manual input if available for commit message
+          VERSION_DISPLAY="${{ inputs.tag || github.ref_name }}"
+
           git add docs/website/index.html docs/website/download.html
 
           if git diff --staged --quiet; then
@@ -456,7 +466,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "docs: update website for release ${{ github.ref_name }}
+          git commit -m "docs: update website for release $VERSION_DISPLAY
 
           Auto-generated from templates (index.html.template, download.html.template)
 
