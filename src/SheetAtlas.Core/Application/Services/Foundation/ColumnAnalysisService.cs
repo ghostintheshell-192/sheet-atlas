@@ -210,22 +210,11 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 if (cellType == dominantType)
                     continue;
 
-                // Skip Unknown (empty cells are handled separately)
+                // Skip Unknown (empty cells are not considered anomalies)
+                // Empty cells are legitimate in spreadsheets (optional fields, missing data, etc.)
+                // For business-critical validation (required fields), implement separate validation layer
                 if (cellType == DataType.Unknown)
                 {
-                    // Empty cell in non-empty column → warning
-                    if (dominantType != DataType.Unknown && cell.IsEmpty)
-                    {
-                        anomalies.Add(new CellAnomaly
-                        {
-                            RowIndex = i,
-                            CellValue = cell,
-                            Issue = DataQualityIssue.MissingRequired,
-                            ExpectedType = dominantType,
-                            ActualType = DataType.Unknown,
-                            Message = $"Empty cell in {dominantType} column"
-                        });
-                    }
                     continue;
                 }
 

@@ -529,15 +529,16 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Fact]
-        public void AnalyzeColumn_EmptyCellsInNumericColumn_Warning()
+        public void AnalyzeColumn_EmptyCellsInNumericColumn_NoAnomaly()
         {
             // Arrange - Empty cells scattered in numeric column
+            // Empty cells are legitimate in spreadsheets (optional fields, missing data)
             var sampleCells = new List<SACellValue>
             {
                 SACellValue.FromInteger(100),
-                SACellValue.Empty,              // Row 1: empty
+                SACellValue.Empty,              // Row 1: empty (legitimate)
                 SACellValue.FromInteger(300),
-                SACellValue.Empty,              // Row 3: empty
+                SACellValue.Empty,              // Row 3: empty (legitimate)
                 SACellValue.FromInteger(500)
             };
             var numberFormats = Enumerable.Repeat("#,##0.00", 5).ToList();
@@ -547,12 +548,9 @@ namespace SheetAtlas.Tests.Foundation.Services
 
             // Assert
             result.DetectedType.Should().Be(DataType.Number);
-            result.Anomalies.Where(a => a.CellValue.IsEmpty).Should().HaveCount(2);
-            result.Anomalies.Where(a => a.CellValue.IsEmpty).Should().AllSatisfy(a =>
-            {
-                a.Issue.Should().Be(DataQualityIssue.MissingRequired);
-                a.Severity.Should().Be(LogSeverity.Warning);
-            });
+            // Empty cells should NOT generate anomalies
+            result.Anomalies.Where(a => a.CellValue.IsEmpty).Should().BeEmpty(
+                "empty cells are legitimate in spreadsheets and should not be flagged as anomalies");
         }
 
         #endregion
