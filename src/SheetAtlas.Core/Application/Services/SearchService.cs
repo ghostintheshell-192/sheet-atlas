@@ -79,7 +79,9 @@ namespace SheetAtlas.Core.Application.Services
 
             if (sheet == null) return results;
 
-            for (int rowIndex = 0; rowIndex < sheet.RowCount; rowIndex++)
+            // Start from HeaderRowCount to skip header rows (search only in data)
+            // This supports multi-row headers (HeaderRowCount can be 1, 2, or more)
+            for (int rowIndex = sheet.HeaderRowCount; rowIndex < sheet.RowCount; rowIndex++)
             {
                 var row = sheet.GetRow(rowIndex);
                 for (int colIndex = 0; colIndex < sheet.ColumnCount; colIndex++)

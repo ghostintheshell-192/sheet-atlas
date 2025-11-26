@@ -170,11 +170,22 @@ namespace SheetAtlas.Tests.Services
         private static ExcelFile CreateTestFile(string fileName, string sheetName, string cellValue)
         {
             var sheet = new SASheetData(sheetName, _columnNames);
-            var rowData = new SACellData[]
+
+            // Row 0: Header row (column names)
+            var headerRow = new SACellData[]
+            {
+                new SACellData(SACellValue.FromText("Header"))
+            };
+            sheet.AddRow(headerRow);
+
+            // Row 1: Data row (the value we're searching for)
+            var dataRow = new SACellData[]
             {
                 new SACellData(SACellValue.FromText(cellValue))
             };
-            sheet.AddRow(rowData);
+            sheet.AddRow(dataRow);
+
+            // HeaderRowCount defaults to 1, which is correct for this structure
 
             var sheets = new Dictionary<string, SASheetData> { { sheetName, sheet } };
 

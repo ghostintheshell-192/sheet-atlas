@@ -8,12 +8,13 @@ using SheetAtlas.Logging.Models;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels;
 
-public class FileDetailsViewModel : ViewModelBase
+public class FileDetailsViewModel : ViewModelBase, IDisposable
 {
     private readonly ILogService _logger;
     private readonly IFileLogService _fileLogService;
     private IFileLoadResultViewModel? _selectedFile;
     private bool _isLoadingHistory;
+    private bool _disposed;
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -312,4 +313,24 @@ public class FileDetailsViewModel : ViewModelBase
     public event EventHandler<FileActionEventArgs>? CleanAllDataRequested;
     public event EventHandler<FileActionEventArgs>? RemoveNotificationRequested;
     public event EventHandler<FileActionEventArgs>? TryAgainRequested;
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+
+        // Clear event subscribers to prevent memory leaks
+        RemoveFromListRequested = null;
+        CleanAllDataRequested = null;
+        RemoveNotificationRequested = null;
+        TryAgainRequested = null;
+
+        // Clear collections
+        Properties.Clear();
+        ErrorLogs.Clear();
+
+        // Release reference
+        _selectedFile = null;
+
+        _disposed = true;
+    }
 }
