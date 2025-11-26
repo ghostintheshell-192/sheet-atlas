@@ -53,13 +53,17 @@ namespace SheetAtlas.Core.Application.Services
             if (sheet == null)
                 throw ComparisonException.MissingSheet(searchResult.SheetName, searchResult.FileName);
 
-            // SearchResult.Row uses DATA-RELATIVE indexing (0 = first data row)
-            // Validate against DataRowCount, not total RowCount
-            if (searchResult.Row >= sheet.DataRowCount)
+            // SearchResult.Row uses ABSOLUTE indexing (0-based, same as SASheetData)
+            // Row 0 = first row of sheet (usually header), Row 1 = second row, etc.
+            // Display to user = Row + 1 (1-based, like Excel)
+            if (searchResult.Row < sheet.HeaderRowCount)
+                throw new ArgumentException($"Row {searchResult.Row + 1} is a header row and cannot be compared", nameof(searchResult));
+
+            if (searchResult.Row >= sheet.RowCount)
                 throw new ArgumentOutOfRangeException(nameof(searchResult), $"Row index {searchResult.Row} is out of range for sheet '{searchResult.SheetName}'");
 
-            // Convert data-relative index to absolute index for SASheetData access
-            int absoluteRow = sheet.HeaderRowCount + searchResult.Row;
+            // Row is already absolute - use directly for SASheetData access
+            int absoluteRow = searchResult.Row;
 
             // Extract complete row data
             var rowCells = sheet.GetRow(absoluteRow);

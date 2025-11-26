@@ -190,11 +190,11 @@ namespace SheetAtlas.Tests.Services
             var excelFile = await excelReaderService.LoadFileAsync(filePath);
 
             // Create a search result pointing to the first data row
-            // Note: Row index is 0-based in the DataTable (header is already removed)
+            // Row index is ABSOLUTE 0-based (row 0 = header, row 1 = first data)
             var searchResult = new SearchResult(
                 excelFile,
                 "Sheet1",
-                0,  // Row index (0-based in DataTable, this is Alice)
+                1,  // Row index (absolute 0-based, row 1 = Alice, first data row)
                 0,  // Column index (0-based)
                 "Alice"
             );
@@ -219,9 +219,9 @@ namespace SheetAtlas.Tests.Services
             var excelFile = await excelReaderService.LoadFileAsync(filePath);
 
             // Create two search results from the same file but different rows
-            // Note: Row indices are 0-based in DataTable (header already removed)
-            var searchResult1 = new SearchResult(excelFile, "Sheet1", 0, 0, "Alice");  // First data row
-            var searchResult2 = new SearchResult(excelFile, "Sheet1", 1, 0, "Bob");    // Second data row
+            // Row indices are ABSOLUTE 0-based (row 0 = header, row 1+ = data)
+            var searchResult1 = new SearchResult(excelFile, "Sheet1", 1, 0, "Alice");  // First data row (absolute row 1)
+            var searchResult2 = new SearchResult(excelFile, "Sheet1", 2, 0, "Bob");    // Second data row (absolute row 2)
 
             var request = new RowComparisonRequest(
                 new List<SearchResult> { searchResult1, searchResult2 },
