@@ -56,7 +56,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             try
             {
-                return await Task.Run(() =>
+                return await Task.Run(async () =>
                 {
                     // Auto-detect delimiter if using default comma
                     char delimiter = _options.Delimiter;
@@ -84,7 +84,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     SASheetData sheetData;
                     try
                     {
-                        sheetData = ConvertToSASheetDataStreaming(Path.GetFileNameWithoutExtension(filePath), csv, errors);
+                        sheetData = await ConvertToSASheetDataStreamingAsync(Path.GetFileNameWithoutExtension(filePath), csv, errors);
                     }
                     catch (Exception ex)
                     {
@@ -132,7 +132,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
         }
 
-        private SASheetData ConvertToSASheetDataStreaming(string fileName, CsvReader csv, List<ExcelError> errors)
+        private async Task<SASheetData> ConvertToSASheetDataStreamingAsync(string fileName, CsvReader csv, List<ExcelError> errors)
         {
             var sheetName = "Data";
 
@@ -245,7 +245,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             _logger.LogInfo($"Sheet trimmed to exact size: {sheetData.RowCount} rows × {sheetData.ColumnCount} cols = {sheetData.CellCount} cells", "CsvFileReader");
 
             // INTEGRATION: Analyze and enrich sheet data via orchestrator
-            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, errors).Result;
+            var enrichedData = await _analysisOrchestrator.EnrichAsync(sheetData, errors);
 
             return enrichedData;
         }

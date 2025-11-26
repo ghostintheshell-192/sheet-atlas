@@ -44,7 +44,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             try
             {
-                return await Task.Run(() =>
+                return await Task.Run(async () =>
                 {
                     using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
@@ -91,7 +91,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
                         try
                         {
-                            var processedSheet = ProcessSheet(Path.GetFileNameWithoutExtension(filePath), table, errors);
+                            var processedSheet = await ProcessSheetAsync(Path.GetFileNameWithoutExtension(filePath), table, errors);
 
                             // Skip empty sheets (no rows or no columns) - this is normal, not an error
                             if (processedSheet == null)
@@ -141,7 +141,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
         }
 
-        private SASheetData? ProcessSheet(string fileName, System.Data.DataTable sourceTable, List<ExcelError> errors)
+        private async Task<SASheetData?> ProcessSheetAsync(string fileName, System.Data.DataTable sourceTable, List<ExcelError> errors)
         {
             var sheetName = sourceTable.TableName;
 
@@ -227,7 +227,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             sheetData.TrimExcess();
 
             // INTEGRATION: Analyze and enrich sheet data via orchestrator
-            var enrichedData = _analysisOrchestrator.EnrichAsync(sheetData, errors).Result;
+            var enrichedData = await _analysisOrchestrator.EnrichAsync(sheetData, errors);
 
             return enrichedData;
         }
