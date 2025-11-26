@@ -181,7 +181,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             _filesManager.Dispose();
             _comparisonCoordinator.Dispose();
             SearchViewModel?.Dispose();
-            // FileDetailsViewModel?.Dispose();
+            FileDetailsViewModel?.Dispose();
             TreeSearchResultsViewModel?.Dispose();
         }
     }

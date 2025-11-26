@@ -45,6 +45,27 @@
 
 - **Avoid Redundant Catches**: Don't catch exceptions already handled by lower layers
 
+### Row Indexing Semantics
+
+**ABSOLUTE 0-based indexing** is used consistently across all components:
+
+| Context | Format | Example |
+|---------|--------|---------|
+| Internal (SASheetData, SearchResult.Row) | 0-based absolute | Row 0 = first row of sheet |
+| Display (UI) | 1-based absolute | "R1" = first row (matches Excel) |
+| Header detection | `row < HeaderRowCount` | Default: row 0 is header |
+
+**Key rules:**
+- `SearchResult.Row` = absolute 0-based index (same as SASheetData.GetRow())
+- Search skips header rows (starts from `HeaderRowCount`)
+- Row comparison validates `Row >= HeaderRowCount` (only data rows)
+- Display conversion: `displayRow = internalRow + 1`
+
+**Header support:**
+- Currently: single header row (`HeaderRowCount = 1`)
+- Architecture supports multi-row headers (`HeaderRowCount` can be 2, 3, etc.)
+- All readers (XLSX, XLS, CSV) use the same semantics via SASheetData
+
 ## Technology Stack
 
 ### Core Technologies
