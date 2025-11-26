@@ -40,7 +40,12 @@ namespace SheetAtlas.Core.Application.Services
                 {
                     if (int.TryParse(rawValue, out int index) && sharedStringTable != null)
                     {
-                        rawValue = sharedStringTable.ElementAt(index).InnerText;
+                        // Use ElementAtOrDefault for safe bounds checking (single iteration)
+                        // Corrupted files may have invalid shared string indices
+                        var element = sharedStringTable.ElementAtOrDefault(index);
+                        rawValue = element != null
+                            ? element.InnerText
+                            : $"[Invalid SST ref: {index}]";
                     }
                     return CellValueFromText(rawValue);
                 }
