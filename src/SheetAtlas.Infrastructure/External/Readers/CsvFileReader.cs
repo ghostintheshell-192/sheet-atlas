@@ -2,9 +2,11 @@ using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Application.DTOs;
+using SheetAtlas.Core.Configuration;
 using SheetAtlas.Logging.Services;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Microsoft.Extensions.Options;
 using SheetAtlas.Logging.Models;
 
 namespace SheetAtlas.Infrastructure.External.Readers
@@ -21,12 +23,17 @@ namespace SheetAtlas.Infrastructure.External.Readers
     {
         private readonly ILogService _logger;
         private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
+        private readonly SecuritySettings _securitySettings;
         private CsvReaderOptions _options;
 
-        public CsvFileReader(ILogService logger, ISheetAnalysisOrchestrator analysisOrchestrator)
+        public CsvFileReader(
+            ILogService logger,
+            ISheetAnalysisOrchestrator analysisOrchestrator,
+            IOptions<AppSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
+            _securitySettings = settings?.Value?.Security ?? new SecuritySettings();
             _options = CsvReaderOptions.Default;
         }
 
@@ -56,6 +63,17 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             try
             {
+                // Check file size limit
+                var fileInfo = new FileInfo(filePath);
+                if (fileInfo.Length > _securitySettings.MaxFileSizeBytes)
+                {
+                    var maxMb = _securitySettings.MaxFileSizeBytes / (1024 * 1024);
+                    var fileMb = fileInfo.Length / (1024 * 1024);
+                    errors.Add(ExcelError.Critical("Security",
+                        $"File size ({fileMb} MB) exceeds maximum allowed ({maxMb} MB)"));
+                    return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
+                }
+
                 return await Task.Run(async () =>
                 {
                     // Auto-detect delimiter if using default comma
@@ -209,6 +227,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
                         // Use FromString for auto-type detection with string interning
                         string cellText = kvp.Value?.ToString() ?? string.Empty;
 
+                        // Sanitize potential formula injection (=, +, -, @, etc.)
+                        cellText = SanitizeCellValue(cellText);
+
                         // FIX: Treat empty/whitespace strings as Empty cells, not Text
                         SACellValue cellValue = string.IsNullOrWhiteSpace(cellText)
                             ? SACellValue.Empty
@@ -329,6 +350,44 @@ namespace SheetAtlas.Infrastructure.External.Readers
                 return LoadStatus.Success;
 
             return sheets.Count != 0 ? LoadStatus.PartialSuccess : LoadStatus.Failed;
+        }
+
+        /// <summary>
+        /// Sanitizes cell value to prevent CSV/formula injection attacks.
+        /// Prefixes dangerous characters with apostrophe so Excel treats them as text.
+        /// Dangerous characters: =, @, tab, carriage return (can trigger formula execution).
+        /// Note: +/- are NOT sanitized if followed by digits (valid numbers like -123, +45.67).
+        /// </summary>
+        private string SanitizeCellValue(string cellText)
+        {
+            if (!_securitySettings.SanitizeCsvFormulas)
+                return cellText;
+
+            if (string.IsNullOrEmpty(cellText))
+                return cellText;
+
+            char firstChar = cellText[0];
+
+            // Always dangerous: formula start, external reference, control characters
+            if (firstChar == '=' || firstChar == '@' || firstChar == '\t' || firstChar == '\r')
+            {
+                return "'" + cellText;
+            }
+
+            // +/- are only dangerous if NOT followed by a digit (i.e., not a number)
+            // Examples: "-123" is safe (number), "-cmd" is dangerous (potential formula)
+            if (firstChar == '+' || firstChar == '-')
+            {
+                if (cellText.Length > 1 && char.IsDigit(cellText[1]))
+                {
+                    // Looks like a number, don't sanitize
+                    return cellText;
+                }
+                // Not a number, sanitize
+                return "'" + cellText;
+            }
+
+            return cellText;
         }
     }
 }
