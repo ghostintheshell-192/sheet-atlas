@@ -87,6 +87,7 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
                     }
                 }
             }
+            CleanupSearchItem(existing);
             SearchHistory.Remove(existing);
         }
 
@@ -94,7 +95,7 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
 
         searchItem.IsExpanded = wasSearchExpanded;
 
-        searchItem.SelectionChanged += (s, e) => NotifySelectionChanged();
+        searchItem.SelectionChanged += OnSearchItemSelectionChanged;
         foreach (var fileGroup in searchItem.FileGroups)
         {
             foreach (var sheetGroup in fileGroup.SheetGroups)
@@ -137,6 +138,8 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
 
         while (SearchHistory.Count > 5)
         {
+            var oldItem = SearchHistory[SearchHistory.Count - 1];
+            CleanupSearchItem(oldItem);
             SearchHistory.RemoveAt(SearchHistory.Count - 1);
         }
 
@@ -150,6 +153,10 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
 
     public void ClearHistory()
     {
+        foreach (var item in SearchHistory)
+        {
+            CleanupSearchItem(item);
+        }
         SearchHistory.Clear();
         _logger.LogInfo("Cleared search history", "TreeSearchResultsViewModel");
     }
@@ -172,6 +179,7 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
 
             foreach (var fileGroup in fileGroupsToRemove)
             {
+                fileGroup.Dispose();  // Cleanup event handlers before removal
                 searchItem.FileGroups.Remove(fileGroup);
             }
 
@@ -183,6 +191,7 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
 
         foreach (var item in searchItemsToRemove)
         {
+            CleanupSearchItem(item);
             SearchHistory.Remove(item);
         }
 
@@ -238,6 +247,20 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
         ((RelayCommand)CompareSelectedRowsCommand).RaiseCanExecuteChanged();
     }
 
+    // Named handler for SearchHistoryItem.SelectionChanged event
+    // This allows proper unsubscription (unlike anonymous lambdas)
+    private void OnSearchItemSelectionChanged(object? sender, EventArgs e)
+    {
+        NotifySelectionChanged();
+    }
+
+    // Helper to properly cleanup a SearchHistoryItem before removal
+    private void CleanupSearchItem(SearchHistoryItem item)
+    {
+        item.SelectionChanged -= OnSearchItemSelectionChanged;
+        item.Dispose();
+    }
+
     public void Dispose()
     {
         Dispose(true);
@@ -252,7 +275,7 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
         {
             foreach (var searchItem in SearchHistory)
             {
-                searchItem.Dispose();
+                CleanupSearchItem(searchItem);
             }
 
             SearchHistory.Clear();

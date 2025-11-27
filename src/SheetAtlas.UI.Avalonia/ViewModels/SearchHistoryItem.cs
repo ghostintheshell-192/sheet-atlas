@@ -117,6 +117,13 @@ public class SearchHistoryItem : ViewModelBase, IDisposable
             {
                 item.SelectionChanged -= OnItemSelectionChanged;
             }
+
+            // Dispose all FileGroups (which will dispose SheetGroups)
+            foreach (var fileGroup in FileGroups)
+            {
+                fileGroup.Dispose();
+            }
+            FileGroups.Clear();
         }
         _disposed = true;
     }
