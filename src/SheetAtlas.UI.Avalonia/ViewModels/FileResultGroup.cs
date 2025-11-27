@@ -3,8 +3,9 @@ using SheetAtlas.Core.Domain.Entities;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels;
 
-public class FileResultGroup : ViewModelBase
+public class FileResultGroup : ViewModelBase, IDisposable
 {
+    private bool _disposed = false;
     private bool _isExpanded = true;
     private ObservableCollection<SheetResultGroup> _sheetGroups = new();
 
@@ -38,5 +39,28 @@ public class FileResultGroup : ViewModelBase
             .ToList();
 
         SheetGroups = new ObservableCollection<SheetResultGroup>(sheetGroups);
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+            return;
+
+        if (disposing)
+        {
+            foreach (var sheetGroup in SheetGroups)
+            {
+                sheetGroup.Dispose();
+            }
+            SheetGroups.Clear();
+        }
+
+        _disposed = true;
     }
 }
