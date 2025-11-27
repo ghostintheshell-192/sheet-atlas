@@ -42,15 +42,6 @@ namespace SheetAtlas.Tests.Integration
             // Create orchestrator (with MergedCellResolver as first parameter)
             var orchestrator = new SheetAnalysisOrchestrator(mergedCellResolver, columnAnalysisService, normalizationService, readerLogger.Object);
 
-            // Create OpenXmlFileReader with orchestrator
-            var openXmlReader = new OpenXmlFileReader(
-                readerLogger.Object,
-                cellParser,
-                mergedRangeExtractor,
-                cellValueReader,
-                orchestrator);
-            var readers = new List<IFileFormatReader> { openXmlReader };
-
             // Create settings mock
             var settings = new AppSettings
             {
@@ -58,6 +49,16 @@ namespace SheetAtlas.Tests.Integration
             };
             var settingsMock = new Mock<IOptions<AppSettings>>();
             settingsMock.Setup(s => s.Value).Returns(settings);
+
+            // Create OpenXmlFileReader with orchestrator
+            var openXmlReader = new OpenXmlFileReader(
+                readerLogger.Object,
+                cellParser,
+                mergedRangeExtractor,
+                cellValueReader,
+                orchestrator,
+                settingsMock.Object);
+            var readers = new List<IFileFormatReader> { openXmlReader };
 
             _service = new ExcelReaderService(readers, serviceLogger.Object, settingsMock.Object);
 

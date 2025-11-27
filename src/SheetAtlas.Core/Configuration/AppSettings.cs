@@ -8,6 +8,37 @@ namespace SheetAtlas.Core.Configuration
         public PerformanceSettings Performance { get; set; } = new();
         public LoggingSettings Logging { get; set; } = new();
         public FoundationLayerSettings FoundationLayer { get; set; } = new();
+        public SecuritySettings Security { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Security-related configuration for file processing
+    /// </summary>
+    public class SecuritySettings
+    {
+        /// <summary>
+        /// Maximum allowed file size in bytes (default: 100 MB).
+        /// Files larger than this will be rejected.
+        /// </summary>
+        public long MaxFileSizeBytes { get; set; } = 100 * 1024 * 1024; // 100 MB
+
+        /// <summary>
+        /// Maximum allowed decompressed size for XLSX files in bytes (default: 2 GB).
+        /// Protects against ZIP bomb attacks.
+        /// </summary>
+        public long MaxDecompressedSizeBytes { get; set; } = 2L * 1024 * 1024 * 1024; // 2 GB
+
+        /// <summary>
+        /// Maximum allowed compression ratio for XLSX files (default: 100).
+        /// Ratios higher than this are suspicious (potential ZIP bomb).
+        /// </summary>
+        public double MaxCompressionRatio { get; set; } = 100;
+
+        /// <summary>
+        /// Sanitize CSV cell values that could be interpreted as formulas.
+        /// Prefixes dangerous characters (=, +, -, @) with apostrophe.
+        /// </summary>
+        public bool SanitizeCsvFormulas { get; set; } = true;
     }
 
     /// <summary>

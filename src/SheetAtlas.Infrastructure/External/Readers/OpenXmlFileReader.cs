@@ -1,11 +1,14 @@
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Configuration;
 using SheetAtlas.Logging.Services;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using SheetAtlas.Logging.Models;
+using Microsoft.Extensions.Options;
+using System.IO.Compression;
 using System.Xml;
 
 namespace SheetAtlas.Infrastructure.External.Readers
@@ -20,19 +23,22 @@ namespace SheetAtlas.Infrastructure.External.Readers
         private readonly IMergedRangeExtractor<WorksheetPart> _mergedRangeExtractor;
         private readonly ICellValueReader _cellValueReader;
         private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
+        private readonly SecuritySettings _securitySettings;
 
         public OpenXmlFileReader(
             ILogService logger,
             ICellReferenceParser cellParser,
             IMergedRangeExtractor<WorksheetPart> mergedRangeExtractor,
             ICellValueReader cellValueReader,
-            ISheetAnalysisOrchestrator analysisOrchestrator)
+            ISheetAnalysisOrchestrator analysisOrchestrator,
+            IOptions<AppSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cellParser = cellParser ?? throw new ArgumentNullException(nameof(cellParser));
             _mergedRangeExtractor = mergedRangeExtractor ?? throw new ArgumentNullException(nameof(mergedRangeExtractor));
             _cellValueReader = cellValueReader ?? throw new ArgumentNullException(nameof(cellValueReader));
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
+            _securitySettings = settings?.Value?.Security ?? new SecuritySettings();
         }
 
         private static readonly string[] _supportedExtensions = new[] { ".xlsx", ".xlsm", ".xltx", ".xltm" };
@@ -50,6 +56,14 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             try
             {
+                // Security validation before opening the document
+                var securityErrors = ValidateXlsxSecurity(filePath);
+                if (securityErrors.Count > 0)
+                {
+                    errors.AddRange(securityErrors);
+                    return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
+                }
+
                 return await Task.Run(async () =>
                 {
                     using var document = OpenDocument(filePath);
@@ -160,6 +174,80 @@ namespace SheetAtlas.Infrastructure.External.Readers
         private static SpreadsheetDocument OpenDocument(string filePath)
         {
             return SpreadsheetDocument.Open(filePath, false);
+        }
+
+        /// <summary>
+        /// Validates XLSX file for security threats before processing.
+        /// Checks file size, decompressed size, and compression ratio to detect ZIP bombs.
+        /// Returns list of errors if validation fails, empty list if valid.
+        /// </summary>
+        private List<ExcelError> ValidateXlsxSecurity(string filePath)
+        {
+            var errors = new List<ExcelError>();
+            var fileInfo = new FileInfo(filePath);
+
+            // Check compressed file size
+            if (fileInfo.Length > _securitySettings.MaxFileSizeBytes)
+            {
+                var maxMb = _securitySettings.MaxFileSizeBytes / (1024 * 1024);
+                var fileMb = fileInfo.Length / (1024 * 1024);
+                errors.Add(ExcelError.Critical("Security",
+                    $"File size ({fileMb} MB) exceeds maximum allowed ({maxMb} MB)"));
+                return errors;
+            }
+
+            // Validate ZIP structure and check for ZIP bomb
+            try
+            {
+                using var zip = ZipFile.OpenRead(filePath);
+                long totalDecompressedSize = 0;
+
+                foreach (var entry in zip.Entries)
+                {
+                    totalDecompressedSize += entry.Length;
+
+                    // Check total decompressed size
+                    if (totalDecompressedSize > _securitySettings.MaxDecompressedSizeBytes)
+                    {
+                        var maxGb = _securitySettings.MaxDecompressedSizeBytes / (1024 * 1024 * 1024);
+                        errors.Add(ExcelError.Critical("Security",
+                            $"Decompressed content exceeds maximum allowed size ({maxGb} GB). Possible ZIP bomb detected."));
+                        return errors;
+                    }
+
+                    // Check compression ratio for each entry
+                    if (entry.CompressedLength > 0 && entry.Length > 0)
+                    {
+                        double ratio = (double)entry.Length / entry.CompressedLength;
+                        if (ratio > _securitySettings.MaxCompressionRatio)
+                        {
+                            errors.Add(ExcelError.Critical("Security",
+                                $"Suspicious compression ratio ({ratio:F1}:1) detected. Possible ZIP bomb."));
+                            return errors;
+                        }
+                    }
+                }
+
+                // Verify it's a valid XLSX (has workbook.xml)
+                var hasWorkbook = zip.Entries.Any(e =>
+                    e.FullName.Equals("xl/workbook.xml", StringComparison.OrdinalIgnoreCase));
+
+                if (!hasWorkbook)
+                {
+                    errors.Add(ExcelError.Critical("File", "Invalid XLSX file: missing workbook.xml"));
+                    return errors;
+                }
+
+                _logger.LogInfo($"Security validation passed: " +
+                    $"{fileInfo.Length / 1024} KB compressed, {totalDecompressedSize / 1024} KB decompressed",
+                    "OpenXmlFileReader");
+            }
+            catch (InvalidDataException)
+            {
+                errors.Add(ExcelError.Critical("File", "File is not a valid ZIP archive"));
+            }
+
+            return errors;
         }
 
         private static IEnumerable<Sheet> GetSheets(WorkbookPart workbookPart)

@@ -1,9 +1,10 @@
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Configuration;
 using SheetAtlas.Logging.Services;
-
 using ExcelDataReader;
+using Microsoft.Extensions.Options;
 using SheetAtlas.Logging.Models;
 
 namespace SheetAtlas.Infrastructure.External.Readers
@@ -19,13 +20,18 @@ namespace SheetAtlas.Infrastructure.External.Readers
     {
         private readonly ILogService _logger;
         private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
+        private readonly SecuritySettings _securitySettings;
         private static bool _encodingProviderRegistered = false;
         private static readonly object _encodingLock = new object();
 
-        public XlsFileReader(ILogService logger, ISheetAnalysisOrchestrator analysisOrchestrator)
+        public XlsFileReader(
+            ILogService logger,
+            ISheetAnalysisOrchestrator analysisOrchestrator,
+            IOptions<AppSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
+            _securitySettings = settings?.Value?.Security ?? new SecuritySettings();
             RegisterEncodingProvider();
         }
 
@@ -44,6 +50,17 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             try
             {
+                // Check file size limit
+                var fileInfo = new FileInfo(filePath);
+                if (fileInfo.Length > _securitySettings.MaxFileSizeBytes)
+                {
+                    var maxMb = _securitySettings.MaxFileSizeBytes / (1024 * 1024);
+                    var fileMb = fileInfo.Length / (1024 * 1024);
+                    errors.Add(ExcelError.Critical("Security",
+                        $"File size ({fileMb} MB) exceeds maximum allowed ({maxMb} MB)"));
+                    return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
+                }
+
                 return await Task.Run(async () =>
                 {
                     using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
