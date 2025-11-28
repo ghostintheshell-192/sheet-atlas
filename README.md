@@ -1,5 +1,9 @@
 # SheetAtlas
 
+![Version](https://img.shields.io/github/v/release/ghostintheshell-192/sheet-atlas)
+![License](https://img.shields.io/github/license/ghostintheshell-192/sheet-atlas)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
+
 A powerful cross-platform desktop application for searching across multiple Excel files and comparing rows between them. Built with .NET 8 and Avalonia UI for native performance on Windows, Linux, and macOS.
 
 🌐 **[Visit the official website](https://ghostintheshell-192.github.io/sheet-atlas/)** | 📥 **[Download Latest Release](https://github.com/ghostintheshell-192/sheet-atlas/releases/latest)**
@@ -191,7 +195,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-### Version 0.2.0 (Current Alpha)
+### Current Release (Alpha)
 
 - ✅ Support for .xlsx, .xls, .csv files
 - ✅ Multi-file loading and cross-file search
