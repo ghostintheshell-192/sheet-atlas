@@ -21,5 +21,6 @@
         <FluentTheme />
         <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Styles/Buttons.axaml"/>
         <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Styles/Menus.axaml"/>
+        <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Controls/CollapsibleSection.axaml"/>
     </Application.Styles>
 </Application>

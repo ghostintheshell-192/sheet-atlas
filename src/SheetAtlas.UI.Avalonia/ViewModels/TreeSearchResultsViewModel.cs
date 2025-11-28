@@ -229,6 +229,9 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
 
             RowComparisonCreated?.Invoke(this, comparison);
 
+            // Clear selections after creating comparison so next comparison starts fresh
+            ClearSelection();
+
             _logger.LogInfo($"Created row comparison with {comparison.Rows.Count} rows", "TreeSearchResultsViewModel");
         }
         catch (Exception ex)
