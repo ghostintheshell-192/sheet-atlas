@@ -287,8 +287,9 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             text = text.Trim().ToLowerInvariant();
 
             // True values (NOTE: "1" removed - too ambiguous, often used as numeric IDs)
+            // NOTE: "x" removed - conflicts with single-char text identifiers (e.g., ticker symbol "X")
             if (text == "true" || text == "yes" || text == "y" ||
-                text == "x" || text == "✓" || text == "✔" || text == "☑")
+                text == "✓" || text == "✔" || text == "☑")
             {
                 result = true;
                 return true;
