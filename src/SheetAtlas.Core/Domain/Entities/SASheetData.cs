@@ -176,6 +176,23 @@ namespace SheetAtlas.Core.Domain.Entities
         }
 
         /// <summary>
+        /// Update cell data at specified position (for enrichment phase).
+        /// Used by SheetAnalysisOrchestrator to add normalization results.
+        /// Returns false if position is out of bounds.
+        /// </summary>
+        public bool SetCellData(int row, int column, SACellData data)
+        {
+            if (row < 0 || row >= _rowCount)
+                return false;
+            if (column < 0 || column >= ColumnNames.Length)
+                return false;
+
+            int index = row * ColumnNames.Length + column;
+            _cells[index] = data;
+            return true;
+        }
+
+        /// <summary>
         /// Get entire row as SACellData array (creates new array - use sparingly).
         /// For iteration, prefer GetCellValue(row, col) to avoid allocation.
         /// </summary>
