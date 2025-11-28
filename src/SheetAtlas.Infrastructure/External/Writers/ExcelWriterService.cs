@@ -23,6 +23,9 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
         private static readonly string[] _supportedExcelExtensions = new[] { ".xlsx" };
 
+        // Style indices for cell formatting (must match CreateStylesheet order)
+        private const uint DateStyleIndex = 1;
+
         public ExcelWriterService(ILogService logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -53,6 +56,11 @@ namespace SheetAtlas.Infrastructure.External.Writers
                     using var document = SpreadsheetDocument.Create(outputPath, SpreadsheetDocumentType.Workbook);
                     var workbookPart = document.AddWorkbookPart();
                     workbookPart.Workbook = new Workbook();
+
+                    // Add stylesheet for date formatting
+                    var stylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
+                    stylesPart.Stylesheet = CreateStylesheet();
+                    stylesPart.Stylesheet.Save();
 
                     var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
                     var sheetData2 = new SheetData();
@@ -271,7 +279,7 @@ namespace SheetAtlas.Infrastructure.External.Writers
             // Create cell based on type
             return valueToWrite.Type switch
             {
-                SACellType.Number => CreateNumberCell(valueToWrite.AsNumber(), colRef, rowIndex),
+                SACellType.FloatingPoint => CreateNumberCell(valueToWrite.AsFloatingPoint(), colRef, rowIndex),
                 SACellType.Integer => CreateNumberCell(valueToWrite.AsInteger(), colRef, rowIndex),
                 SACellType.DateTime => CreateDateCell(valueToWrite.AsDateTime(), colRef, rowIndex),
                 SACellType.Boolean => CreateBooleanCell(valueToWrite.AsBoolean(), colRef, rowIndex),
@@ -294,15 +302,13 @@ namespace SheetAtlas.Infrastructure.External.Writers
         private static Cell CreateDateCell(DateTime value, string columnRef, uint rowIndex)
         {
             // Excel stores dates as serial numbers (days since 1899-12-30)
-            // We write as number with date format
             double serialDate = value.ToOADate();
             return new Cell
             {
                 CellReference = $"{columnRef}{rowIndex}",
                 DataType = CellValues.Number,
                 CellValue = new CellValue(serialDate.ToString(CultureInfo.InvariantCulture)),
-                // Note: Would need a StyleIndex referencing a date format for proper display
-                // For simplicity, we just write the serial number
+                StyleIndex = DateStyleIndex // Apply date format style
             };
         }
 
@@ -364,7 +370,7 @@ namespace SheetAtlas.Infrastructure.External.Writers
             return valueToWrite.Type switch
             {
                 SACellType.DateTime => valueToWrite.AsDateTime().ToString(options.DateFormat, CultureInfo.InvariantCulture),
-                SACellType.Number => valueToWrite.AsNumber().ToString(CultureInfo.InvariantCulture),
+                SACellType.FloatingPoint => valueToWrite.AsFloatingPoint().ToString(CultureInfo.InvariantCulture),
                 SACellType.Integer => valueToWrite.AsInteger().ToString(CultureInfo.InvariantCulture),
                 SACellType.Boolean => valueToWrite.AsBoolean() ? "TRUE" : "FALSE",
                 SACellType.Text => valueToWrite.AsText(),
@@ -392,6 +398,63 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
             // Escape double quotes by doubling them, then wrap in quotes
             return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+
+        /// <summary>
+        /// Creates the stylesheet for the workbook with date formatting.
+        /// </summary>
+        private static Stylesheet CreateStylesheet()
+        {
+            // Built-in format ID 14 = "mm-dd-yy" (or localized short date)
+            // We use a custom format for better control: "yyyy-mm-dd"
+            const uint CustomDateFormatId = 164; // Custom formats start at 164
+
+            return new Stylesheet(
+                // Number formats (custom date format)
+                new NumberingFormats(
+                    new NumberingFormat
+                    {
+                        NumberFormatId = CustomDateFormatId,
+                        FormatCode = "yyyy-mm-dd"
+                    }
+                )
+                { Count = 1 },
+
+                // Fonts (required, at least one default)
+                new Fonts(
+                    new Font() // Default font
+                )
+                { Count = 1 },
+
+                // Fills (required, at least two: none and gray125)
+                new Fills(
+                    new Fill(new PatternFill { PatternType = PatternValues.None }),
+                    new Fill(new PatternFill { PatternType = PatternValues.Gray125 })
+                )
+                { Count = 2 },
+
+                // Borders (required, at least one default)
+                new Borders(
+                    new Border() // Default border (none)
+                )
+                { Count = 1 },
+
+                // Cell formats
+                new CellFormats(
+                    // Index 0: Default format (no specific formatting)
+                    new CellFormat { FontId = 0, FillId = 0, BorderId = 0 },
+                    // Index 1: Date format (DateStyleIndex = 1)
+                    new CellFormat
+                    {
+                        FontId = 0,
+                        FillId = 0,
+                        BorderId = 0,
+                        NumberFormatId = CustomDateFormatId,
+                        ApplyNumberFormat = true
+                    }
+                )
+                { Count = 2 }
+            );
         }
     }
 }

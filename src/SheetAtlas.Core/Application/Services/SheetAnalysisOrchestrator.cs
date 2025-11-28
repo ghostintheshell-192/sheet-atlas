@@ -256,7 +256,8 @@ namespace SheetAtlas.Core.Application.Services
 
             // Convert SACellValue to object for normalization service
             object? rawValue = original.IsText ? original.AsText()
-                : original.IsNumber ? original.AsNumber()
+                : original.IsFloatingPoint ? original.AsFloatingPoint()
+                : original.IsInteger ? original.AsInteger()
                 : original.IsBoolean ? original.AsBoolean()
                 : original.IsDateTime ? original.AsDateTime()
                 : null;

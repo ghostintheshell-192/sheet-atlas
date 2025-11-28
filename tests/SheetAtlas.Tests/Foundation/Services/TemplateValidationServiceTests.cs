@@ -386,13 +386,13 @@ namespace SheetAtlas.Tests.Foundation.Services
             return type switch
             {
                 DataType.Number => new SACellData(
-                    SACellValue.FromNumber(100.0 * (rowIndex + 1)),
+                    SACellValue.FromFloatingPoint(100.0 * (rowIndex + 1)),
                     new CellMetadata { NumberFormat = "#,##0.00" }),
                 DataType.Date => new SACellData(
                     SACellValue.FromInteger(45292 + rowIndex),
                     new CellMetadata { NumberFormat = "mm/dd/yyyy" }),
                 DataType.Currency => new SACellData(
-                    SACellValue.FromNumber(100.0 * (rowIndex + 1)),
+                    SACellValue.FromFloatingPoint(100.0 * (rowIndex + 1)),
                     new CellMetadata { NumberFormat = "[$€-407] #,##0.00" }),
                 DataType.Text => new SACellData(SACellValue.FromText($"Text Row {rowIndex + 1}")),
                 DataType.Boolean => new SACellData(SACellValue.FromBoolean(rowIndex % 2 == 0)),

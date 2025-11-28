@@ -203,8 +203,8 @@ namespace SheetAtlas.Tests.Foundation.Builders
             return value switch
             {
                 null => SACellValue.Empty,
-                double d => SACellValue.FromNumber(d),
-                decimal m => SACellValue.FromNumber((double)m),
+                double d => SACellValue.FromFloatingPoint(d),
+                decimal m => SACellValue.FromFloatingPoint((double)m),
                 int i => SACellValue.FromInteger(i),
                 long l => SACellValue.FromInteger(l),
                 bool b => SACellValue.FromBoolean(b),

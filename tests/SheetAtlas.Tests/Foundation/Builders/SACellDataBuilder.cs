@@ -72,8 +72,8 @@ namespace SheetAtlas.Tests.Foundation.Builders
             var cellValue = _value switch
             {
                 null => SACellValue.Empty,
-                double d => SACellValue.FromNumber(d),
-                decimal m => SACellValue.FromNumber((double)m),
+                double d => SACellValue.FromFloatingPoint(d),
+                decimal m => SACellValue.FromFloatingPoint((double)m),
                 int i => SACellValue.FromInteger(i),
                 long l => SACellValue.FromInteger(l),
                 bool b => SACellValue.FromBoolean(b),
@@ -103,7 +103,7 @@ namespace SheetAtlas.Tests.Foundation.Builders
     public static class SACellDataFactory
     {
         public static SACellData Numeric(decimal value)
-            => new SACellData(SACellValue.FromNumber((double)value));
+            => new SACellData(SACellValue.FromFloatingPoint((double)value));
 
         public static SACellData Text(string value)
             => new SACellData(SACellValue.FromText(value));
@@ -116,7 +116,7 @@ namespace SheetAtlas.Tests.Foundation.Builders
 
         public static SACellData Currency(decimal value, string currencyCode)
         {
-            var cellValue = SACellValue.FromNumber((double)value);
+            var cellValue = SACellValue.FromFloatingPoint((double)value);
             var currency = currencyCode.ToUpperInvariant() switch
             {
                 "EUR" => CurrencyInfo.EUR,
