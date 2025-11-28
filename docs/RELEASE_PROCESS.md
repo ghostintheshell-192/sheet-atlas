@@ -4,22 +4,47 @@ This document describes the release process for SheetAtlas, including how to cre
 
 ## Quick Release Guide
 
-To create a new release:
+### Automated Steps
 
-1. **Update version number** in your code/config files
-2. **Run the changelog workflow** to generate release notes:
+1. **Create and push signed tag** (from `develop` branch):
    ```bash
-   # Via GitHub Actions UI: release-changelog.yml
-   # This creates a git tag and updates CHANGELOG.md
+   git checkout develop
+   git tag -s v0.3.3 -m "Release v0.3.3 - Description"
+   git push origin v0.3.3
    ```
-3. **The release pipeline automatically runs** when a tag is pushed:
+
+2. **Pipeline runs automatically** (~5 minutes):
+   - Builds for Windows, Linux, macOS
+   - Creates GitHub release with artifacts
+   - Updates website files on `main` branch
+   - **⚠️ Does NOT deploy website** (GitHub limitation)
+
+3. **Deploy website manually** (required after each release):
    ```bash
-   # Or manually tag:
-   git tag v0.3.0
-   git push origin v0.3.0
+   gh workflow run deploy-pages.yml
    ```
-4. **Wait for the pipeline** to complete (~5 minutes)
-5. **Verify the release** on GitHub and check the website updated
+   Or via GitHub Actions UI → Deploy GitHub Pages → Run workflow
+
+4. **Merge to main**:
+   ```bash
+   git checkout main
+   git pull origin main  # Get website updates from pipeline
+   git merge develop
+   git push origin main
+   ```
+
+### What's Automatic vs Manual
+
+| Step | Type | Command/Action |
+|------|------|----------------|
+| Tag creation | Manual | `git tag -s v0.3.3` + push |
+| Build artifacts | ✅ Automatic | Triggered by tag push |
+| GitHub release | ✅ Automatic | Created with artifacts |
+| Update website files | ✅ Automatic | Committed to `main` |
+| Deploy website | ⚠️ **Manual** | `gh workflow run deploy-pages.yml` |
+| Merge develop→main | Manual | After release verified |
+
+**Why manual website deploy?** GitHub Actions workflows triggered by `GITHUB_TOKEN` (like our release pipeline) don't trigger other workflows automatically (prevents infinite loops). The `deploy-pages.yml` must be triggered manually.
 
 ## Versioning Strategy
 

@@ -32,6 +32,11 @@ build_log.txt
 app_output.log
 logs/
 
+# Code signing certificates - NEVER commit private keys!
+*.key
+*.pfx
+*.p12
+
 # Ignore backup folders and files
 backups/
 *.bak
