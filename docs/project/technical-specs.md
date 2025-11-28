@@ -4,54 +4,73 @@
 
 ### High-Level Architecture
 ```
-┌─────────────────────────────────────────┐
-│               Avalonia UI               │
-│  ┌─────────────┐  ┌─────────────────┐  │
-│  │  Views      │  │  ViewModels     │  │
-│  │  (XAML)     │  │  (MVVM)        │  │
-│  └─────────────┘  └─────────────────┘  │
-└─────────────────────────────────────────┘
-                    │
-┌─────────────────────────────────────────┐
-│           Application Layer             │
-│  ┌─────────────┐  ┌─────────────────┐  │
-│  │  Services   │  │   Managers      │  │
-│  │  (UI Logic) │  │  (Orchestration)│  │
-│  └─────────────┘  └─────────────────┘  │
-└─────────────────────────────────────────┘
-                    │
-┌─────────────────────────────────────────┐
-│              Core Layer                 │
-│  ┌─────────────┐  ┌─────────────────┐  │
-│  │   Models    │  │    Services     │  │
-│  │ (Entities)  │  │ (Business Logic)│  │
-│  └─────────────┘  └─────────────────┘  │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      UI Layer (Avalonia)                    │
+│  ┌───────────┐  ┌────────────┐  ┌───────────┐  ┌─────────┐ │
+│  │  Views    │  │ ViewModels │  │ Managers  │  │Controls │ │
+│  │  (XAML)   │  │  (MVVM)    │  │           │  │         │ │
+│  └───────────┘  └────────────┘  └───────────┘  └─────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                     Core Layer                              │
+│  ┌─────────────────────────┐  ┌───────────────────────────┐│
+│  │     Application         │  │         Domain            ││
+│  │  ┌─────────┐ ┌───────┐  │  │  ┌──────────┐ ┌────────┐  ││
+│  │  │Services │ │  DTOs │  │  │  │ Entities │ │ Values │  ││
+│  │  └─────────┘ └───────┘  │  │  └──────────┘ └────────┘  ││
+│  └─────────────────────────┘  └───────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+┌───────────────┐    ┌───────────────┐    ┌───────────────┐
+│Infrastructure │    │    Logging    │    │   External    │
+│  ┌─────────┐  │    │  ┌─────────┐  │    │   Services    │
+│  │ Readers │  │    │  │Providers│  │    │   (future)    │
+│  └─────────┘  │    │  └─────────┘  │    │               │
+└───────────────┘    └───────────────┘    └───────────────┘
 ```
 
 ### Project Structure
 ```
 SheetAtlas/
 ├── src/
-│   ├── SheetAtlas.Core/           # Business logic layer
-│   │   ├── Models/                 # Domain entities
-│   │   ├── Services/              # Business services
-│   │   └── Interfaces/            # Abstractions
+│   ├── SheetAtlas.Core/              # Business logic layer
+│   │   ├── Application/              # Application services
+│   │   │   ├── DTOs/                 # Data transfer objects
+│   │   │   ├── Interfaces/           # Service abstractions
+│   │   │   ├── Services/             # Business services
+│   │   │   └── Utilities/            # Helper utilities
+│   │   ├── Domain/                   # Domain layer
+│   │   │   ├── Entities/             # Domain entities
+│   │   │   ├── Exceptions/           # Domain exceptions
+│   │   │   └── ValueObjects/         # Value objects
+│   │   └── Shared/                   # Shared helpers
 │   │
-│   ├── SheetAtlas.UI.Avalonia/   # Presentation layer
-│   │   ├── Views/                 # XAML views
-│   │   ├── ViewModels/            # View models
-│   │   ├── Services/              # UI services
-│   │   ├── Converters/            # Value converters
-│   │   └── Controls/              # Custom controls
+│   ├── SheetAtlas.Infrastructure/    # External integrations
+│   │   └── External/Readers/         # File format readers
 │   │
-│   └── SheetAtlas.Tests/          # Test projects
-│       ├── Core.Tests/            # Core layer tests
-│       └── UI.Tests/              # UI layer tests
+│   ├── SheetAtlas.Logging/           # Logging infrastructure
+│   │   ├── Models/                   # Log models
+│   │   └── Services/                 # Logging services
+│   │
+│   └── SheetAtlas.UI.Avalonia/       # Presentation layer
+│       ├── Views/                    # XAML views
+│       ├── ViewModels/               # View models
+│       ├── Managers/                 # UI managers (Files, Search, Theme, etc.)
+│       ├── Controls/                 # Custom controls (CollapsibleSection)
+│       ├── Converters/               # Value converters
+│       ├── Commands/                 # UI commands
+│       ├── Services/                 # UI services
+│       └── Styles/                   # Themes and styles
 │
-├── docs/                          # Documentation
-├── build/                         # Build scripts
-└── assets/                        # Resources and assets
+├── tests/
+│   └── SheetAtlas.Tests/             # Unit and integration tests
+│
+├── docs/                             # Documentation
+└── assets/                           # Resources and assets
 ```
 
 ## Technology Stack
@@ -172,18 +191,6 @@ public interface IExportService
 - **Anti-tampering**: Basic code obfuscation
 - **Audit trail**: Usage logging for enterprise versions
 
-## Platform Support
-
-### Target Platforms
-- **Windows 10/11**: x64, ARM64
-- **Linux**: Ubuntu 20.04+, RHEL 8+, Debian 11+
-- **macOS**: 10.15+ (Intel/Apple Silicon)
-
-### Distribution
-- **Windows**: MSI installer, portable executable
-- **Linux**: AppImage, .deb, .rpm packages
-- **macOS**: .dmg installer, portable app
-
 ## Testing Strategy
 
 ### Unit Testing
@@ -201,29 +208,6 @@ public interface IExportService
 - **User experience**: Usability testing
 - **Performance**: Large file handling
 - **Edge cases**: Corrupted/unusual files
-
-## Build & Deployment
-
-### Build Process
-```bash
-# Development build
-dotnet build --configuration Debug
-
-# Release build
-dotnet publish --configuration Release --self-contained true
-
-# Platform-specific builds
-dotnet publish -r win-x64 --configuration Release
-dotnet publish -r linux-x64 --configuration Release
-dotnet publish -r osx-x64 --configuration Release
-```
-
-### CI/CD Pipeline
-1. **Code quality**: Linting, formatting checks
-2. **Testing**: Unit and integration tests
-3. **Building**: Multi-platform builds
-4. **Packaging**: Platform-specific installers
-5. **Deployment**: Release artifacts
 
 ## Configuration
 
@@ -261,5 +245,7 @@ dotnet publish -r osx-x64 --configuration Release
 
 ---
 
-*Last updated: September 2025*
-*Version: 1.0*
+*Last updated: November 2025*
+
+For build commands and platform support, see [README.md](../../README.md).
+For release process, see [RELEASE_PROCESS.md](../RELEASE_PROCESS.md).
