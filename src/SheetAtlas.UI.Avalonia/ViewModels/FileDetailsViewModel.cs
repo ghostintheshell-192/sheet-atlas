@@ -24,6 +24,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private readonly ITemplateRepository _templateRepository;
     private readonly IFilePickerService _filePickerService;
     private readonly IDataNormalizationService _dataNormalizationService;
+    private readonly IExcelWriterService _excelWriterService;
 
     private IFileLoadResultViewModel? _selectedFile;
     private bool _isLoadingHistory;
@@ -140,6 +141,8 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public ICommand SaveAsTemplateCommand { get; }
     public ICommand LoadTemplateCommand { get; }
     public ICommand NormalizeAllCommand { get; }
+    public ICommand ExportExcelCommand { get; }
+    public ICommand ExportCsvCommand { get; }
 
     public bool CanNormalize => HasValidationIssues && SelectedFile?.File != null;
 
@@ -149,7 +152,8 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         ITemplateValidationService templateValidationService,
         ITemplateRepository templateRepository,
         IFilePickerService filePickerService,
-        IDataNormalizationService dataNormalizationService)
+        IDataNormalizationService dataNormalizationService,
+        IExcelWriterService excelWriterService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileLogService = fileLogService ?? throw new ArgumentNullException(nameof(fileLogService));
@@ -157,6 +161,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         _templateRepository = templateRepository ?? throw new ArgumentNullException(nameof(templateRepository));
         _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
         _dataNormalizationService = dataNormalizationService ?? throw new ArgumentNullException(nameof(dataNormalizationService));
+        _excelWriterService = excelWriterService ?? throw new ArgumentNullException(nameof(excelWriterService));
 
         RemoveFromListCommand = new RelayCommand(() => { ExecuteRemoveFromList(); return Task.CompletedTask; });
         CleanAllDataCommand = new RelayCommand(() => { ExecuteCleanAllData(); return Task.CompletedTask; });
@@ -169,6 +174,8 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         SaveAsTemplateCommand = new RelayCommand(ExecuteSaveAsTemplateAsync);
         LoadTemplateCommand = new RelayCommand(ExecuteLoadTemplateAsync);
         NormalizeAllCommand = new RelayCommand(ExecuteNormalizeAllAsync);
+        ExportExcelCommand = new RelayCommand(ExecuteExportExcelAsync);
+        ExportCsvCommand = new RelayCommand(ExecuteExportCsvAsync);
 
         // Load available templates on startup
         _ = LoadAvailableTemplatesAsync();
@@ -685,11 +692,120 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task ExecuteExportExcelAsync()
+    {
+        if (SelectedFile?.File == null)
+            return;
+
+        try
+        {
+            var sheet = SelectedFile.File.Sheets.Values.FirstOrDefault();
+            if (sheet == null)
+            {
+                _logger.LogWarning("No sheet found to export", "FileDetailsViewModel");
+                return;
+            }
+
+            // Generate default output path
+            var originalPath = SelectedFile.FilePath;
+            var directory = Path.GetDirectoryName(originalPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var baseName = Path.GetFileNameWithoutExtension(originalPath);
+            var outputPath = Path.Combine(directory, $"{baseName}_normalized.xlsx");
+
+            // Use file picker to let user choose location
+            var savedPath = await _filePickerService.SaveFileAsync(
+                "Export Normalized Excel",
+                outputPath,
+                new[] { "*.xlsx" });
+
+            if (string.IsNullOrEmpty(savedPath))
+                return;
+
+            _logger.LogInfo($"Exporting to Excel: {savedPath}", "FileDetailsViewModel");
+
+            var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath);
+
+            if (result.IsSuccess)
+            {
+                _logger.LogInfo($"Excel export completed: {result.RowsExported} rows, {result.NormalizedCellCount} normalized cells, {result.FileSizeBytes} bytes in {result.Duration.TotalMilliseconds:F0}ms", "FileDetailsViewModel");
+
+                ExportCompleted?.Invoke(this, new ExportCompletedEventArgs(
+                    savedPath,
+                    "Excel",
+                    result.RowsExported,
+                    result.NormalizedCellCount));
+            }
+            else
+            {
+                _logger.LogError($"Excel export failed: {result.ErrorMessage}", "FileDetailsViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to export Excel: {ex.Message}", ex, "FileDetailsViewModel");
+        }
+    }
+
+    private async Task ExecuteExportCsvAsync()
+    {
+        if (SelectedFile?.File == null)
+            return;
+
+        try
+        {
+            var sheet = SelectedFile.File.Sheets.Values.FirstOrDefault();
+            if (sheet == null)
+            {
+                _logger.LogWarning("No sheet found to export", "FileDetailsViewModel");
+                return;
+            }
+
+            // Generate default output path
+            var originalPath = SelectedFile.FilePath;
+            var directory = Path.GetDirectoryName(originalPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var baseName = Path.GetFileNameWithoutExtension(originalPath);
+            var outputPath = Path.Combine(directory, $"{baseName}_normalized.csv");
+
+            // Use file picker to let user choose location
+            var savedPath = await _filePickerService.SaveFileAsync(
+                "Export Normalized CSV",
+                outputPath,
+                new[] { "*.csv" });
+
+            if (string.IsNullOrEmpty(savedPath))
+                return;
+
+            _logger.LogInfo($"Exporting to CSV: {savedPath}", "FileDetailsViewModel");
+
+            var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath);
+
+            if (result.IsSuccess)
+            {
+                _logger.LogInfo($"CSV export completed: {result.RowsExported} rows, {result.NormalizedCellCount} normalized cells, {result.FileSizeBytes} bytes in {result.Duration.TotalMilliseconds:F0}ms", "FileDetailsViewModel");
+
+                ExportCompleted?.Invoke(this, new ExportCompletedEventArgs(
+                    savedPath,
+                    "CSV",
+                    result.RowsExported,
+                    result.NormalizedCellCount));
+            }
+            else
+            {
+                _logger.LogError($"CSV export failed: {result.ErrorMessage}", "FileDetailsViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to export CSV: {ex.Message}", ex, "FileDetailsViewModel");
+        }
+    }
+
     #endregion
 
     // Events to communicate with parent ViewModels
     public event EventHandler<TemplateSavedEventArgs>? TemplateSaved;
     public event EventHandler<NormalizationCompletedEventArgs>? NormalizationCompleted;
+    public event EventHandler<ExportCompletedEventArgs>? ExportCompleted;
     public event EventHandler<FileActionEventArgs>? RemoveFromListRequested;
     public event EventHandler<FileActionEventArgs>? CleanAllDataRequested;
     public event EventHandler<FileActionEventArgs>? RemoveNotificationRequested;

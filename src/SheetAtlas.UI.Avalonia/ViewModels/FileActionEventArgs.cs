@@ -62,3 +62,37 @@ public class NormalizationCompletedEventArgs : EventArgs
         TotalColumns = totalColumns;
     }
 }
+
+/// <summary>
+/// Event arguments raised when export is completed.
+/// </summary>
+public class ExportCompletedEventArgs : EventArgs
+{
+    /// <summary>
+    /// Path to the exported file.
+    /// </summary>
+    public string OutputPath { get; }
+
+    /// <summary>
+    /// Format of export (Excel, CSV).
+    /// </summary>
+    public string Format { get; }
+
+    /// <summary>
+    /// Number of rows exported.
+    /// </summary>
+    public int RowsExported { get; }
+
+    /// <summary>
+    /// Number of cells with normalization applied.
+    /// </summary>
+    public int NormalizedCellCount { get; }
+
+    public ExportCompletedEventArgs(string outputPath, string format, int rowsExported, int normalizedCellCount)
+    {
+        OutputPath = outputPath;
+        Format = format;
+        RowsExported = rowsExported;
+        NormalizedCellCount = normalizedCellCount;
+    }
+}

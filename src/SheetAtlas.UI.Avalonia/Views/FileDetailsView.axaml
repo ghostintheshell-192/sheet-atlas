@@ -32,8 +32,18 @@
                                Foreground="{DynamicResource SearchQueryText}"/>
                     <!-- Toolbar Buttons (Right) -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                        <Button Content="Retry"
+                        <Button Content="Export Excel"
                                 Classes="ModernButton"
+                                Command="{Binding ExportExcelCommand}"
+                                ToolTip.Tip="Export normalized data to Excel file"
+                                FontSize="11"/>
+                        <Button Content="Export CSV"
+                                Classes="SecondaryButton"
+                                Command="{Binding ExportCsvCommand}"
+                                ToolTip.Tip="Export normalized data to CSV file"
+                                FontSize="11"/>
+                        <Button Content="Retry"
+                                Classes="SecondaryButton"
                                 Command="{Binding RetryCommand}"
                                 FontSize="11"/>
                         <Button Content="Clear"
