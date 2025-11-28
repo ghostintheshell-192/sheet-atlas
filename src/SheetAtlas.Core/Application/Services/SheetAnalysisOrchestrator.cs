@@ -140,16 +140,13 @@ namespace SheetAtlas.Core.Application.Services
                     int absoluteRow = sheetData.HeaderRowCount + dataRowIndex;
                     var cellData = sheetData.GetCellData(absoluteRow, colIndex);
 
-                    // Normalize cell value and preserve full result
+                    // Normalize cell value and preserve full result (for export)
                     var normResult = NormalizeCellValue(cellData.Value, cellData.Metadata?.NumberFormat);
                     normalizationResults.Add(normResult);
 
-                    // Use cleaned value for analysis (or original if empty/failed)
-                    var normalizedValue = normResult.IsSuccess && normResult.CleanedValue.HasValue
-                        ? normResult.CleanedValue.Value
-                        : cellData.Value;
-
-                    sampleCells.Add(normalizedValue);
+                    // IMPORTANT: Pass ORIGINAL values to ColumnAnalysisService for anomaly detection
+                    // If we pass normalized values, dirty data gets "cleaned" and anomalies are masked
+                    sampleCells.Add(cellData.Value);
                     // Extract numberFormat from metadata (saved during file read)
                     numberFormats.Add(cellData.Metadata?.NumberFormat);
                     // Track absolute row index for this cell (for anomaly reporting)
