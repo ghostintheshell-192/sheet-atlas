@@ -57,10 +57,10 @@ samples/
 # Legacy private directory (deprecated - use .personal/ instead)
 .secrets/
 
-# Claude Code temporary todo lists (do NOT commit)
+# Claude Code folder and todos (do NOT commit)
 **/claude-todos*.md
 **/temp-todos*.md
-.claude/todos/
+.claude
 
 # Legacy ignore rules
 /src/VisioHandler/Resources/Results
