@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
+             xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
@@ -13,196 +14,195 @@
     </Design.DataContext>
 
     <Grid>
-        <!-- Enhanced Tree Results (Notepad++ Style) -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <TreeView ItemsSource="{Binding SearchHistory}"
-                     Background="Transparent">
+        <!-- Search Results using CollapsibleSection for top level -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                     IsVisible="{Binding SearchHistory.Count}">
+            <ItemsControl ItemsSource="{Binding SearchHistory}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SearchHistoryItem">
+                        <controls:CollapsibleSection IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                                     Margin="0,4,0,0">
+                            <controls:CollapsibleSection.Header>
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                    <!-- Search Icon -->
+                                    <PathIcon Grid.Column="0"
+                                             Data="{StaticResource SearchIconData}"
+                                             Width="16" Height="16"
+                                             Foreground="{DynamicResource SearchQueryText}"
+                                             Margin="0,0,8,0"/>
 
-                <!-- Search History Level (Query Header) -->
-                <TreeView.DataTemplates>
-                    <TreeDataTemplate DataType="vm:SearchHistoryItem" ItemsSource="{Binding FileGroups}">
-                        <Border Background="{DynamicResource SearchQueryBackground}"
-                               CornerRadius="0"
-                               Padding="8,12,8,12"
-                               Margin="0,4,0,0">
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                <!-- Search Icon -->
-                                <PathIcon Grid.Column="0"
-                                         Data="{StaticResource SearchIconData}"
-                                         Width="16" Height="16"
-                                         Foreground="{DynamicResource SearchQueryText}"
-                                         Margin="0,0,8,0"/>
+                                    <!-- Search Info Text -->
+                                    <TextBlock Grid.Column="1"
+                                              Foreground="{DynamicResource SearchQueryText}"
+                                              FontWeight="SemiBold"
+                                              VerticalAlignment="Center">
+                                        <Run Text="Search: &quot;"/>
+                                        <Run Text="{Binding Query}" FontWeight="Bold"/>
+                                        <Run Text="&quot; ("/>
+                                        <Run Text="{Binding TotalResults}"/>
+                                        <Run Text=" hits)"/>
+                                    </TextBlock>
 
-                                <!-- Search Info Text -->
-                                <TextBlock Grid.Column="1"
-                                          Foreground="{DynamicResource SearchQueryText}"
-                                          FontWeight="SemiBold">
-                                    <Run Text="Search: &quot;"/>
-                                    <Run Text="{Binding Query}" FontWeight="Bold"/>
-                                    <Run Text="&quot; ("/>
-                                    <Run Text="{Binding TotalResults}"/>
-                                    <Run Text=" hits)"/>
-                                </TextBlock>
+                                    <!-- Selection Counter -->
+                                    <TextBlock Grid.Column="2"
+                                              Text="{Binding SelectionText}"
+                                              Foreground="{DynamicResource SearchQueryText}"
+                                              FontWeight="Medium"
+                                              FontSize="12"
+                                              Margin="16,0,8,0"
+                                              VerticalAlignment="Center"/>
 
-                                <!-- Selection Counter -->
-                                <TextBlock Grid.Column="2"
-                                          Text="{Binding SelectionText}"
-                                          Foreground="{DynamicResource SearchQueryText}"
-                                          FontWeight="Medium"
-                                          FontSize="12"
-                                          Margin="16,0,8,0"
-                                          VerticalAlignment="Center"/>
+                                    <!-- Clear Button -->
+                                    <Button Grid.Column="3"
+                                           Content="Clear"
+                                           Command="{Binding ClearSelectionCommand}"
+                                           Classes="ModernButton"
+                                           FontSize="11"
+                                           Padding="8,4"
+                                           MinWidth="50"/>
+                                </Grid>
+                            </controls:CollapsibleSection.Header>
 
-                                <!-- Clear Button -->
-                                <Button Grid.Column="3"
-                                       Content="Clear"
-                                       Command="{Binding ClearSelectionCommand}"
-                                       Classes="ModernButton"
-                                       FontSize="11"
-                                       Padding="8,4"
-                                       MinWidth="50"/>
-                            </Grid>
-                        </Border>
-                    </TreeDataTemplate>
+                            <controls:CollapsibleSection.Content>
+                                <!-- Nested TreeView for File → Sheet → Result levels -->
+                                <TreeView ItemsSource="{Binding FileGroups}"
+                                         Background="Transparent">
+                                    <TreeView.DataTemplates>
+                                        <!-- File Group Level -->
+                                        <TreeDataTemplate DataType="vm:FileResultGroup" ItemsSource="{Binding SheetGroups}">
+                                            <Border Background="{DynamicResource FileGroupBackground}"
+                                                   Padding="8,6"
+                                                   BorderThickness="0,0,0,1"
+                                                   BorderBrush="{DynamicResource SubtleBorder}">
+                                                <TextBlock FontWeight="Medium"
+                                                          Foreground="{DynamicResource PrimaryText}">
+                                                    <Run Text="File - " Foreground="{DynamicResource SecondaryText}"/>
+                                                    <Run Text="{Binding FileName}"/>
+                                                    <Run Text=" (" Foreground="{DynamicResource SecondaryText}"/>
+                                                    <Run Text="{Binding TotalResults}" Foreground="{DynamicResource SecondaryText}"/>
+                                                    <Run Text=" hits)" Foreground="{DynamicResource SecondaryText}"/>
+                                                </TextBlock>
+                                            </Border>
+                                        </TreeDataTemplate>
 
-                    <!-- File Group Level -->
-                    <TreeDataTemplate DataType="vm:FileResultGroup" ItemsSource="{Binding SheetGroups}">
-                        <Border Background="{DynamicResource FileGroupBackground}"
-                               Padding="8,6"
-                               BorderThickness="0,0,0,1"
-                               BorderBrush="{DynamicResource SubtleBorder}">
-                            <TextBlock FontWeight="Medium"
-                                      Foreground="{DynamicResource PrimaryText}">
-                                <Run Text="File - " Foreground="{DynamicResource SecondaryText}"/>
-                                <Run Text="{Binding FileName}"/>
-                                <Run Text=" (" Foreground="{DynamicResource SecondaryText}"/>
-                                <Run Text="{Binding TotalResults}" Foreground="{DynamicResource SecondaryText}"/>
-                                <Run Text=" hits)" Foreground="{DynamicResource SecondaryText}"/>
-                            </TextBlock>
-                        </Border>
-                    </TreeDataTemplate>
+                                        <!-- Sheet Group Level -->
+                                        <TreeDataTemplate DataType="vm:SheetResultGroup" ItemsSource="{Binding Results}">
+                                            <Border Background="{DynamicResource SheetGroupBackground}"
+                                                   Padding="8,4"
+                                                   BorderThickness="0,0,0,1"
+                                                   BorderBrush="{DynamicResource SubtleBorder}">
+                                                <TextBlock Foreground="{DynamicResource SecondaryText}" FontSize="13">
+                                                    <Run Text="Foglio - "/>
+                                                    <Run Text="{Binding SheetName}"/>
+                                                    <Run Text=" ("/>
+                                                    <Run Text="{Binding TotalResults}"/>
+                                                    <Run Text=" hits)"/>
+                                                </TextBlock>
+                                            </Border>
+                                        </TreeDataTemplate>
 
-                    <!-- Sheet Group Level -->
-                    <TreeDataTemplate DataType="vm:SheetResultGroup" ItemsSource="{Binding Results}">
-                        <Border Background="{DynamicResource SheetGroupBackground}"
-                               Padding="8,4"
-                               BorderThickness="0,0,0,1"
-                               BorderBrush="{DynamicResource SubtleBorder}">
-                            <TextBlock Foreground="{DynamicResource SecondaryText}" FontSize="13">
-                                <Run Text="Foglio - "/>
-                                <Run Text="{Binding SheetName}"/>
-                                <Run Text=" ("/>
-                                <Run Text="{Binding TotalResults}"/>
-                                <Run Text=" hits)"/>
-                            </TextBlock>
-                        </Border>
-                    </TreeDataTemplate>
+                                        <!-- Individual Result Level -->
+                                        <DataTemplate DataType="vm:SearchResultItem">
+                                            <Border Padding="8,3,16,3"
+                                                   BorderThickness="0,0,0,1"
+                                                   BorderBrush="{DynamicResource SubtleBorder}"
+                                                   Background="Transparent">
 
-                    <!-- Individual Result Level (Notepad++ style with line numbers) -->
-                    <DataTemplate DataType="vm:SearchResultItem">
-                        <Border Padding="8,3,16,3"
-                               BorderThickness="0,0,0,1"
-                               BorderBrush="{DynamicResource SubtleBorder}"
-                               Background="Transparent">
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <!-- Selection Checkbox -->
+                                                    <CheckBox Grid.Column="0"
+                                                             IsChecked="{Binding IsSelected}"
+                                                             IsVisible="{Binding CanBeCompared}"
+                                                             Margin="0,0,8,0"
+                                                             VerticalAlignment="Center"/>
 
-                            <Grid ColumnDefinitions="Auto,*">
-                                <!-- Selection Checkbox (no hover effect) -->
-                                <CheckBox Grid.Column="0"
-                                         IsChecked="{Binding IsSelected}"
-                                         IsVisible="{Binding CanBeCompared}"
-                                         Margin="0,0,8,0"
-                                         VerticalAlignment="Center"/>
+                                                    <!-- Content area with hover effect -->
+                                                    <Border Grid.Column="1"
+                                                           Background="Transparent"
+                                                           Padding="0">
+                                                        <Border.Styles>
+                                                            <Style Selector="Border:pointerover">
+                                                                <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
+                                                            </Style>
+                                                        </Border.Styles>
 
-                                <!-- Content area with hover effect -->
-                                <Border Grid.Column="1"
-                                       Background="Transparent"
-                                       Padding="0">
-                                    <Border.Styles>
-                                        <Style Selector="Border:pointerover">
-                                            <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
+                                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                                            <!-- Line Label -->
+                                                            <TextBlock Grid.Column="0"
+                                                                      Text="Line "
+                                                                      Foreground="{DynamicResource SecondaryText}"
+                                                                      FontSize="11"
+                                                                      VerticalAlignment="Center"/>
+
+                                                            <!-- Row Number -->
+                                                            <TextBlock Grid.Column="1"
+                                                                      Text="{Binding Result.Row, StringFormat='{}{0}:'}"
+                                                                      Foreground="{DynamicResource AccentOrange}"
+                                                                      FontWeight="SemiBold"
+                                                                      FontSize="11"
+                                                                      Margin="0,0,8,0"
+                                                                      VerticalAlignment="Center"/>
+
+                                                            <!-- Match Content -->
+                                                            <TextBlock Grid.Column="2"
+                                                                      FontSize="12"
+                                                                      TextTrimming="CharacterEllipsis"
+                                                                      VerticalAlignment="Center"
+                                                                      FontFamily="Consolas, 'Courier New', monospace">
+                                                                <Run Text="{Binding DisplayText}"
+                                                                     Foreground="{DynamicResource PrimaryText}"/>
+                                                            </TextBlock>
+
+                                                            <!-- Cell Type Icon -->
+                                                            <PathIcon Grid.Column="3"
+                                                                     Data="{StaticResource CellIconData}"
+                                                                     Width="12" Height="12"
+                                                                     Foreground="{DynamicResource Gray500}"
+                                                                     Margin="8,0,0,0"
+                                                                     IsVisible="{Binding CanBeCompared}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </TreeView.DataTemplates>
+
+                                    <!-- TreeView Styling for nested levels -->
+                                    <TreeView.Styles>
+                                        <Style Selector="TreeViewItem">
+                                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                            <Setter Property="Padding" Value="0"/>
+                                            <Setter Property="Margin" Value="-20,0,0,0"/>
                                         </Style>
-                                    </Border.Styles>
 
-                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                                        <!-- Line Label -->
-                                        <TextBlock Grid.Column="0"
-                                                  Text="Line "
-                                                  Foreground="{DynamicResource SecondaryText}"
-                                                  FontSize="11"
-                                                  VerticalAlignment="Center"/>
+                                        <!-- Level 1: Sheet Groups (children of File Groups) -->
+                                        <Style Selector="TreeViewItem TreeViewItem">
+                                            <Setter Property="Margin" Value="-16,0,0,0"/>
+                                        </Style>
 
-                                        <!-- Row Number -->
-                                        <TextBlock Grid.Column="1"
-                                                  Text="{Binding Result.Row, StringFormat='{}{0}:'}"
-                                                  Foreground="{DynamicResource AccentOrange}"
-                                                  FontWeight="SemiBold"
-                                                  FontSize="11"
-                                                  Margin="0,0,8,0"
-                                                  VerticalAlignment="Center"/>
+                                        <!-- Level 2: Results (children of Sheet Groups) -->
+                                        <Style Selector="TreeViewItem TreeViewItem TreeViewItem">
+                                            <Setter Property="Margin" Value="0,0,0,0"/>
+                                        </Style>
 
-                                        <!-- Match Content with Highlighting -->
-                                        <TextBlock Grid.Column="2"
-                                                  FontSize="12"
-                                                  TextTrimming="CharacterEllipsis"
-                                                  VerticalAlignment="Center"
-                                                  FontFamily="Consolas, 'Courier New', monospace">
-                                            <Run Text="{Binding DisplayText}"
-                                                 Foreground="{DynamicResource PrimaryText}"/>
-                                        </TextBlock>
+                                        <!-- Remove expander toggle button -->
+                                        <Style Selector="TreeViewItem /template/ ToggleButton#PART_Expander">
+                                            <Setter Property="IsVisible" Value="False"/>
+                                        </Style>
 
-                                        <!-- Cell Type Icon -->
-                                        <PathIcon Grid.Column="3"
-                                                 Data="{StaticResource CellIconData}"
-                                                 Width="12" Height="12"
-                                                 Foreground="{DynamicResource Gray500}"
-                                                 Margin="8,0,0,0"
-                                                 IsVisible="{Binding CanBeCompared}"/>
-                                    </Grid>
-                                </Border>
-                            </Grid>
-                        </Border>
+                                        <Style Selector="TreeViewItem /template/ ToggleButton">
+                                            <Setter Property="IsVisible" Value="False"/>
+                                        </Style>
+                                    </TreeView.Styles>
+                                </TreeView>
+                            </controls:CollapsibleSection.Content>
+                        </controls:CollapsibleSection>
                     </DataTemplate>
-                </TreeView.DataTemplates>
-
-                <!-- Enhanced TreeView Styling -->
-                <TreeView.Styles>
-                    <Style Selector="TreeViewItem">
-                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                        <Setter Property="Padding" Value="0"/>
-                        <Setter Property="Margin" Value="-20,0,0,0"/>
-                    </Style>
-
-                    <!-- Override TreeViewItem template to remove indentation -->
-                    <!-- Level 1: File Groups (children of Search History) -->
-                    <Style Selector="TreeViewItem TreeViewItem">
-                        <Setter Property="Margin" Value="-16,0,0,0"/>
-                    </Style>
-
-                    <!-- Level 2: Sheet Groups (children of File Groups) -->
-                    <Style Selector="TreeViewItem TreeViewItem TreeViewItem">
-                        <Setter Property="Margin" Value="-16,0,0,0"/>
-                    </Style>
-
-                    <!-- Level 3: Results (children of Sheet Groups) -->
-                    <Style Selector="TreeViewItem TreeViewItem TreeViewItem TreeViewItem">
-                        <Setter Property="Margin" Value="0,0,0,0"/>
-                    </Style>
-
-                    <!-- Remove expander toggle button -->
-                    <Style Selector="TreeViewItem /template/ ToggleButton#PART_Expander">
-                        <Setter Property="IsVisible" Value="False"/>
-                    </Style>
-
-                    <!-- Hide the indentation toggle -->
-                    <Style Selector="TreeViewItem /template/ ToggleButton">
-                        <Setter Property="IsVisible" Value="False"/>
-                    </Style>
-                </TreeView.Styles>
-
-            </TreeView>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </ScrollViewer>
 
-        <!-- Enhanced Empty State -->
+        <!-- Empty State -->
         <StackPanel HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    Spacing="16"
