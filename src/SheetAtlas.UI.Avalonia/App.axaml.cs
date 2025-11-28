@@ -84,6 +84,8 @@ public partial class App : Application
                 services.AddSingleton<IDataNormalizationService, SheetAtlas.Core.Application.Services.Foundation.DataNormalizationService>();
                 services.AddSingleton<IColumnAnalysisService, SheetAtlas.Core.Application.Services.Foundation.ColumnAnalysisService>();
                 services.AddSingleton<IMergedCellResolver, SheetAtlas.Core.Application.Services.Foundation.MergedCellResolver>();
+                services.AddSingleton<ITemplateValidationService, SheetAtlas.Core.Application.Services.Foundation.TemplateValidationService>();
+                services.AddSingleton<ITemplateRepository, SheetAtlas.Core.Application.Services.Foundation.TemplateRepository>();
 
                 services.AddSingleton<ISheetAnalysisOrchestrator>(sp =>
                 {

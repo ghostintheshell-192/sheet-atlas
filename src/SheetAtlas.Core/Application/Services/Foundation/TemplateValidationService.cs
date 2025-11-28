@@ -317,6 +317,27 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                     expected.MinTypeConfidence));
             }
 
+            // Propagate cell anomalies as validation issues
+            // This catches type mismatches within cells even when column type matches overall
+            foreach (var anomaly in analysis.Anomalies.Where(a =>
+                a.Issue == DataQualityIssue.TypeMismatch ||
+                a.Issue == DataQualityIssue.InvalidCharacters))
+            {
+                var severity = anomaly.Severity >= Logging.Models.LogSeverity.Error
+                    ? ValidationSeverity.Error
+                    : ValidationSeverity.Warning;
+
+                issues.Add(ValidationIssue.RuleViolation(
+                    expected.Name,
+                    columnIndex.Value,
+                    anomaly.RowIndex,
+                    $"R{anomaly.RowIndex + 1}",
+                    "DataQuality",
+                    anomaly.Message,
+                    anomaly.CellValue.ToString(),
+                    severity));
+            }
+
             // Currency check
             if (!string.IsNullOrEmpty(expected.ExpectedCurrency))
             {

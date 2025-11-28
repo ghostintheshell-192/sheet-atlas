@@ -1,8 +1,16 @@
 using System.Collections.ObjectModel;
+using System.Text;
 using System.Windows.Input;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
+using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.UI.Avalonia.Commands;
 using SheetAtlas.UI.Avalonia.Models;
+using SheetAtlas.UI.Avalonia.Services;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Logging.Models;
 
@@ -12,9 +20,20 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 {
     private readonly ILogService _logger;
     private readonly IFileLogService _fileLogService;
+    private readonly ITemplateValidationService _templateValidationService;
+    private readonly ITemplateRepository _templateRepository;
+    private readonly IFilePickerService _filePickerService;
+    private readonly IDataNormalizationService _dataNormalizationService;
+
     private IFileLoadResultViewModel? _selectedFile;
     private bool _isLoadingHistory;
     private bool _disposed;
+
+    // Template validation fields
+    private ExcelTemplate? _selectedTemplate;
+    private ValidationReport? _validationReport;
+    private bool _isValidating;
+    private bool _isLoadingTemplates;
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -41,6 +60,75 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public string FilePath => SelectedFile?.FilePath ?? string.Empty;
     public string FileSize => SelectedFile != null ? FormatFileSize(SelectedFile.FilePath) : string.Empty;
     public bool HasErrorLogs => ErrorLogs.Count > 0;
+    public bool HasSelectedFile => SelectedFile != null;
+
+    // Template validation properties
+    public ObservableCollection<ExcelTemplate> AvailableTemplates { get; } = new();
+    public ObservableCollection<ValidationIssueViewModel> ValidationIssues { get; } = new();
+
+    public ExcelTemplate? SelectedTemplate
+    {
+        get => _selectedTemplate;
+        set
+        {
+            if (SetField(ref _selectedTemplate, value))
+            {
+                OnPropertyChanged(nameof(CanValidate));
+                // Clear previous validation when template changes
+                ClearValidationResult();
+            }
+        }
+    }
+
+    public bool IsValidating
+    {
+        get => _isValidating;
+        set => SetField(ref _isValidating, value);
+    }
+
+    public bool CanValidate => SelectedTemplate != null && SelectedFile?.File != null && !IsValidating;
+
+    public bool HasValidationResult => _validationReport != null;
+
+    public bool HasValidationIssues => _validationReport?.AllIssues.Count > 0;
+
+    public string ValidationStatusIcon => _validationReport?.Status switch
+    {
+        ValidationStatus.Valid => "\u2705",            // Green checkmark
+        ValidationStatus.ValidWithWarnings => "\u26A0", // Warning
+        ValidationStatus.Invalid => "\u274C",           // Red X
+        ValidationStatus.Failed => "\u26D4",            // No entry
+        _ => ""
+    };
+
+    public string ValidationStatusText => _validationReport?.Status switch
+    {
+        ValidationStatus.Valid => "Valid",
+        ValidationStatus.ValidWithWarnings => $"{_validationReport.TotalWarningCount} warning(s)",
+        ValidationStatus.Invalid => $"{_validationReport.TotalErrorCount} error(s)",
+        ValidationStatus.Failed => "Failed",
+        _ => ""
+    };
+
+    public string ValidationResultStatus => _validationReport?.Status switch
+    {
+        ValidationStatus.Valid => "VALID",
+        ValidationStatus.ValidWithWarnings => "VALID",
+        ValidationStatus.Invalid => "INVALID",
+        ValidationStatus.Failed => "FAILED",
+        _ => ""
+    };
+
+    public IBrush ValidationResultBackground => _validationReport?.Status switch
+    {
+        ValidationStatus.Valid => new SolidColorBrush(Color.Parse("#22C55E")),          // Green
+        ValidationStatus.ValidWithWarnings => new SolidColorBrush(Color.Parse("#F59E0B")), // Amber
+        ValidationStatus.Invalid => new SolidColorBrush(Color.Parse("#EF4444")),        // Red
+        ValidationStatus.Failed => new SolidColorBrush(Color.Parse("#6B7280")),         // Gray
+        _ => new SolidColorBrush(Colors.Transparent)
+    };
+
+    public string ValidationSummary => _validationReport?.Summary ?? "";
 
     public ICommand RemoveFromListCommand { get; }
     public ICommand CleanAllDataCommand { get; }
@@ -48,13 +136,27 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public ICommand TryAgainCommand { get; }
     public ICommand RetryCommand { get; }
     public ICommand ClearCommand { get; }
+    public ICommand ValidateCommand { get; }
+    public ICommand SaveAsTemplateCommand { get; }
+    public ICommand LoadTemplateCommand { get; }
+    public ICommand NormalizeAllCommand { get; }
+
+    public bool CanNormalize => HasValidationIssues && SelectedFile?.File != null;
 
     public FileDetailsViewModel(
         ILogService logger,
-        IFileLogService fileLogService)
+        IFileLogService fileLogService,
+        ITemplateValidationService templateValidationService,
+        ITemplateRepository templateRepository,
+        IFilePickerService filePickerService,
+        IDataNormalizationService dataNormalizationService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileLogService = fileLogService ?? throw new ArgumentNullException(nameof(fileLogService));
+        _templateValidationService = templateValidationService ?? throw new ArgumentNullException(nameof(templateValidationService));
+        _templateRepository = templateRepository ?? throw new ArgumentNullException(nameof(templateRepository));
+        _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
+        _dataNormalizationService = dataNormalizationService ?? throw new ArgumentNullException(nameof(dataNormalizationService));
 
         RemoveFromListCommand = new RelayCommand(() => { ExecuteRemoveFromList(); return Task.CompletedTask; });
         CleanAllDataCommand = new RelayCommand(() => { ExecuteCleanAllData(); return Task.CompletedTask; });
@@ -63,6 +165,13 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         ViewErrorLogCommand = new RelayCommand(OpenErrorLogAsync);
         RetryCommand = new RelayCommand(ExecuteRetryAsync);
         ClearCommand = new RelayCommand(ExecuteClearAsync);
+        ValidateCommand = new RelayCommand(ExecuteValidateAsync);
+        SaveAsTemplateCommand = new RelayCommand(ExecuteSaveAsTemplateAsync);
+        LoadTemplateCommand = new RelayCommand(ExecuteLoadTemplateAsync);
+        NormalizeAllCommand = new RelayCommand(ExecuteNormalizeAllAsync);
+
+        // Load available templates on startup
+        _ = LoadAvailableTemplatesAsync();
     }
 
     private void UpdateDetails()
@@ -70,10 +179,16 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         Properties.Clear();
         ErrorLogs.Clear();
 
+        // Clear validation when file changes
+        ClearValidationResult();
+
+        OnPropertyChanged(nameof(HasSelectedFile));
+
         if (SelectedFile == null) return;
 
         OnPropertyChanged(nameof(FilePath));
         OnPropertyChanged(nameof(FileSize));
+        OnPropertyChanged(nameof(CanValidate));
 
         _ = LoadErrorHistoryAsync();
     }
@@ -308,7 +423,273 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         TryAgainRequested?.Invoke(this, new FileActionEventArgs(SelectedFile));
     }
 
+    #region Template Validation Methods
+
+    private async Task LoadAvailableTemplatesAsync()
+    {
+        if (_isLoadingTemplates) return;
+
+        _isLoadingTemplates = true;
+
+        try
+        {
+            var templates = await _templateRepository.ListTemplatesAsync();
+
+            AvailableTemplates.Clear();
+            foreach (var summary in templates)
+            {
+                var template = await _templateRepository.LoadTemplateAsync(summary.Name);
+                if (template != null)
+                {
+                    AvailableTemplates.Add(template);
+                }
+            }
+
+            _logger.LogInfo($"Loaded {AvailableTemplates.Count} templates", "FileDetailsViewModel");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to load templates", ex, "FileDetailsViewModel");
+        }
+        finally
+        {
+            _isLoadingTemplates = false;
+        }
+    }
+
+    private async Task ExecuteValidateAsync()
+    {
+        if (SelectedFile?.File == null || SelectedTemplate == null)
+            return;
+
+        IsValidating = true;
+        ClearValidationResult();
+
+        try
+        {
+            _logger.LogInfo($"Validating file '{SelectedFile.FileName}' against template '{SelectedTemplate.Name}'", "FileDetailsViewModel");
+
+            _validationReport = await _templateValidationService.ValidateAsync(
+                SelectedFile.File,
+                SelectedTemplate);
+
+            // Populate issues for display
+            foreach (var issue in _validationReport.AllIssues.OrderByDescending(i => i.Severity))
+            {
+                ValidationIssues.Add(new ValidationIssueViewModel(issue));
+            }
+
+            NotifyValidationPropertiesChanged();
+
+            _logger.LogInfo($"Validation completed: {_validationReport.Status} ({_validationReport.TotalErrorCount} errors, {_validationReport.TotalWarningCount} warnings)", "FileDetailsViewModel");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Validation failed for file: {SelectedFile.FileName}", ex, "FileDetailsViewModel");
+        }
+        finally
+        {
+            IsValidating = false;
+            OnPropertyChanged(nameof(CanValidate));
+        }
+    }
+
+    private async Task ExecuteSaveAsTemplateAsync()
+    {
+        if (SelectedFile?.File == null)
+            return;
+
+        try
+        {
+            // Generate template name from file name
+            var templateName = Path.GetFileNameWithoutExtension(SelectedFile.FileName);
+
+            // Check if template already exists
+            if (_templateRepository.TemplateExists(templateName))
+            {
+                // For now, just add a suffix. In the future, we could show a dialog
+                templateName = $"{templateName}_{DateTime.Now:yyyyMMdd_HHmmss}";
+            }
+
+            _logger.LogInfo($"Creating template '{templateName}' from file '{SelectedFile.FileName}'", "FileDetailsViewModel");
+
+            var template = await _templateValidationService.CreateTemplateFromFileAsync(
+                SelectedFile.File,
+                templateName);
+
+            await _templateRepository.SaveTemplateAsync(template);
+
+            // Refresh template list
+            await LoadAvailableTemplatesAsync();
+
+            // Select the newly created template
+            SelectedTemplate = AvailableTemplates.FirstOrDefault(t => t.Name == templateName);
+
+            _logger.LogInfo($"Template '{templateName}' created successfully with {template.Columns.Count} columns", "FileDetailsViewModel");
+
+            // Raise event so UI can show confirmation
+            TemplateSaved?.Invoke(this, new TemplateSavedEventArgs(template));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to save template from file: {SelectedFile.FileName}", ex, "FileDetailsViewModel");
+        }
+    }
+
+    private void ClearValidationResult()
+    {
+        _validationReport = null;
+        ValidationIssues.Clear();
+        NotifyValidationPropertiesChanged();
+    }
+
+    private void NotifyValidationPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(HasValidationResult));
+        OnPropertyChanged(nameof(HasValidationIssues));
+        OnPropertyChanged(nameof(ValidationStatusIcon));
+        OnPropertyChanged(nameof(ValidationStatusText));
+        OnPropertyChanged(nameof(ValidationResultStatus));
+        OnPropertyChanged(nameof(ValidationResultBackground));
+        OnPropertyChanged(nameof(ValidationSummary));
+        OnPropertyChanged(nameof(CanNormalize));
+    }
+
+    /// <summary>
+    /// Refresh the available templates list.
+    /// Call this when templates are added/removed externally.
+    /// </summary>
+    public Task RefreshTemplatesAsync() => LoadAvailableTemplatesAsync();
+
+    private async Task ExecuteLoadTemplateAsync()
+    {
+        try
+        {
+            var files = await _filePickerService.OpenFilesAsync(
+                "Select Template File",
+                new[] { "*.json" });
+
+            var filePath = files?.FirstOrDefault();
+            if (string.IsNullOrEmpty(filePath))
+                return;
+
+            _logger.LogInfo($"Loading template from: {filePath}", "FileDetailsViewModel");
+
+            var template = await _templateRepository.LoadTemplateFromPathAsync(filePath);
+            if (template == null)
+            {
+                _logger.LogWarning($"Failed to load template from: {filePath}", "FileDetailsViewModel");
+                return;
+            }
+
+            // Import the template to the templates directory
+            await _templateRepository.ImportTemplateAsync(filePath, overwrite: true);
+
+            // Refresh the list and select the imported template
+            await LoadAvailableTemplatesAsync();
+            SelectedTemplate = AvailableTemplates.FirstOrDefault(t => t.Name == template.Name);
+
+            _logger.LogInfo($"Template '{template.Name}' loaded successfully", "FileDetailsViewModel");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to load template from file", ex, "FileDetailsViewModel");
+        }
+    }
+
+    private async Task ExecuteNormalizeAllAsync()
+    {
+        if (SelectedFile?.File == null || !HasValidationIssues)
+            return;
+
+        try
+        {
+            _logger.LogInfo($"Normalizing data from file: {SelectedFile.FileName}", "FileDetailsViewModel");
+
+            var sheet = SelectedFile.File.Sheets.Values.FirstOrDefault();
+            if (sheet == null)
+            {
+                _logger.LogWarning("No sheet found to normalize", "FileDetailsViewModel");
+                return;
+            }
+
+            var csvBuilder = new StringBuilder();
+            int normalizedCount = 0;
+
+            // Add header row
+            csvBuilder.AppendLine(string.Join("\t", sheet.ColumnNames));
+
+            // Process each data row
+            foreach (var row in sheet.EnumerateDataRows())
+            {
+                var normalizedValues = new List<string>();
+
+                for (int colIndex = 0; colIndex < row.ColumnCount; colIndex++)
+                {
+                    var cell = row[colIndex];
+                    var effectiveValue = cell.EffectiveValue;
+                    var numberFormat = cell.Metadata?.NumberFormat;
+
+                    // Normalize the cell value
+                    var result = _dataNormalizationService.Normalize(
+                        effectiveValue.ToString(),
+                        numberFormat,
+                        CellDataType.General,
+                        DateSystem.Date1900);
+
+                    string normalizedValue;
+                    if (result.IsSuccess && result.CleanedValue != null)
+                    {
+                        normalizedValue = result.CleanedValue.ToString() ?? string.Empty;
+                        // Check if value was modified
+                        if (!string.Equals(result.OriginalValue.ToString(), normalizedValue, StringComparison.Ordinal))
+                            normalizedCount++;
+                    }
+                    else
+                    {
+                        normalizedValue = effectiveValue.ToString() ?? string.Empty;
+                    }
+
+                    // Escape for TSV (tab-separated)
+                    normalizedValue = normalizedValue.Replace("\t", " ").Replace("\n", " ").Replace("\r", "");
+                    normalizedValues.Add(normalizedValue);
+                }
+
+                csvBuilder.AppendLine(string.Join("\t", normalizedValues));
+            }
+
+            // Copy to clipboard via Avalonia
+            var lifetime = Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+            var mainWindow = lifetime?.MainWindow;
+            var clipboard = mainWindow?.Clipboard;
+
+            if (clipboard != null)
+            {
+                await clipboard.SetTextAsync(csvBuilder.ToString());
+                _logger.LogInfo($"Normalized data copied to clipboard ({normalizedCount} values modified, {sheet.DataRowCount} rows)", "FileDetailsViewModel");
+
+                // Notify user via event
+                NormalizationCompleted?.Invoke(this, new NormalizationCompletedEventArgs(
+                    normalizedCount,
+                    sheet.DataRowCount,
+                    sheet.ColumnCount));
+            }
+            else
+            {
+                _logger.LogWarning("Clipboard not available", "FileDetailsViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to normalize data: {ex.Message}", ex, "FileDetailsViewModel");
+        }
+    }
+
+    #endregion
+
     // Events to communicate with parent ViewModels
+    public event EventHandler<TemplateSavedEventArgs>? TemplateSaved;
+    public event EventHandler<NormalizationCompletedEventArgs>? NormalizationCompleted;
     public event EventHandler<FileActionEventArgs>? RemoveFromListRequested;
     public event EventHandler<FileActionEventArgs>? CleanAllDataRequested;
     public event EventHandler<FileActionEventArgs>? RemoveNotificationRequested;
@@ -323,13 +704,19 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         CleanAllDataRequested = null;
         RemoveNotificationRequested = null;
         TryAgainRequested = null;
+        TemplateSaved = null;
+        NormalizationCompleted = null;
 
         // Clear collections
         Properties.Clear();
         ErrorLogs.Clear();
+        AvailableTemplates.Clear();
+        ValidationIssues.Clear();
 
-        // Release reference
+        // Release references
         _selectedFile = null;
+        _selectedTemplate = null;
+        _validationReport = null;
 
         _disposed = true;
     }
