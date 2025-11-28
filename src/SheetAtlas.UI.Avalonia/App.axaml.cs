@@ -18,6 +18,7 @@ using SheetAtlas.Core.Application.Services;
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Infrastructure.External;
 using SheetAtlas.Infrastructure.External.Readers;
+using SheetAtlas.Infrastructure.External.Writers;
 using SheetAtlas.UI.Avalonia.Managers;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Core.Configuration;
@@ -113,6 +114,7 @@ public partial class App : Application
                 services.AddSingleton<IFileFormatReader, CsvFileReader>();
 
                 services.AddSingleton<IExcelReaderService, ExcelReaderService>();
+                services.AddSingleton<IExcelWriterService, ExcelWriterService>();
                 services.AddSingleton<ISearchService, SearchService>();
                 services.AddSingleton<IRowComparisonService, RowComparisonService>();
                 services.AddSingleton<IExceptionHandler, ExceptionHandler>();
