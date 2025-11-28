@@ -105,16 +105,23 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             TreeSearchResultsViewModel?.ClearSelection();
 
-            if (IsSearchTabVisible)
+            // Only switch away from Comparison tab if no comparisons remain
+            if (RowComparisons.Count == 0)
             {
-                SelectedTabIndex = GetTabIndex("Search");
-            }
-            else
-            {
-                SelectedTabIndex = -1;
-            }
+                IsComparisonTabVisible = false;
 
-            _logger.LogInfo("Comparison removed and selections cleared", "MainWindowViewModel");
+                if (IsSearchTabVisible)
+                {
+                    SelectedTabIndex = GetTabIndex("Search");
+                }
+                else
+                {
+                    SelectedTabIndex = -1;
+                }
+            }
+            // If there are still comparisons, stay on the Comparison tab
+
+            _logger.LogInfo($"Comparison removed, {RowComparisons.Count} remaining", "MainWindowViewModel");
         }
 
         private void OnComparisonSelectionChanged(object? sender, ComparisonSelectionChangedEventArgs e)

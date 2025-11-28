@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
         xmlns:views="using:SheetAtlas.UI.Avalonia.Views"
+        xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
         xmlns:converters="using:SheetAtlas.UI.Avalonia.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -420,20 +421,66 @@
                         </TabItem.Header>
 
                         <Grid>
-                            <!-- Comparison View (when comparison exists) -->
-                            <ContentControl Content="{Binding SelectedComparison}"
-                                          IsVisible="{Binding SelectedComparison, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                <ContentControl.ContentTemplate>
-                                    <DataTemplate>
-                                        <views:RowComparisonView/>
-                                    </DataTemplate>
-                                </ContentControl.ContentTemplate>
-                            </ContentControl>
+                            <!-- Comparison Stack (when comparisons exist) -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                         IsVisible="{Binding RowComparisons.Count}">
+                                <ItemsControl ItemsSource="{Binding RowComparisons}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RowComparisonViewModel">
+                                            <controls:CollapsibleSection IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                                                         Margin="0,0,0,8">
+                                                <controls:CollapsibleSection.Header>
+                                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                                        <!-- Title and Info -->
+                                                        <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Title}"
+                                                                      FontWeight="SemiBold"
+                                                                      FontSize="14"
+                                                                      Foreground="{DynamicResource SearchQueryText}"/>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                                <TextBlock Text="{Binding RowCount}"
+                                                                          FontWeight="SemiBold"
+                                                                          FontSize="12"
+                                                                          Foreground="{DynamicResource SearchQueryText}"/>
+                                                                <TextBlock Text=" rows"
+                                                                          FontSize="12"
+                                                                          Foreground="{DynamicResource SearchQueryText}"
+                                                                          Opacity="0.8"
+                                                                          Margin="0,0,16,0"/>
+                                                                <TextBlock Text="{Binding CreatedAt, StringFormat='HH:mm:ss'}"
+                                                                          FontSize="12"
+                                                                          Foreground="{DynamicResource SearchQueryText}"
+                                                                          Opacity="0.8"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
 
-                            <!-- Empty State (when no comparison selected) -->
+                                                        <!-- Close Button -->
+                                                        <Button Grid.Column="2"
+                                                                Content="✕"
+                                                                Command="{Binding CloseCommand}"
+                                                                Background="Transparent"
+                                                                Foreground="{DynamicResource SearchQueryText}"
+                                                                BorderThickness="0"
+                                                                FontSize="14"
+                                                                FontWeight="Bold"
+                                                                Padding="8,4"
+                                                                VerticalAlignment="Center"
+                                                                ToolTip.Tip="Close comparison"/>
+                                                    </Grid>
+                                                </controls:CollapsibleSection.Header>
+                                                <controls:CollapsibleSection.Content>
+                                                    <views:RowComparisonView/>
+                                                </controls:CollapsibleSection.Content>
+                                            </controls:CollapsibleSection>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <!-- Empty State (when no comparisons) -->
                             <Border HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
-                                   IsVisible="{Binding SelectedComparison, Converter={x:Static ObjectConverters.IsNull}}">
+                                   IsVisible="{Binding !RowComparisons.Count}">
                                 <StackPanel Spacing="16" HorizontalAlignment="Center">
                                     <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Opacity="0.4"/>
                                     <TextBlock Text="No comparisons yet"

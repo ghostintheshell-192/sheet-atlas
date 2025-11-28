@@ -15,6 +15,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         private RowComparison? _comparison;
 
         private bool _disposed = false;
+        private bool _isExpanded = true;
         private ObservableCollection<RowComparisonColumnViewModel> _columns = new();
         private List<RowComparisonCellViewModel> _allCells = new(); // Flat cache for O(n) theme refresh
 
@@ -40,6 +41,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public int RowCount => Comparison?.Rows.Count ?? 0;
         public bool HasRows => RowCount > 0;
         public DateTime CreatedAt => Comparison?.CreatedAt ?? DateTime.MinValue;
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetField(ref _isExpanded, value);
+        }
 
         public ICommand CloseCommand { get; }
 

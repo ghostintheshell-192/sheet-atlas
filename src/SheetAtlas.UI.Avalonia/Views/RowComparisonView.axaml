@@ -17,69 +17,81 @@
         <converters:ComparisonTypeToBackgroundConverter x:Key="ComparisonTypeToBackgroundConverter"/>
     </UserControl.Resources>
 
-    <Grid>
-        <!-- Comparison Content with Header (only visible when there are rows) -->
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                     IsVisible="{Binding HasRows}">
-            <Grid Grid.IsSharedSizeScope="True">
-                <Grid.ColumnDefinitions>
-                    <!-- Row Info Column -->
-                    <ColumnDefinition Width="250" MinWidth="200"/>
-                    <!-- Dynamic columns for data -->
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <!-- Header -->
-                    <RowDefinition Height="Auto"/>
-                    <!-- Column Headers -->
-                    <RowDefinition Height="Auto"/>
-                    <!-- Data -->
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- Header spanning all columns -->
-                <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                        Background="{DynamicResource ComparisonHeaderBackground}" Padding="16">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="18" Foreground="White"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <TextBlock Text="{Binding RowCount}" FontWeight="SemiBold" Foreground="White"/>
-                                <TextBlock Text=" rows compared" Margin="4,0,16,0" Foreground="White"/>
-                                <TextBlock Text="Created:" Margin="0,0,6,0" Foreground="White"/>
-                                <TextBlock Text="{Binding CreatedAt, StringFormat='HH:mm:ss'}" Foreground="White"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Button Grid.Column="1" Content="✕"
-                                Command="{Binding CloseCommand}"
-                                Background="Transparent"
-                                Foreground="White"
-                                BorderThickness="0"
-                                FontSize="18"
-                                FontWeight="Bold"
-                                Padding="12"
-                                Width="44" Height="44"
-                                HorizontalContentAlignment="Center"
-                                VerticalContentAlignment="Center"
-                                ToolTip.Tip="Close comparison"/>
-                    </Grid>
-                </Border>
-
-                <!-- Row Info Header -->
-                <Border Grid.Column="0" Grid.Row="1" Background="{DynamicResource ComparisonHeaderBackground}"
-                        BorderBrush="{DynamicResource BorderColor}"
-                        BorderThickness="0,0,1,1" Padding="12">
-                    <TextBlock Text="Source" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
-                </Border>
-
+    <!-- Comparison Table Content (header is managed by CollapsibleSection in MainWindow) -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                 IsVisible="{Binding HasRows}">
+        <Grid Grid.IsSharedSizeScope="True">
+            <Grid.ColumnDefinitions>
+                <!-- Row Info Column -->
+                <ColumnDefinition Width="250" MinWidth="200"/>
+                <!-- Dynamic columns for data -->
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
                 <!-- Column Headers -->
-                <ItemsControl Grid.Column="1" Grid.Row="1" ItemsSource="{Binding Columns}">
+                <RowDefinition Height="Auto"/>
+                <!-- Data -->
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row Info Header -->
+            <Border Grid.Column="0" Grid.Row="0" Background="{DynamicResource ComparisonHeaderBackground}"
+                    BorderBrush="{DynamicResource BorderColor}"
+                    BorderThickness="0,0,1,1" Padding="12">
+                <TextBlock Text="Source" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- Column Headers -->
+            <ItemsControl Grid.Column="1" Grid.Row="0" ItemsSource="{Binding Columns}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:RowComparisonColumnViewModel">
+                        <Border Background="{DynamicResource ComparisonHeaderBackground}"
+                                BorderBrush="{DynamicResource BorderColor}"
+                                BorderThickness="0,0,1,1"
+                                Padding="12"
+                                MinWidth="140">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="{Binding ColumnIndex, StringFormat='Col{0}'}"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Header}"
+                                          FontWeight="SemiBold"
+                                          Foreground="White"
+                                          TextTrimming="CharacterEllipsis"
+                                          VerticalAlignment="Center"
+                                          MaxWidth="220"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Row Data -->
+            <ItemsControl Grid.Column="0" Grid.Row="1" ItemsSource="{Binding Comparison.Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="entities:ExcelRow">
+                        <Border Background="{DynamicResource SecondaryBackground}"
+                                BorderBrush="{DynamicResource BorderColor}"
+                                BorderThickness="0,0,1,1"
+                                MinHeight="36" Padding="12">
+                            <TextBlock Text="{Binding DisplayName}"
+                                      VerticalAlignment="Center"
+                                      TextTrimming="CharacterEllipsis"
+                                      FontSize="12"
+                                      FontWeight="Medium"
+                                      Foreground="{DynamicResource SecondaryText}"/>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Cell Data Grid -->
+            <ItemsControl Grid.Column="1" Grid.Row="1" ItemsSource="{Binding Columns}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal"/>
@@ -87,103 +99,35 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:RowComparisonColumnViewModel">
-                            <Border Background="{DynamicResource ComparisonHeaderBackground}"
-                                    BorderBrush="{DynamicResource BorderColor}"
-                                    BorderThickness="0,0,1,1"
-                                    Padding="12"
-                                    MinWidth="140">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" SharedSizeGroup="{Binding ColumnIndex, StringFormat='Col{0}'}"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Header}"
-                                              FontWeight="SemiBold"
-                                              Foreground="White"
-                                              TextTrimming="CharacterEllipsis"
-                                              VerticalAlignment="Center"
-                                              MaxWidth="220"/>
-                                </Grid>
-                            </Border>
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding Cells}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:RowComparisonCellViewModel">
+                                            <Border Background="{Binding ComparisonResult, Converter={StaticResource ComparisonTypeToBackgroundConverter}}"
+                                                    BorderBrush="{DynamicResource BorderColor}"
+                                                    BorderThickness="0,0,1,1"
+                                                    MinHeight="36" Padding="12"
+                                                    MinWidth="140">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="{Binding ColumnIndex, StringFormat='Col{0}'}"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Value}"
+                                                              VerticalAlignment="Center"
+                                                              TextTrimming="CharacterEllipsis"
+                                                              FontSize="12"
+                                                              Foreground="{DynamicResource PrimaryText}"
+                                                              ToolTip.Tip="{Binding Value}"
+                                                              MaxWidth="220"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <!-- Row Data -->
-                <ItemsControl Grid.Column="0" Grid.Row="2" ItemsSource="{Binding Comparison.Rows}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="entities:ExcelRow">
-                            <Border Background="{DynamicResource SecondaryBackground}"
-                                    BorderBrush="{DynamicResource BorderColor}"
-                                    BorderThickness="0,0,1,1"
-                                    MinHeight="36" Padding="12">
-                                <TextBlock Text="{Binding DisplayName}"
-                                          VerticalAlignment="Center"
-                                          TextTrimming="CharacterEllipsis"
-                                          FontSize="12"
-                                          FontWeight="Medium"
-                                          Foreground="{DynamicResource SecondaryText}"/>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <!-- Cell Data Grid -->
-                <ItemsControl Grid.Column="1" Grid.Row="2" ItemsSource="{Binding Columns}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:RowComparisonColumnViewModel">
-                                <StackPanel>
-                                    <ItemsControl ItemsSource="{Binding Cells}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="vm:RowComparisonCellViewModel">
-                                                <Border Background="{Binding ComparisonResult, Converter={StaticResource ComparisonTypeToBackgroundConverter}}"
-                                                        BorderBrush="{DynamicResource BorderColor}"
-                                                        BorderThickness="0,0,1,1"
-                                                        MinHeight="36" Padding="12"
-                                                        MinWidth="140">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto" SharedSizeGroup="{Binding ColumnIndex, StringFormat='Col{0}'}"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Text="{Binding Value}"
-                                                                  VerticalAlignment="Center"
-                                                                  TextTrimming="CharacterEllipsis"
-                                                                  FontSize="12"
-                                                                  Foreground="{DynamicResource PrimaryText}"
-                                                                  ToolTip.Tip="{Binding Value}"
-                                                                  MaxWidth="220"/>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Grid>
-        </ScrollViewer>
-
-        <!-- Empty State (shown when no rows) -->
-        <Border HorizontalAlignment="Center"
-               VerticalAlignment="Center"
-               IsVisible="{Binding HasRows, Converter={x:Static BoolConverters.Not}}">
-            <StackPanel Spacing="16" HorizontalAlignment="Center">
-                <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Opacity="0.4"/>
-                <TextBlock Text="No comparisons yet"
-                          FontSize="16"
-                          FontWeight="SemiBold"
-                          Foreground="{DynamicResource PrimaryText}"
-                          HorizontalAlignment="Center"/>
-                <TextBlock Text="Select rows from search results to compare"
-                          FontSize="14"
-                          Foreground="{DynamicResource SecondaryText}"
-                          HorizontalAlignment="Center"/>
-            </StackPanel>
-        </Border>
-    </Grid>
+            </ItemsControl>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

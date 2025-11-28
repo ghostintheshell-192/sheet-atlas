@@ -1,0 +1,97 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls">
+
+    <Design.PreviewWith>
+        <Border Padding="20" Background="#F0F0F0" Width="400">
+            <StackPanel Spacing="10">
+                <controls:CollapsibleSection IsExpanded="True"
+                                             HeaderBackground="#1E3A5F"
+                                             HeaderForeground="White">
+                    <controls:CollapsibleSection.Header>
+                        <TextBlock Text="Sample Header" FontWeight="SemiBold"/>
+                    </controls:CollapsibleSection.Header>
+                    <controls:CollapsibleSection.Content>
+                        <Border Background="White" Padding="16">
+                            <TextBlock Text="This is the collapsible content area."/>
+                        </Border>
+                    </controls:CollapsibleSection.Content>
+                </controls:CollapsibleSection>
+
+                <controls:CollapsibleSection IsExpanded="False"
+                                             HeaderBackground="#1E3A5F"
+                                             HeaderForeground="White">
+                    <controls:CollapsibleSection.Header>
+                        <TextBlock Text="Collapsed Section" FontWeight="SemiBold"/>
+                    </controls:CollapsibleSection.Header>
+                    <controls:CollapsibleSection.Content>
+                        <Border Background="White" Padding="16">
+                            <TextBlock Text="Hidden content"/>
+                        </Border>
+                    </controls:CollapsibleSection.Content>
+                </controls:CollapsibleSection>
+            </StackPanel>
+        </Border>
+    </Design.PreviewWith>
+
+    <Style Selector="controls|CollapsibleSection">
+        <Setter Property="HeaderBackground" Value="{DynamicResource SearchQueryBackground}"/>
+        <Setter Property="HeaderForeground" Value="{DynamicResource SearchQueryText}"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border CornerRadius="0">
+                    <Grid RowDefinitions="Auto,*">
+                        <!-- Header (always visible, clickable to toggle) -->
+                        <Border Grid.Row="0"
+                                x:Name="PART_HeaderBorder"
+                                Background="{TemplateBinding HeaderBackground}"
+                                Padding="8,12,8,12"
+                                Cursor="Hand">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <!-- Expand/Collapse Icon -->
+                                <TextBlock Grid.Column="0"
+                                           x:Name="PART_ExpandIcon"
+                                           Text="&#x25BC;"
+                                           FontSize="10"
+                                           Foreground="{TemplateBinding HeaderForeground}"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,10,0"
+                                           IsVisible="{TemplateBinding ShowExpandIcon}"
+                                           RenderTransformOrigin="0.5,0.5">
+                                    <TextBlock.RenderTransform>
+                                        <RotateTransform Angle="0"/>
+                                    </TextBlock.RenderTransform>
+                                </TextBlock>
+
+                                <!-- Header Content -->
+                                <ContentPresenter Grid.Column="1"
+                                                  Content="{TemplateBinding Header}"
+                                                  VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Collapsible Content -->
+                        <Border Grid.Row="1"
+                                x:Name="PART_ContentBorder"
+                                IsVisible="{TemplateBinding IsExpanded}">
+                            <ContentPresenter Content="{TemplateBinding Content}"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- Collapsed state: rotate icon -->
+    <Style Selector="controls|CollapsibleSection:not(:expanded) /template/ TextBlock#PART_ExpandIcon">
+        <Setter Property="RenderTransform">
+            <RotateTransform Angle="-90"/>
+        </Setter>
+    </Style>
+
+    <!-- Header hover effect -->
+    <Style Selector="controls|CollapsibleSection /template/ Border#PART_HeaderBorder:pointerover">
+        <Setter Property="Opacity" Value="0.9"/>
+    </Style>
+
+</Styles>
