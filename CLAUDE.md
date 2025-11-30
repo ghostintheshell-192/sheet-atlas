@@ -345,6 +345,29 @@ gh workflow run deploy-pages.yml
 
 For complete details, see `docs/RELEASE_PROCESS.md`.
 
+### Creating Releases - MANDATORY WORKFLOW
+
+**⚠️ CRITICAL: When user requests a release (e.g., "create release v0.4.0"), ALWAYS follow this workflow:**
+
+1. ✅ **Read `docs/RELEASE_PROCESS.md` FIRST** - This is MANDATORY, not optional
+2. ✅ **Create TodoList** from the "Release Checklist" section (lines 350-369)
+3. ✅ **Follow steps sequentially**, updating TodoList as you progress
+4. ✅ **Ask user confirmation** before critical steps:
+   - Creating and pushing tags
+   - Merging to main branch
+   - Manual website deployment
+5. ✅ **Verify completion** of each step before proceeding to the next
+
+**Never skip reading RELEASE_PROCESS.md when creating a release.**
+
+**Common mistakes to avoid:**
+- ❌ Forgetting to update CHANGELOG.md
+- ❌ Forgetting to update GitHub release notes
+- ❌ Skipping manual website deployment step
+- ❌ Not verifying all platforms built successfully
+
+**If user asks "what's next?" during release:** Check the TodoList and RELEASE_PROCESS.md to show the next step.
+
 ---
 
 ## Quick Start Commands
