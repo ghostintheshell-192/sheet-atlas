@@ -20,7 +20,7 @@ A powerful cross-platform desktop application for searching across multiple Exce
 ### **Advanced Search**
 
 - Search across all loaded files and sheets
-- Search in file names, sheet names, and cell content
+- Search in sheet names and cell content
 - Support for case-sensitive, exact match, and regex patterns
 - Tree-view results with file/sheet/cell organization
 
