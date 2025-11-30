@@ -1,6 +1,6 @@
 # SheetAtlas
 
-![Version](https://img.shields.io/github/v/release/ghostintheshell-192/sheet-atlas)
+![Version](https://img.shields.io/github/v/release/ghostintheshell-192/sheet-atlas?include_prereleases)
 ![License](https://img.shields.io/github/license/ghostintheshell-192/sheet-atlas)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 
