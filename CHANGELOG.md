@@ -5,196 +5,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.1] - 2025-10-24
-
-### Added
-
-- Comprehensive website deployment with automated testing
-
-### Documentation
-
-- Update website for release v0.3.1
+## [Unreleased]
 
 ### Fixed
 
-- Remove incorrect data from website structured metadata
-- Critical fixes for website deployment workflow
+- Remove 'x' from boolean parsing to avoid text conflicts
 
 ### Miscellaneous
 
-- Add website data configuration file
+- Improve security and clarify release workflow
 
-### Refactored
-
-- Remove redundant alpha status message
-
-## [0.3.0] - 2025-10-23
+## [0.3.3] - 2025-11-28
 
 ### Added
 
-- Implement honest SEO improvements focused on Windows availability
-- Create website template with version placeholders
-- Implement unified release workflow
-- Unified release pipeline with website automation
-- Extract SheetAtlas.Logging as reusable module
-- Integrate LogService into error notification flow
-- Simplified extension methods for LogService
-- Implement native file logging with daily rotation
-- Add pre-push hook for automated unit testing
-- Add structured JSON file logging system
-- Tabular error log view with full history tracking
-- Implement collapsible sidebar with vertical toggle bar
-- Implement dynamic tab system with progressive disclosure
-- Comprehensive UI/UX improvements
-- Implement IDisposable pattern on MainWindowViewModel
-- Implement parallel file loading with configurable concurrency
-
-### Docs
-
-- Clean up redundant comments and add XML documentation
+- Add file validation and security protections
+- Implement collapsible stack for multiple row comparisons
 
 ### Documentation
 
-- Update CHANGELOG to reflect corrected versioning (0.x for alpha)
-- Correct README.md to reflect honest platform availability
-- Add release process documentation and update CLAUDE.md
-- Major SEO improvements for website discoverability
-- Revise privacy messaging in features page
+- Cleanup and update documentation structure
 
 ### Fixed
 
-- Merge build-release workflow fix from main
-- Remove hardcoded version numbers from website, add alpha status notice
-- Update website download links to use specific v0.2.0 tag
-- Correct error messages for corrupted xlsx files
-- Translate all Italian error messages to English
-- Catch specific regex exceptions in SearchService instead of all exceptions
-- Update test to expect Info level for empty sheets
-- Remove redundant .NET project detection in pre-push hook
-- Fix tab selection bugs and refactor navigation logic
-- Resolve memory leak in UnloadAllFiles by reusing single-file cleanup logic
-- Prevent memory leak from inline PropertyChanged subscription
-- Eliminate fire-and-forget inconsistency and retry UI flicker
-- Correct alpha banner version substitution and platform availability text
-- Correct sitemap and alpha banner generation
-- Improve website deployment and navbar alignment
-
-### Miscellaneous
-
-- Remove legacy ExcelViewer references and directories
-- Remove duplicate release workflows
-- Remove unused using directives across codebase
-
-### Perf
-
-- Precompute column comparison data to eliminate redundant calculations
-- Eliminate duplicate GetCellAsStringByHeader calls
-- Implement flat cache for RefreshCellColors to eliminate nested iteration
-
-### Performance
-
-- Optimize PropertyChanged notifications in TreeSearchResultsViewModel
-- Implement flat cache in SearchHistoryItem to reduce O(n³) to O(n)
-
-### Refactor
-
-- Replace toast notifications with inline treeview error display
-- Simplify property propagation in OnTabNavigatorPropertyChanged
-- Simplify property propagation in OnComparisonCoordinatorPropertyChanged
-- Extract SelectedFile setter logic to helper methods
-- Unify duplicate switch logic in LoadedFilesManager
-- Eliminate message duplication and redundant null checks
-- Standardize event delegates and fix memory leak
+- Enable macOS download button in website template
+- Enable macOS download in downloads page template
+- Remove false positive anomalies for empty cells in CSV files
+- Replace blocking .Result with async/await in file readers
+- Add bounds checking for SharedStringTable lookup
+- Correct row index semantics for search and comparison
+- Implement IDisposable on FileDetailsViewModel
+- Resolve event handler memory leaks in search results hierarchy
 
 ### Refactored
 
-- Consolidate severity levels using LogSeverity
-- Clean up nomenclature in Logging module
-- Migrate all UI layer logging to ILogService
-- Migrate Infrastructure layer logging to ILogService
-- Migrate Core layer logging to ILogService
-- Migrate Services/Commands logging to ILogService
-- Standardize error handling pattern across file readers
-- Simplify null validation in RowComparisonService
-- Implement IDisposable pattern to fix memory leaks
-- Consolidate button styles to centralized Buttons.axaml
-- Extract menu styles and replace hardcoded colors with theme resources
-- Add SecondaryButton style and eliminate last hardcoded colors
-- Remove deprecated ShowSearchResultsCommand
-- Extract TabNavigationCoordinator from MainWindowViewModel
-- Extract FileDetails operations to FileDetailsCoordinator
-- Simplify UnloadAllFilesAsync with self-documenting helper methods
-- Split MainWindowViewModel into partial classes for better organization
+- Use CollapsibleSection in SearchView for consistency
 
-### Test
+## [0.3.2] - 2025-11-14
 
-- Add comprehensive regex tests for SearchService
+### Added
+
+- Add Foundation Layer infrastructure (Phase 1 - Structure)
+- Implement CurrencyDetector with locale-aware separator detection
+- Add Excel date system support (1900/1904) with data normalization
+- Implement ColumnAnalysisService with context-aware anomaly detection
+- Implement MergedCellResolver with merge strategies
+- Report invalid merge ranges as warnings to user
+- Add macOS DMG installer support
+
+### Fixed
+
+- Align XLS and CSV readers with XLSX absolute row indexing
+- Centralize exception recovery logic to eliminate duplication
+- Remove unnecessary async from MergedCellResolver
+- Remove duplicate OpenXmlPackageException handler
+- Apply naming conventions to private static readonly fields
+- Remove unused parameters from xUnit theory tests
+- Apply naming conventions to static readonly fields
+- Correct workflow_dispatch input handling and sed delimiter
+- Complete workflow_dispatch input handling for Linux .deb
+
+### Refactored
+
+- Remove semantic validation from TryParseDate
+- Simplify CellReference semantics and fix merged cell processing
+- Remove redundant try-catch in ParseCellReference
+- Fix blocking async/await in OpenXmlFileReader
+- Implement absolute 0-based row indexing and remove auto-detection
+- Resolve all compiler warnings (24 → 0)
+- Remove commented-out dead code
+- Remove boilerplate and section marker comments
+- Cleanup comments - translate Italian, remove obvious/historical (228 comments)
+- Remove dead code ToastNotificationService
+- Apply code analyzer suggestions and modernize C# syntax
 
 ### Testing
 
-- Migrate test mocks from ILogger to ILogService
-- Update assertions for English error messages
-- Add comprehensive unit tests for structured file logging system
+- Correct French locale currency format to use Excel US convention
 
-### Ci
-
-- Add workflow_dispatch trigger to build-release workflow
-- Integrate Windows installer build into main release workflow
-
-### Release
-
-- Unified release pipeline v1.0
-
-## [0.2.0] - 2025-10-12
-
-### Added
-
-- Add prominent download section to GitHub Page
-- Reorganize project structure with branch protections and GitHub Actions
-- Add GitHub issue and PR templates
-- Add Windows installer infrastructure with Inno Setup
-- Implement custom SASheetData for memory optimization
-- Add final memory optimizations with TrimExcess
-- Add responsive hamburger menu for mobile navigation
-
-### Documentation
-
-- Update website branding from ExcelViewer to SheetAtlas
-- Update website downloads - Windows installer ready, Linux/macOS coming soon
-
-### Fixed
-
-- Remove explicit wizard image files from Inno Setup script
-- Reorder Pascal functions to declare before use
-- Correct project descriptions and update all references from excel-viewer to sheet-atlas
-- Implement memory leak cleanup infrastructure (partial)
-- Handle empty Excel sheets correctly in OpenXmlFileReader
-- Preserve UI state when removing files via Clean All Data
-- RowComparison UI cleanup on close (#8, #9)
-- Auto-switch to Search Results tab when search completes
-- RowComparison cells now adapt to dark mode theme (#7)
-- Menu items cleanup and implementation (#1-6)
-- Update website version numbers to v1.1.0
-- Update project path from ExcelViewer to SheetAtlas in build-release workflow
-
-### Miscellaneous
-
-- Update CHANGELOG for v1.1.0
-- Merge develop for v1.0.0 release
-- Update GitHub Page for v1.0.0 release
-
-### Performance
-
-- Remove unnecessary ItemArray.ToList() memory copy
-- Remove fake async methods from RowComparisonService
-- Add string interning for duplicate cell values
-
-### Refactored
-
-- Rename project from ExcelViewer to SheetAtlas
-- Fix all nullability warnings for cleaner build
-
-## [0.1.0] - 2025-10-08
+## [0.3.1] - 2025-11-07
 
 ### Added
 
@@ -212,6 +101,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update file picker to support all spreadsheet formats
 - Add automated changelog generation workflow
 - Add automated multi-platform build workflow
+- Add prominent download section to GitHub Page
+- Reorganize project structure with branch protections and GitHub Actions
+- Add GitHub issue and PR templates
+- Add Windows installer infrastructure with Inno Setup
+- Implement custom SASheetData for memory optimization
+- Add final memory optimizations with TrimExcess
+- Add responsive hamburger menu for mobile navigation
+- Implement honest SEO improvements focused on Windows availability
+- Create website template with version placeholders
+- Implement unified release workflow
+- Unified release pipeline with website automation
+- Extract SheetAtlas.Logging as reusable module
+- Integrate LogService into error notification flow
+- Simplified extension methods for LogService
+- Implement native file logging with daily rotation
+- Add pre-push hook for automated unit testing
+- Add structured JSON file logging system
+- Tabular error log view with full history tracking
+- Implement collapsible sidebar with vertical toggle bar
+- Implement dynamic tab system with progressive disclosure
+- Comprehensive UI/UX improvements
+- Implement IDisposable pattern on MainWindowViewModel
+- Implement parallel file loading with configurable concurrency
+- Comprehensive website deployment with automated testing
+
+### Docs
+
+- Clean up redundant comments and add XML documentation
 
 ### Documentation
 
@@ -222,6 +139,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add error handling philosophy to CLAUDE.md
 - Add Google Search Console verification meta tag
 - Update README for v1.0.0 release
+- Update website branding from ExcelViewer to SheetAtlas
+- Update website downloads - Windows installer ready, Linux/macOS coming soon
+- Update CHANGELOG to reflect corrected versioning (0.x for alpha)
+- Correct README.md to reflect honest platform availability
+- Add release process documentation and update CLAUDE.md
+- Major SEO improvements for website discoverability
+- Revise privacy messaging in features page
+- Update website for release v0.3.0
+- Update website for release v0.3.1
+- Regenerate complete CHANGELOG for all versions
 
 ### Fixed
 
@@ -231,12 +158,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Synchronize column widths between headers and data cells
 - Align row comparison header width with column content
 - Use single-line command for PowerShell compatibility
+- Remove explicit wizard image files from Inno Setup script
+- Reorder Pascal functions to declare before use
+- Correct project descriptions and update all references from excel-viewer to sheet-atlas
+- Implement memory leak cleanup infrastructure (partial)
+- Handle empty Excel sheets correctly in OpenXmlFileReader
+- Preserve UI state when removing files via Clean All Data
+- RowComparison UI cleanup on close (#8, #9)
+- Auto-switch to Search Results tab when search completes
+- RowComparison cells now adapt to dark mode theme (#7)
+- Menu items cleanup and implementation (#1-6)
+- Update website version numbers to v1.1.0
+- Update project path from ExcelViewer to SheetAtlas in build-release workflow
+- Merge build-release workflow fix from main
+- Remove hardcoded version numbers from website, add alpha status notice
+- Update website download links to use specific v0.2.0 tag
+- Correct error messages for corrupted xlsx files
+- Translate all Italian error messages to English
+- Catch specific regex exceptions in SearchService instead of all exceptions
+- Update test to expect Info level for empty sheets
+- Remove redundant .NET project detection in pre-push hook
+- Fix tab selection bugs and refactor navigation logic
+- Resolve memory leak in UnloadAllFiles by reusing single-file cleanup logic
+- Prevent memory leak from inline PropertyChanged subscription
+- Eliminate fire-and-forget inconsistency and retry UI flicker
+- Correct alpha banner version substitution and platform availability text
+- Correct sitemap and alpha banner generation
+- Improve website deployment and navbar alignment
+- Remove incorrect data from website structured metadata
+- Critical fixes for website deployment workflow
+- Extract version-specific changelog section for GitHub releases
 
 ### Miscellaneous
 
 - Remove accidentally committed sample files
 - Remove obsolete UI documentation files
 - Update CHANGELOG for v1.0.0
+- Update CHANGELOG for v1.1.0
+- Merge develop for v1.0.0 release
+- Update GitHub Page for v1.0.0 release
+- Remove legacy ExcelViewer references and directories
+- Remove duplicate release workflows
+- Remove unused using directives across codebase
+- Add website data configuration file
+
+### Perf
+
+- Precompute column comparison data to eliminate redundant calculations
+- Eliminate duplicate GetCellAsStringByHeader calls
+- Implement flat cache for RefreshCellColors to eliminate nested iteration
+
+### Performance
+
+- Remove unnecessary ItemArray.ToList() memory copy
+- Remove fake async methods from RowComparisonService
+- Add string interning for duplicate cell values
+- Optimize PropertyChanged notifications in TreeSearchResultsViewModel
+- Implement flat cache in SearchHistoryItem to reduce O(n³) to O(n)
+
+### Refactor
+
+- Replace toast notifications with inline treeview error display
+- Simplify property propagation in OnTabNavigatorPropertyChanged
+- Simplify property propagation in OnComparisonCoordinatorPropertyChanged
+- Extract SelectedFile setter logic to helper methods
+- Unify duplicate switch logic in LoadedFilesManager
+- Eliminate message duplication and redundant null checks
+- Standardize event delegates and fix memory leak
 
 ### Refactored
 
@@ -248,21 +236,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extract ICellValueReader to eliminate code duplication
 - Remove redundant error handling and apply "Never Throw" philosophy
 - Extract OpenXML logic to Strategy Pattern for multi-format support
+- Rename project from ExcelViewer to SheetAtlas
+- Fix all nullability warnings for cleaner build
+- Consolidate severity levels using LogSeverity
+- Clean up nomenclature in Logging module
+- Migrate all UI layer logging to ILogService
+- Migrate Infrastructure layer logging to ILogService
+- Migrate Core layer logging to ILogService
+- Migrate Services/Commands logging to ILogService
+- Standardize error handling pattern across file readers
+- Simplify null validation in RowComparisonService
+- Implement IDisposable pattern to fix memory leaks
+- Consolidate button styles to centralized Buttons.axaml
+- Extract menu styles and replace hardcoded colors with theme resources
+- Add SecondaryButton style and eliminate last hardcoded colors
+- Remove deprecated ShowSearchResultsCommand
+- Extract TabNavigationCoordinator from MainWindowViewModel
+- Extract FileDetails operations to FileDetailsCoordinator
+- Simplify UnloadAllFilesAsync with self-documenting helper methods
+- Split MainWindowViewModel into partial classes for better organization
+- Remove redundant alpha status message
+
+### Test
+
+- Add comprehensive regex tests for SearchService
 
 ### Testing
 
 - Verify pre-commit hook
 - Add integration test infrastructure with real Excel files
 - Update test constructors after ExcelReaderService refactoring
+- Migrate test mocks from ILogger to ILogService
+- Update assertions for English error messages
+- Add comprehensive unit tests for structured file logging system
 
 ### Ci
 
 - Add multi-platform CI workflow with automated testing
+- Add workflow_dispatch trigger to build-release workflow
+- Integrate Windows installer build into main release workflow
 
 ### Merge
 
 - Align feature/ui-improvements with develop
 - Integrate UI improvements into develop
+
+### Release
+
+- Unified release pipeline v1.0
 
 ### Resolve
 

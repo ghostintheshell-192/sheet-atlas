@@ -297,17 +297,21 @@ namespace SheetAtlas.Tests.Foundation.Services
         }
 
         [Theory]
-        [InlineData("X", true)]
-        [InlineData("x", true)]
-        public void Normalize_XBoolean_MapsCorrectly(string input, bool expected)
+        [InlineData("X")]
+        [InlineData("x")]
+        public void Normalize_XCharacter_NotTreatedAsBoolean(string input)
         {
+            // NOTE: "x" pattern removed from boolean parsing to avoid conflicts
+            // with single-char text identifiers (e.g., ticker symbol "X")
+            // See: .personal/active/tech-debt/context-aware-boolean-parsing.md
+
             // Act
             var result = _service.Normalize(input);
 
             // Assert
             result.IsSuccess.Should().BeTrue();
-            result.DetectedType.Should().Be(DataType.Boolean);
-            result.CleanedValue?.AsBoolean().Should().Be(expected);
+            result.DetectedType.Should().Be(DataType.Text, "single char 'x' should be treated as text, not boolean");
+            result.CleanedValue?.AsText().Should().Be(input);
         }
 
         [Fact]
