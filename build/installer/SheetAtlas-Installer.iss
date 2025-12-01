@@ -7,9 +7,15 @@
 ; - Optional Desktop shortcut
 ; - Uninstaller registration
 ; - Code signing support
+;
+; Version can be passed from command line:
+;   ISCC.exe /DMyAppVersion=0.4.0 SheetAtlas-Installer.iss
 
 #define MyAppName "SheetAtlas"
-#define MyAppVersion "1.1.0"
+; Version: passed via /DMyAppVersion=x.x.x from CI, fallback to 0.0.0-dev
+#ifndef MyAppVersion
+  #define MyAppVersion "0.0.0-dev"
+#endif
 #define MyAppPublisher "SheetAtlas"
 #define MyAppURL "https://github.com/ghostintheshell-192/sheet-atlas"
 #define MyAppExeName "SheetAtlas.UI.Avalonia.exe"
