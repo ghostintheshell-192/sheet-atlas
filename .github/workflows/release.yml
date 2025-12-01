@@ -429,7 +429,31 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Check if this is the latest release
+        id: check_latest
+        run: |
+          git fetch --tags
+          LATEST_TAG=$(git tag --sort=-version:refname | head -1)
+
+          if [ -n "${{ inputs.tag }}" ]; then
+            CURRENT_TAG="${{ inputs.tag }}"
+          else
+            CURRENT_TAG="${{ github.ref_name }}"
+          fi
+
+          echo "Current tag: $CURRENT_TAG"
+          echo "Latest tag: $LATEST_TAG"
+
+          if [ "$CURRENT_TAG" = "$LATEST_TAG" ]; then
+            echo "is_latest=true" >> $GITHUB_OUTPUT
+            echo "✅ This is the latest release, proceeding with website update"
+          else
+            echo "is_latest=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Skipping website update - $CURRENT_TAG is not the latest ($LATEST_TAG)"
+          fi
+
       - name: Generate website from template
+        if: steps.check_latest.outputs.is_latest == 'true'
         run: |
           # Use manual input if available, otherwise use ref_name
           if [ -n "${{ inputs.tag }}" ]; then
@@ -469,6 +493,7 @@ jobs:
           echo "- IS_PRERELEASE: ${IS_PRERELEASE}"
 
       - name: Commit and push website update
+        if: steps.check_latest.outputs.is_latest == 'true'
         run: |
           # Use manual input if available for commit message
           VERSION_DISPLAY="${{ inputs.tag || github.ref_name }}"
@@ -494,8 +519,15 @@ jobs:
 
       - name: Website update summary
         run: |
-          echo "### Website Updated Successfully! 🌐" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The GitHub Pages site will be automatically deployed by the deploy-pages workflow." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_latest.outputs.is_latest }}" = "true" ]; then
+            echo "### Website Updated Successfully! 🌐" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The GitHub Pages site will be automatically deployed by the deploy-pages workflow." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Website Update Skipped ⏭️" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This release (${{ inputs.tag || github.ref_name }}) is not the latest version." >> $GITHUB_STEP_SUMMARY
+            echo "Website will only be updated for the most recent release." >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**URL:** https://ghostintheshell-192.github.io/sheet-atlas/" >> $GITHUB_STEP_SUMMARY
