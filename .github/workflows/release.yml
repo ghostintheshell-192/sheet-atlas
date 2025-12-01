@@ -77,22 +77,35 @@ jobs:
           echo "$innoPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           Write-Host "Inno Setup installed successfully"
 
+      - name: Extract version number
+        id: version
+        shell: pwsh
+        run: |
+          # Use manual input if available, otherwise use ref_name
+          $VERSION = if ("${{ inputs.tag }}") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          $VERSION_NUMBER = $VERSION -replace '^v', ''
+
+          Write-Host "Building version: $VERSION_NUMBER"
+          echo "version_number=$VERSION_NUMBER" >> $env:GITHUB_OUTPUT
+
       - name: Build Windows Installer
         shell: pwsh
         run: |
           $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           $issFile = "build\installer\SheetAtlas-Installer.iss"
           $outputDir = "build\output"
+          $versionNumber = "${{ steps.version.outputs.version_number }}"
 
           Write-Host "Compiling installer with Inno Setup..."
-          & $isccPath $issFile /O$outputDir /DConfiguration=${{ env.BUILD_CONFIGURATION }} /DNoSign=1
+          Write-Host "Version: $versionNumber"
+          & $isccPath $issFile /O$outputDir /DMyAppVersion=$versionNumber /DConfiguration=${{ env.BUILD_CONFIGURATION }} /DNoSign=1
 
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Inno Setup compilation failed"
             exit 1
           }
 
-          Write-Host "Installer compiled successfully"
+          Write-Host "Installer compiled successfully with version $versionNumber"
 
       - name: Rename installer to version-agnostic name
         shell: pwsh
