@@ -183,9 +183,24 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public void SetTemplateManagementViewModel(TemplateManagementViewModel templateManagementViewModel)
         {
             TemplateManagementViewModel = templateManagementViewModel ?? throw new ArgumentNullException(nameof(templateManagementViewModel));
+        }
 
-            // Update template selection when file selection changes
-            // The TemplateManagementViewModel needs to know which files are selected
+        /// <summary>
+        /// Update the list of selected files from the sidebar.
+        /// Called by MainWindow code-behind when ListBox selection changes.
+        /// </summary>
+        public void UpdateSelectedFiles(IReadOnlyList<IFileLoadResultViewModel> selectedFiles)
+        {
+            // Pass the full list to TemplateManagementViewModel for multi-file operations
+            TemplateManagementViewModel?.SetSelectedFiles(selectedFiles);
+
+            // Update SelectedFile to the first selected (for FileDetails compatibility)
+            // Note: SelectedFile binding will also update, but this ensures sync
+            if (selectedFiles.Count > 0 && SelectedFile != selectedFiles[0])
+            {
+                // Don't update if already correct - avoids infinite loop with SelectedItem binding
+                // The ListBox SelectedItem binding handles single selection
+            }
         }
 
         private void OnRowComparisonCreated(object? sender, RowComparison comparison)

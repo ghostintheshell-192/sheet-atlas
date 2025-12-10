@@ -1,3 +1,4 @@
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -47,13 +48,10 @@ public partial class MainWindow : Window
         {
             fileViewModel.IsExpanded = !fileViewModel.IsExpanded;
 
-            // Update the selected file in MainWindowViewModel
-            if (DataContext is MainWindowViewModel mainViewModel)
-            {
-                mainViewModel.SelectedFile = fileViewModel;
-            }
-
-            e.Handled = true;
+            // Note: Don't set SelectedFile here or block the event.
+            // Let the ListBox handle selection natively to support multi-select
+            // (Ctrl+Click, Shift+Click). The SelectionChanged event will update
+            // SelectedFile and TemplateManagementViewModel accordingly.
         }
     }
 
@@ -121,6 +119,18 @@ public partial class MainWindow : Window
                 viewModel.FileDetailsViewModel.SelectedFile = file;
                 viewModel.FileDetailsViewModel.TryAgainCommand.Execute(null);
             }
+        }
+    }
+
+    private void OnFilesSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel && sender is ListBox listBox)
+        {
+            var selectedFiles = listBox.SelectedItems?
+                .OfType<IFileLoadResultViewModel>()
+                .ToList() ?? new List<IFileLoadResultViewModel>();
+
+            viewModel.UpdateSelectedFiles(selectedFiles);
         }
     }
 }

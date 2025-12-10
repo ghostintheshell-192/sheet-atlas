@@ -56,14 +56,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     FileDetailsViewModel.SelectedFile = value;
                 }
 
-                // Update TemplateManagementViewModel with selected file(s)
-                if (TemplateManagementViewModel != null)
-                {
-                    var files = value != null
-                        ? new[] { value }
-                        : Array.Empty<IFileLoadResultViewModel>();
-                    TemplateManagementViewModel.SetSelectedFiles(files);
-                }
+                // Note: TemplateManagementViewModel is updated via UpdateSelectedFiles()
+                // which is called by the SelectionChanged event handler in MainWindow.
+                // This supports multi-selection properly.
 
                 if (value != null)
                 {

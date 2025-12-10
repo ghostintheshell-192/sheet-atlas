@@ -142,8 +142,11 @@
                 </Grid>
 
                 <ListBox Grid.Row="1"
+                         x:Name="FilesListBox"
                          ItemsSource="{Binding LoadedFiles}"
                          SelectedItem="{Binding SelectedFile}"
+                         SelectionMode="Multiple"
+                         SelectionChanged="OnFilesSelectionChanged"
                          Margin="4"
                          Padding="0,0,0,-8"
                          Background="{DynamicResource CardBackground}"
