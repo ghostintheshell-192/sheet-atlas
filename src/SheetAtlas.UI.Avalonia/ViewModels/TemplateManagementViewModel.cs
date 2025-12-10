@@ -24,7 +24,6 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
 
     private TemplateSummary? _selectedTemplateSummary;
     private ExcelTemplate? _selectedTemplateDetails;
-    private ValidationReport? _validationReport;
     private bool _isLoadingTemplates;
     private bool _isValidating;
     private bool _disposed;
@@ -33,7 +32,7 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
     private IReadOnlyList<IFileLoadResultViewModel> _selectedFiles = Array.Empty<IFileLoadResultViewModel>();
 
     public ObservableCollection<TemplateSummary> TemplateLibrary { get; } = new();
-    public ObservableCollection<ValidationIssueViewModel> ValidationIssues { get; } = new();
+    public ObservableCollection<FileValidationResultViewModel> BatchValidationResults { get; } = new();
 
     /// <summary>
     /// Selected template in the library list.
@@ -108,47 +107,69 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
         _ => $"{_selectedFiles.Count} files selected"
     };
 
-    // Validation state
-    public bool HasValidationResult => _validationReport != null;
-    public bool HasValidationIssues => _validationReport?.AllIssues.Count > 0;
+    // Batch validation state (aggregated from all file results)
+    public bool HasValidationResult => BatchValidationResults.Count > 0;
+    public bool HasValidationIssues => BatchValidationResults.Any(r => r.HasIssues);
 
-    public string ValidationStatusIcon => _validationReport?.Status switch
+    public int TotalFilesValidated => BatchValidationResults.Count;
+    public int FilesWithErrors => BatchValidationResults.Count(r => r.Status == ValidationStatus.Invalid || r.Status == ValidationStatus.Failed);
+    public int FilesWithWarnings => BatchValidationResults.Count(r => r.Status == ValidationStatus.ValidWithWarnings);
+    public int FilesValid => BatchValidationResults.Count(r => r.Status == ValidationStatus.Valid);
+
+    public string ValidationStatusIcon
     {
-        ValidationStatus.Valid => "\u2705",
-        ValidationStatus.ValidWithWarnings => "\u26A0",
-        ValidationStatus.Invalid => "\u274C",
-        ValidationStatus.Failed => "\u26D4",
-        _ => ""
-    };
+        get
+        {
+            if (!HasValidationResult) return "";
+            if (FilesWithErrors > 0) return "\u274C";
+            if (FilesWithWarnings > 0) return "\u26A0";
+            return "\u2705";
+        }
+    }
 
-    public string ValidationStatusText => _validationReport?.Status switch
+    public string ValidationStatusText
     {
-        ValidationStatus.Valid => "Valid",
-        ValidationStatus.ValidWithWarnings => $"{_validationReport.TotalWarningCount} warning(s)",
-        ValidationStatus.Invalid => $"{_validationReport.TotalErrorCount} error(s)",
-        ValidationStatus.Failed => "Failed",
-        _ => ""
-    };
+        get
+        {
+            if (!HasValidationResult) return "";
+            if (FilesWithErrors > 0) return $"{FilesWithErrors} file(s) with errors";
+            if (FilesWithWarnings > 0) return $"{FilesWithWarnings} file(s) with warnings";
+            return $"{FilesValid} file(s) valid";
+        }
+    }
 
-    public string ValidationResultStatus => _validationReport?.Status switch
+    public string ValidationResultStatus
     {
-        ValidationStatus.Valid => "VALID",
-        ValidationStatus.ValidWithWarnings => "VALID",
-        ValidationStatus.Invalid => "INVALID",
-        ValidationStatus.Failed => "FAILED",
-        _ => ""
-    };
+        get
+        {
+            if (!HasValidationResult) return "";
+            if (FilesWithErrors > 0) return "INVALID";
+            if (FilesWithWarnings > 0) return "VALID";
+            return "VALID";
+        }
+    }
 
-    public IBrush ValidationResultBackground => _validationReport?.Status switch
+    public IBrush ValidationResultBackground
     {
-        ValidationStatus.Valid => new SolidColorBrush(Color.Parse("#22C55E")),
-        ValidationStatus.ValidWithWarnings => new SolidColorBrush(Color.Parse("#F59E0B")),
-        ValidationStatus.Invalid => new SolidColorBrush(Color.Parse("#EF4444")),
-        ValidationStatus.Failed => new SolidColorBrush(Color.Parse("#6B7280")),
-        _ => new SolidColorBrush(Colors.Transparent)
-    };
+        get
+        {
+            if (!HasValidationResult) return new SolidColorBrush(Colors.Transparent);
+            if (FilesWithErrors > 0) return new SolidColorBrush(Color.Parse("#EF4444"));
+            if (FilesWithWarnings > 0) return new SolidColorBrush(Color.Parse("#F59E0B"));
+            return new SolidColorBrush(Color.Parse("#22C55E"));
+        }
+    }
 
-    public string ValidationSummary => _validationReport?.Summary ?? "";
+    public string ValidationSummary
+    {
+        get
+        {
+            if (!HasValidationResult) return "";
+            var totalErrors = BatchValidationResults.Sum(r => r.ErrorCount);
+            var totalWarnings = BatchValidationResults.Sum(r => r.WarningCount);
+            return $"{TotalFilesValidated} file(s) validated: {totalErrors} error(s), {totalWarnings} warning(s)";
+        }
+    }
 
     // Can execute conditions
     public bool CanCreateTemplate => HasSingleFileSelected && _selectedFiles[0].File != null && !IsValidating;
@@ -302,31 +323,47 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
 
         try
         {
-            // For now, validate single file. Multi-file batch validation can be added later.
-            var file = _selectedFiles[0];
-            if (file.File == null) return;
+            _logger.LogInfo($"Validating {_selectedFiles.Count} file(s) against template '{SelectedTemplateDetails.Name}'", "TemplateManagementViewModel");
 
-            _logger.LogInfo($"Validating file '{file.FileName}' against template '{SelectedTemplateDetails.Name}'", "TemplateManagementViewModel");
-
-            _validationReport = await _templateValidationService.ValidateAsync(
-                file.File,
-                SelectedTemplateDetails);
-
-            // Populate issues for display
-            foreach (var issue in _validationReport.AllIssues.OrderByDescending(i => i.Severity))
+            // Validate all selected files
+            foreach (var file in _selectedFiles)
             {
-                ValidationIssues.Add(new ValidationIssueViewModel(issue));
+                if (file.File == null) continue;
+
+                try
+                {
+                    var report = await _templateValidationService.ValidateAsync(
+                        file.File,
+                        SelectedTemplateDetails);
+
+                    var resultViewModel = new FileValidationResultViewModel(file.FileName, report);
+                    BatchValidationResults.Add(resultViewModel);
+
+                    _logger.LogInfo($"Validated '{file.FileName}': {report.Status} ({report.TotalErrorCount} errors, {report.TotalWarningCount} warnings)", "TemplateManagementViewModel");
+                }
+                catch (Exception ex)
+                {
+                    // Create a failed result for this file
+                    var failedResult = new FileValidationResultViewModel(file.FileName, ex.Message);
+                    BatchValidationResults.Add(failedResult);
+
+                    _logger.LogError($"Validation failed for '{file.FileName}'", ex, "TemplateManagementViewModel");
+                }
             }
 
             NotifyValidationPropertiesChanged();
 
-            _logger.LogInfo($"Validation completed: {_validationReport.Status} ({_validationReport.TotalErrorCount} errors, {_validationReport.TotalWarningCount} warnings)", "TemplateManagementViewModel");
+            _logger.LogInfo($"Batch validation completed: {TotalFilesValidated} files, {FilesValid} valid, {FilesWithWarnings} with warnings, {FilesWithErrors} with errors", "TemplateManagementViewModel");
 
-            ValidationCompleted?.Invoke(this, new ValidationCompletedEventArgs(_validationReport));
+            // Fire event for each result (or aggregate event if needed)
+            foreach (var result in BatchValidationResults.Where(r => r.Report != null))
+            {
+                ValidationCompleted?.Invoke(this, new ValidationCompletedEventArgs(result.Report!));
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Validation failed", ex, "TemplateManagementViewModel");
+            _logger.LogError($"Batch validation failed", ex, "TemplateManagementViewModel");
         }
         finally
         {
@@ -396,8 +433,7 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
 
     private void ClearValidationResult()
     {
-        _validationReport = null;
-        ValidationIssues.Clear();
+        BatchValidationResults.Clear();
         NotifyValidationPropertiesChanged();
     }
 
@@ -405,6 +441,10 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(HasValidationResult));
         OnPropertyChanged(nameof(HasValidationIssues));
+        OnPropertyChanged(nameof(TotalFilesValidated));
+        OnPropertyChanged(nameof(FilesWithErrors));
+        OnPropertyChanged(nameof(FilesWithWarnings));
+        OnPropertyChanged(nameof(FilesValid));
         OnPropertyChanged(nameof(ValidationStatusIcon));
         OnPropertyChanged(nameof(ValidationStatusText));
         OnPropertyChanged(nameof(ValidationResultStatus));
@@ -436,13 +476,84 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
         ValidationCompleted = null;
 
         TemplateLibrary.Clear();
-        ValidationIssues.Clear();
+        BatchValidationResults.Clear();
 
         _selectedTemplateSummary = null;
         _selectedTemplateDetails = null;
-        _validationReport = null;
 
         _disposed = true;
+    }
+}
+
+/// <summary>
+/// Represents validation result for a single file in batch validation.
+/// </summary>
+public class FileValidationResultViewModel : ViewModelBase
+{
+    public string FileName { get; }
+    public ValidationReport? Report { get; }
+    public string? ErrorMessage { get; }
+
+    public ValidationStatus Status => Report?.Status ?? ValidationStatus.Failed;
+    public int ErrorCount => Report?.TotalErrorCount ?? (ErrorMessage != null ? 1 : 0);
+    public int WarningCount => Report?.TotalWarningCount ?? 0;
+    public bool HasIssues => ErrorCount > 0 || WarningCount > 0;
+    public bool IsValid => Status == ValidationStatus.Valid;
+    public bool IsValidWithWarnings => Status == ValidationStatus.ValidWithWarnings;
+    public bool IsInvalid => Status == ValidationStatus.Invalid || Status == ValidationStatus.Failed;
+
+    public string StatusIcon => Status switch
+    {
+        ValidationStatus.Valid => "\u2705",
+        ValidationStatus.ValidWithWarnings => "\u26A0",
+        ValidationStatus.Invalid => "\u274C",
+        ValidationStatus.Failed => "\u26D4",
+        _ => ""
+    };
+
+    public string StatusText => Status switch
+    {
+        ValidationStatus.Valid => "Valid",
+        ValidationStatus.ValidWithWarnings => $"{WarningCount} warning(s)",
+        ValidationStatus.Invalid => $"{ErrorCount} error(s)",
+        ValidationStatus.Failed => ErrorMessage ?? "Failed",
+        _ => ""
+    };
+
+    public IBrush StatusBackground => Status switch
+    {
+        ValidationStatus.Valid => new SolidColorBrush(Color.Parse("#22C55E")),
+        ValidationStatus.ValidWithWarnings => new SolidColorBrush(Color.Parse("#F59E0B")),
+        ValidationStatus.Invalid => new SolidColorBrush(Color.Parse("#EF4444")),
+        ValidationStatus.Failed => new SolidColorBrush(Color.Parse("#6B7280")),
+        _ => new SolidColorBrush(Colors.Transparent)
+    };
+
+    public IReadOnlyList<ValidationIssueViewModel> Issues { get; }
+
+    // For expanding/collapsing issues in UI
+    private bool _isExpanded;
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set => SetField(ref _isExpanded, value);
+    }
+
+    public FileValidationResultViewModel(string fileName, ValidationReport report)
+    {
+        FileName = fileName;
+        Report = report;
+        Issues = report.AllIssues
+            .OrderByDescending(i => i.Severity)
+            .Select(i => new ValidationIssueViewModel(i))
+            .ToList();
+    }
+
+    public FileValidationResultViewModel(string fileName, string errorMessage)
+    {
+        FileName = fileName;
+        ErrorMessage = errorMessage;
+        Issues = Array.Empty<ValidationIssueViewModel>();
     }
 }
 

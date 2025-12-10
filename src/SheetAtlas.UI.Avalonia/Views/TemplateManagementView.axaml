@@ -300,45 +300,88 @@
                                            TextWrapping="Wrap"/>
                             </Grid>
 
-                            <!-- Issues List -->
-                            <ScrollViewer MaxHeight="300"
-                                          VerticalScrollBarVisibility="Auto"
-                                          IsVisible="{Binding HasValidationIssues}">
-                                <ItemsControl ItemsSource="{Binding ValidationIssues}">
+                            <!-- Per-File Results List -->
+                            <ScrollViewer MaxHeight="400"
+                                          VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding BatchValidationResults}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:ValidationIssueViewModel">
-                                            <Border Padding="8,4"
-                                                    BorderThickness="0,0,0,1"
-                                                    BorderBrush="{DynamicResource SubtleBorder}"
-                                                    Background="Transparent">
-                                                <Border.Styles>
-                                                    <Style Selector="Border:pointerover">
-                                                        <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
-                                                    </Style>
-                                                </Border.Styles>
-                                                <Grid ColumnDefinitions="Auto,Auto,*">
-                                                    <!-- Severity Icon -->
-                                                    <TextBlock Grid.Column="0"
-                                                               Text="{Binding SeverityIcon}"
-                                                               Margin="0,0,8,0"
-                                                               VerticalAlignment="Center"
-                                                               FontSize="12"/>
-                                                    <!-- Location -->
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding Location}"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource AccentOrange}"
-                                                               FontSize="11"
-                                                               Margin="0,0,8,0"
-                                                               VerticalAlignment="Center"/>
-                                                    <!-- Message -->
-                                                    <TextBlock Grid.Column="2"
-                                                               Text="{Binding Message}"
-                                                               TextWrapping="Wrap"
-                                                               VerticalAlignment="Center"
-                                                               FontSize="12"
-                                                               Foreground="{DynamicResource PrimaryText}"/>
-                                                </Grid>
+                                        <DataTemplate x:DataType="vm:FileValidationResultViewModel">
+                                            <Border Margin="0,4"
+                                                    Background="{DynamicResource SecondaryBackground}"
+                                                    CornerRadius="4"
+                                                    Padding="0">
+                                                <StackPanel>
+                                                    <!-- File Header (clickable to expand) -->
+                                                    <Border Padding="10,8"
+                                                            Background="Transparent"
+                                                            PointerPressed="OnFileResultHeaderPressed">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                                            <!-- Expand/Collapse indicator -->
+                                                            <Panel Grid.Column="0" Margin="0,0,8,0" IsVisible="{Binding HasIssues}">
+                                                                <TextBlock Text="&#x25BC;"
+                                                                           FontSize="8"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{DynamicResource SecondaryText}"
+                                                                           IsVisible="{Binding IsExpanded}"/>
+                                                                <TextBlock Text="&#x25B6;"
+                                                                           FontSize="8"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{DynamicResource SecondaryText}"
+                                                                           IsVisible="{Binding !IsExpanded}"/>
+                                                            </Panel>
+                                                            <!-- File name -->
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding FileName}"
+                                                                       FontWeight="Medium"
+                                                                       FontSize="13"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource PrimaryText}"/>
+                                                            <!-- Status icon -->
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding StatusIcon}"
+                                                                       FontSize="14"
+                                                                       Margin="8,0"
+                                                                       VerticalAlignment="Center"/>
+                                                            <!-- Status text -->
+                                                            <TextBlock Grid.Column="3"
+                                                                       Text="{Binding StatusText}"
+                                                                       FontSize="11"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource SecondaryText}"/>
+                                                        </Grid>
+                                                    </Border>
+
+                                                    <!-- Expanded Issues List -->
+                                                    <ItemsControl ItemsSource="{Binding Issues}"
+                                                                  IsVisible="{Binding IsExpanded}"
+                                                                  Margin="24,0,8,8">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:ValidationIssueViewModel">
+                                                                <Border Padding="6,3"
+                                                                        BorderThickness="0,0,0,1"
+                                                                        BorderBrush="{DynamicResource SubtleBorder}">
+                                                                    <Grid ColumnDefinitions="Auto,Auto,*">
+                                                                        <TextBlock Grid.Column="0"
+                                                                                   Text="{Binding SeverityIcon}"
+                                                                                   Margin="0,0,6,0"
+                                                                                   FontSize="11"/>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding Location}"
+                                                                                   FontWeight="SemiBold"
+                                                                                   Foreground="{DynamicResource AccentOrange}"
+                                                                                   FontSize="10"
+                                                                                   Margin="0,0,6,0"/>
+                                                                        <TextBlock Grid.Column="2"
+                                                                                   Text="{Binding Message}"
+                                                                                   TextWrapping="Wrap"
+                                                                                   FontSize="11"
+                                                                                   Foreground="{DynamicResource PrimaryText}"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
