@@ -51,10 +51,12 @@ public partial class App : Application
             var searchViewModel = _host.Services.GetRequiredService<SearchViewModel>();
             var fileDetailsViewModel = _host.Services.GetRequiredService<FileDetailsViewModel>();
             var treeSearchResultsViewModel = _host.Services.GetRequiredService<TreeSearchResultsViewModel>();
+            var templateManagementViewModel = _host.Services.GetRequiredService<TemplateManagementViewModel>();
 
             mainViewModel.SetSearchViewModel(searchViewModel);
             mainViewModel.SetFileDetailsViewModel(fileDetailsViewModel);
             mainViewModel.SetTreeSearchResultsViewModel(treeSearchResultsViewModel);
+            mainViewModel.SetTemplateManagementViewModel(templateManagementViewModel);
 
             mainWindow.DataContext = mainViewModel;
             desktop.MainWindow = mainWindow;
@@ -143,6 +145,7 @@ public partial class App : Application
                 services.AddSingleton<SearchViewModel>();
                 services.AddSingleton<FileDetailsViewModel>();
                 services.AddSingleton<TreeSearchResultsViewModel>();
+                services.AddSingleton<TemplateManagementViewModel>();
 
                 // Register Views
                 services.AddSingleton<MainWindow>();

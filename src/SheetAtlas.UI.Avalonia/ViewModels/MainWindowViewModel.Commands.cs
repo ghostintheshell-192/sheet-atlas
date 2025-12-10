@@ -16,6 +16,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand CloseFileDetailsTabCommand { get; private set; } = null!;
         public ICommand CloseSearchTabCommand { get; private set; } = null!;
         public ICommand CloseComparisonTabCommand { get; private set; } = null!;
+        public ICommand ShowTemplatesTabCommand { get; private set; } = null!;
+        public ICommand CloseTemplatesTabCommand { get; private set; } = null!;
         public ICommand ShowSearchResultsCommand { get; private set; } = null!;
         public ICommand ShowAboutCommand { get; private set; } = null!;
         public ICommand ShowDocumentationCommand { get; private set; } = null!;
@@ -85,6 +87,20 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 IsComparisonTabVisible = false;
                 SelectedComparison = null;
                 SwitchToNextVisibleTab("Comparison");
+                return Task.CompletedTask;
+            });
+
+            ShowTemplatesTabCommand = new RelayCommand(() =>
+            {
+                IsTemplatesTabVisible = true;
+                SelectedTabIndex = GetTabIndex("Templates");
+                return Task.CompletedTask;
+            });
+
+            CloseTemplatesTabCommand = new RelayCommand(() =>
+            {
+                IsTemplatesTabVisible = false;
+                SwitchToNextVisibleTab("Templates");
                 return Task.CompletedTask;
             });
 

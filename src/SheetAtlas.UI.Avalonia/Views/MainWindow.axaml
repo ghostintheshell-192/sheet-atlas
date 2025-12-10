@@ -59,6 +59,8 @@
                           Command="{Binding ShowSearchTabCommand}"/>
                 <MenuItem Header="Show _Comparison"
                           Command="{Binding ShowComparisonTabCommand}"/>
+                <MenuItem Header="Show _Templates"
+                          Command="{Binding ShowTemplatesTabCommand}"/>
                 <Separator/>
                 <MenuItem Header="{Binding IsStatusBarVisible, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Hide Status Bar|Show Status Bar'}"
                           Command="{Binding ToggleStatusBarCommand}"/>
@@ -495,6 +497,30 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
+                    </TabItem>
+
+                    <!-- Templates Tab -->
+                    <TabItem IsVisible="{Binding IsTemplatesTabVisible}">
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="Templates" VerticalAlignment="Center"/>
+                                <Button Content="✕"
+                                        Command="{Binding CloseTemplatesTabCommand}"
+                                        Padding="4,0"
+                                        FontSize="14"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Foreground="{DynamicResource SecondaryText}"
+                                        ToolTip.Tip="Close tab"/>
+                            </StackPanel>
+                        </TabItem.Header>
+                        <ContentControl Content="{Binding TemplateManagementViewModel}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate>
+                                    <views:TemplateManagementView/>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
                     </TabItem>
 
                 </TabControl>

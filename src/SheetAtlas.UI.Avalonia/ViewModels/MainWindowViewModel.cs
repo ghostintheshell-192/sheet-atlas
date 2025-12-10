@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isFileDetailsTabVisible;
     private bool _isSearchTabVisible;
     private bool _isComparisonTabVisible;
+    private bool _isTemplatesTabVisible;
     private bool _isStatusBarVisible = true;
     private bool _disposed = false;
 
@@ -41,6 +42,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public SearchViewModel? SearchViewModel { get; private set; }
     public FileDetailsViewModel? FileDetailsViewModel { get; private set; }
     public TreeSearchResultsViewModel? TreeSearchResultsViewModel { get; private set; }
+    public TemplateManagementViewModel? TemplateManagementViewModel { get; private set; }
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -52,6 +54,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 if (FileDetailsViewModel != null)
                 {
                     FileDetailsViewModel.SelectedFile = value;
+                }
+
+                // Update TemplateManagementViewModel with selected file(s)
+                if (TemplateManagementViewModel != null)
+                {
+                    var files = value != null
+                        ? new[] { value }
+                        : Array.Empty<IFileLoadResultViewModel>();
+                    TemplateManagementViewModel.SetSelectedFiles(files);
                 }
 
                 if (value != null)
@@ -121,7 +132,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible;
+    public bool IsTemplatesTabVisible
+    {
+        get => _isTemplatesTabVisible;
+        set
+        {
+            if (SetField(ref _isTemplatesTabVisible, value))
+            {
+                OnPropertyChanged(nameof(HasAnyTabVisible));
+            }
+        }
+    }
+
+    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible;
 
     public bool IsStatusBarVisible
     {
@@ -157,6 +180,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _isFileDetailsTabVisible = false;
         _isSearchTabVisible = false;
         _isComparisonTabVisible = false;
+        _isTemplatesTabVisible = false;
 
         InitializeCommands();
         SubscribeToEvents();
@@ -183,6 +207,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             SearchViewModel?.Dispose();
             FileDetailsViewModel?.Dispose();
             TreeSearchResultsViewModel?.Dispose();
+            TemplateManagementViewModel?.Dispose();
         }
     }
 }

@@ -180,6 +180,14 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             TreeSearchResultsViewModel.RowComparisonCreated += OnRowComparisonCreated;
         }
 
+        public void SetTemplateManagementViewModel(TemplateManagementViewModel templateManagementViewModel)
+        {
+            TemplateManagementViewModel = templateManagementViewModel ?? throw new ArgumentNullException(nameof(templateManagementViewModel));
+
+            // Update template selection when file selection changes
+            // The TemplateManagementViewModel needs to know which files are selected
+        }
+
         private void OnRowComparisonCreated(object? sender, RowComparison comparison)
         {
             _comparisonCoordinator.CreateComparison(comparison);
@@ -258,6 +266,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 "FileDetails" => 0,  // First TabItem in XAML
                 "Search" => 1,       // Second TabItem in XAML
                 "Comparison" => 2,   // Third TabItem in XAML
+                "Templates" => 3,    // Fourth TabItem in XAML
                 _ => -1              // Invalid tab name
             };
         }
@@ -274,9 +283,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Each tab type has its preferred fallback sequence
             var tabPriorities = closedTabName switch
             {
-                "FileDetails" => new[] { "Search", "Comparison" },
-                "Search" => new[] { "FileDetails", "Comparison" },
-                "Comparison" => new[] { "Search", "FileDetails" },
+                "FileDetails" => new[] { "Search", "Comparison", "Templates" },
+                "Search" => new[] { "FileDetails", "Comparison", "Templates" },
+                "Comparison" => new[] { "Search", "FileDetails", "Templates" },
+                "Templates" => new[] { "Search", "FileDetails", "Comparison" },
                 _ => Array.Empty<string>()
             };
 
@@ -287,6 +297,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                     "FileDetails" => IsFileDetailsTabVisible,
                     "Search" => IsSearchTabVisible,
                     "Comparison" => IsComparisonTabVisible,
+                    "Templates" => IsTemplatesTabVisible,
                     _ => false
                 };
 
