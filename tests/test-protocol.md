@@ -1,12 +1,13 @@
 # 🧪 Test Protocol
 
-## **Serve per eseguire test complessi (che richiedono interazione utente) in modo controllato e riproducibile**
+## **It is used to run complex tests (requiring user interaction) in a controlled and reproducible way**
 
 ---
 
 ## Memory Profiling Test
 
 ### Prerequisites
+
 - Test files ready (same files every test run)
 - `dotnet-dump` tool installed (`dotnet tool install -g dotnet-dump`)
 - SheetAtlas built in Debug mode
@@ -14,6 +15,7 @@
 ### Execution Steps
 
 1. **Start clean**
+
    ```bash
    # Kill any running SheetAtlas instances
    pkill -f "SheetAtlas.UI.Avalonia"
@@ -27,6 +29,7 @@
    - Verify app window is visible and responsive
 
 3. **Capture baseline dump**
+
    ```bash
    # Find PID
    PID=$(pgrep -f "SheetAtlas.UI.Avalonia/bin" | head -1)
@@ -45,6 +48,7 @@
    - Check memory: `ps -p $PID -o rss=,vsz=`
 
 6. **Capture post-load dump**
+
    ```bash
    dotnet-dump collect -p $PID -o tests/dumps/post-load.dump
    ```
@@ -57,11 +61,13 @@
    - Wait 10 seconds for automatic GC
 
 9. **Capture post-cleanup dump**
+
    ```bash
    dotnet-dump collect -p $PID -o tests/dumps/post-cleanup.dump
    ```
 
 10. **Terminate app**
+
     ```bash
     kill $PID
     ```
@@ -69,6 +75,7 @@
 ### Analysis
 
 Analyze dumps:
+
 ```bash
 cd tests/dumps
 
@@ -97,18 +104,21 @@ echo "dumpheap -stat" | dotnet-dump analyze post-cleanup.dump 2>&1 | tail -5
 ## Troubleshooting
 
 **Dump collection fails**:
+
 - Verify PID is correct: `ps aux | grep SheetAtlas`
 - Check permissions: dumps require same user as process
 
 **Memory doesn't stabilize**:
+
 - Wait longer (up to 30 seconds)
 - Check for background tasks in app
 
 **Results inconsistent**:
+
 - Verify same test files used
 - Check system load: `top` (high CPU/mem affects results)
 - Close other applications during test
 
 ---
 
-*Location: `/data/repos/sheet-atlas/tests/test-protocol.md`*
+*Location: `sheet-atlas/tests/test-protocol.md`*
