@@ -169,6 +169,19 @@ namespace SheetAtlas.Core.Application.Services
                 // Populate column metadata
                 sheetData.SetColumnMetadata(colIndex, analysisResult.ToMetadata());
 
+                // Log informative message when type is Unknown due to sparse data
+                if (analysisResult.DetectedType == DataType.Unknown && sheetData.DataRowCount > maxSampleSize)
+                {
+                    var nonEmptyCount = sampleCells.Count(c => !c.IsEmpty);
+                    if (nonEmptyCount == 0)
+                    {
+                        _logger.LogInfo(
+                            $"Column '{sheetData.ColumnNames[colIndex]}' has Unknown type: no data found in first {maxSampleSize} rows " +
+                            $"(file has {sheetData.DataRowCount} data rows - values may exist beyond sample range)",
+                            "SheetAnalysisOrchestrator");
+                    }
+                }
+
                 // Update cell metadata with normalization results
                 for (int i = 0; i < absoluteRowIndices.Count; i++)
                 {
