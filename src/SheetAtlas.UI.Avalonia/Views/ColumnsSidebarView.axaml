@@ -1,0 +1,172 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="280" d:DesignHeight="600"
+             x:Class="SheetAtlas.UI.Avalonia.Views.ColumnsSidebarView"
+             x:DataType="vm:ColumnLinkingViewModel">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="Columns"
+                       FontWeight="SemiBold"
+                       FontSize="14"
+                       Foreground="{DynamicResource PrimaryText}"
+                       VerticalAlignment="Center"/>
+
+            <Button Grid.Column="1"
+                    Content="Refresh"
+                    Command="{Binding RefreshCommand}"
+                    Padding="8,4"
+                    FontSize="11"
+                    ToolTip.Tip="Refresh columns from loaded files"/>
+        </Grid>
+
+        <!-- Column Links List -->
+        <ScrollViewer Grid.Row="1" Margin="4">
+            <!-- Empty state -->
+            <Panel>
+                <StackPanel IsVisible="{Binding !HasColumns}"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="No columns"
+                               FontSize="14"
+                               Foreground="{DynamicResource SecondaryText}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Load files to see columns"
+                               FontSize="12"
+                               Foreground="{DynamicResource DisabledText}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Column list -->
+                <ItemsControl ItemsSource="{Binding ColumnLinks}"
+                              IsVisible="{Binding HasColumns}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ColumnLinkViewModel">
+                            <Border Background="{DynamicResource CardBackground}"
+                                    BorderBrush="{DynamicResource BorderColor}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Margin="0,0,0,4"
+                                    Padding="8">
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Main row: Name + Type -->
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Expand/Collapse indicator for groups -->
+                                        <Panel Grid.Column="0"
+                                               Margin="0,0,6,0"
+                                               IsVisible="{Binding IsGrouped}"
+                                               Cursor="Hand"
+                                               PointerPressed="OnExpandCollapseClick">
+                                            <TextBlock Text="▼"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource SecondaryText}"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding IsExpanded}"/>
+                                            <TextBlock Text="▶"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource SecondaryText}"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding !IsExpanded}"/>
+                                        </Panel>
+
+                                        <!-- Column name and type -->
+                                        <StackPanel Grid.Column="1" Orientation="Vertical">
+                                            <TextBlock Text="{Binding SemanticName}"
+                                                       FontWeight="Medium"
+                                                       Foreground="{DynamicResource PrimaryText}"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding TypeDisplay}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource SecondaryText}"/>
+                                                <TextBlock Text="{Binding SourceCountText}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource SecondaryText}"
+                                                           IsVisible="{Binding IsGrouped}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- Source count badge for groups -->
+                                        <Border Grid.Column="2"
+                                                Background="{DynamicResource InfoBackground}"
+                                                CornerRadius="10"
+                                                Padding="6,2"
+                                                VerticalAlignment="Center"
+                                                IsVisible="{Binding IsGrouped}">
+                                            <TextBlock Text="{Binding ColumnCount}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource InfoColor}"/>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Expanded: show linked columns -->
+                                    <ItemsControl Grid.Row="1"
+                                                  ItemsSource="{Binding LinkedColumns}"
+                                                  IsVisible="{Binding IsExpanded}"
+                                                  Margin="16,8,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:LinkedColumnViewModel">
+                                                <Grid Margin="0,2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="├─"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource DisabledText}"
+                                                               Margin="0,0,4,0"/>
+
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Name}"
+                                                               FontSize="12"
+                                                               Foreground="{DynamicResource PrimaryText}"/>
+
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding SourceDisplay}"
+                                                               FontSize="10"
+                                                               Foreground="{DynamicResource SecondaryText}"
+                                                               ToolTip.Tip="{Binding SourceDisplay}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Panel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

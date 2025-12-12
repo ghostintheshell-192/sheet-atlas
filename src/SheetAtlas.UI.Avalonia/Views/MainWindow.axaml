@@ -121,25 +121,14 @@
                         </models:SidebarItem.ContentTemplate>
                     </models:SidebarItem>
 
-                    <!-- Columns Sidebar (placeholder for Column Linking) -->
+                    <!-- Columns Sidebar (Column Linking) -->
                     <models:SidebarItem IconData="{StaticResource ColumnsIconData}"
                                         Tooltip="Columns"
                                         IsOpen="False"
                                         Width="280">
                         <models:SidebarItem.ContentTemplate>
                             <DataTemplate x:DataType="vm:MainWindowViewModel">
-                                <Border Padding="12">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock Text="Columns"
-                                                   FontWeight="SemiBold"
-                                                   FontSize="14"
-                                                   Foreground="{DynamicResource PrimaryText}"/>
-                                        <TextBlock Text="Column linking will be implemented here"
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource SecondaryText}"
-                                                   TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </Border>
+                                <views:ColumnsSidebarView DataContext="{Binding ColumnLinkingViewModel}"/>
                             </DataTemplate>
                         </models:SidebarItem.ContentTemplate>
                     </models:SidebarItem>

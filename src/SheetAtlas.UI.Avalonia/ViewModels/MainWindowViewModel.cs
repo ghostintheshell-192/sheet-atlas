@@ -43,6 +43,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public FileDetailsViewModel? FileDetailsViewModel { get; private set; }
     public TreeSearchResultsViewModel? TreeSearchResultsViewModel { get; private set; }
     public TemplateManagementViewModel? TemplateManagementViewModel { get; private set; }
+    public ColumnLinkingViewModel? ColumnLinkingViewModel { get; private set; }
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -203,6 +204,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             FileDetailsViewModel?.Dispose();
             TreeSearchResultsViewModel?.Dispose();
             TemplateManagementViewModel?.Dispose();
+            ColumnLinkingViewModel?.Dispose();
         }
     }
 }

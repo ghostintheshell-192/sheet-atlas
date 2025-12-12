@@ -52,11 +52,13 @@ public partial class App : Application
             var fileDetailsViewModel = _host.Services.GetRequiredService<FileDetailsViewModel>();
             var treeSearchResultsViewModel = _host.Services.GetRequiredService<TreeSearchResultsViewModel>();
             var templateManagementViewModel = _host.Services.GetRequiredService<TemplateManagementViewModel>();
+            var columnLinkingViewModel = _host.Services.GetRequiredService<ColumnLinkingViewModel>();
 
             mainViewModel.SetSearchViewModel(searchViewModel);
             mainViewModel.SetFileDetailsViewModel(fileDetailsViewModel);
             mainViewModel.SetTreeSearchResultsViewModel(treeSearchResultsViewModel);
             mainViewModel.SetTemplateManagementViewModel(templateManagementViewModel);
+            mainViewModel.SetColumnLinkingViewModel(columnLinkingViewModel);
 
             mainWindow.DataContext = mainViewModel;
             desktop.MainWindow = mainWindow;
@@ -119,6 +121,7 @@ public partial class App : Application
                 services.AddSingleton<IExcelWriterService, ExcelWriterService>();
                 services.AddSingleton<ISearchService, SearchService>();
                 services.AddSingleton<IRowComparisonService, RowComparisonService>();
+                services.AddSingleton<IColumnLinkingService, ColumnLinkingService>();
                 services.AddSingleton<IExceptionHandler, ExceptionHandler>();
                 services.AddSingleton<IFileLogService, FileLogService>();
 
@@ -146,6 +149,17 @@ public partial class App : Application
                 services.AddSingleton<FileDetailsViewModel>();
                 services.AddSingleton<TreeSearchResultsViewModel>();
                 services.AddSingleton<TemplateManagementViewModel>();
+                services.AddSingleton<ColumnLinkingViewModel>(sp =>
+                {
+                    var columnLinkingService = sp.GetRequiredService<IColumnLinkingService>();
+                    var filesManager = sp.GetRequiredService<ILoadedFilesManager>();
+                    return new ColumnLinkingViewModel(
+                        columnLinkingService,
+                        () => filesManager.LoadedFiles
+                            .Where(f => f.File != null)
+                            .Select(f => f.File!),
+                        filesManager);
+                });
 
                 // Register Views
                 services.AddSingleton<MainWindow>();

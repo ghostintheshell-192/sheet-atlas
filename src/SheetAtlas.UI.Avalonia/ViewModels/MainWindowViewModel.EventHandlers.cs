@@ -185,6 +185,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             TemplateManagementViewModel = templateManagementViewModel ?? throw new ArgumentNullException(nameof(templateManagementViewModel));
         }
 
+        public void SetColumnLinkingViewModel(ColumnLinkingViewModel columnLinkingViewModel)
+        {
+            ColumnLinkingViewModel = columnLinkingViewModel ?? throw new ArgumentNullException(nameof(columnLinkingViewModel));
+        }
+
         /// <summary>
         /// Update the list of selected files from the sidebar.
         /// Called by MainWindow code-behind when ListBox selection changes.
