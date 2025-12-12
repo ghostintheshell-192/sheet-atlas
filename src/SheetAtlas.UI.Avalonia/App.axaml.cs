@@ -139,7 +139,13 @@ public partial class App : Application
                 services.AddSingleton<ISelectionManager, SheetAtlas.UI.Avalonia.Managers.Selection.SelectionManager>();
                 services.AddSingleton<IThemeManager, ThemeManager>();
                 services.AddSingleton<ILoadedFilesManager, LoadedFilesManager>();
-                services.AddSingleton<IRowComparisonCoordinator, RowComparisonCoordinator>();
+                services.AddSingleton<IRowComparisonCoordinator>(sp =>
+                {
+                    var logger = sp.GetRequiredService<ILogService>();
+                    var themeManager = sp.GetRequiredService<IThemeManager>();
+                    var columnLinkingViewModel = sp.GetRequiredService<ColumnLinkingViewModel>();
+                    return new RowComparisonCoordinator(logger, logger, themeManager, columnLinkingViewModel);
+                });
                 services.AddSingleton<ITabNavigationCoordinator, TabNavigationCoordinator>();
                 services.AddSingleton<IFileDetailsCoordinator, FileDetailsCoordinator>();
 

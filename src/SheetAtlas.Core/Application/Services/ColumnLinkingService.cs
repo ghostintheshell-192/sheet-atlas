@@ -34,6 +34,17 @@ public interface IColumnLinkingService
     /// Extract column info from loaded Excel files.
     /// </summary>
     IEnumerable<ColumnInfo> ExtractColumnsFromFiles(IEnumerable<ExcelFile> files);
+
+    /// <summary>
+    /// Merge two column links into one.
+    /// The result takes the semantic name from the target.
+    /// </summary>
+    ColumnLink MergeGroups(ColumnLink target, ColumnLink source);
+
+    /// <summary>
+    /// Ungroup a column link, returning individual links for each column.
+    /// </summary>
+    IReadOnlyList<ColumnLink> Ungroup(ColumnLink link);
 }
 
 /// <summary>
@@ -129,5 +140,43 @@ public class ColumnLinkingService : IColumnLinkingService
                 }
             }
         }
+    }
+
+    public ColumnLink MergeGroups(ColumnLink target, ColumnLink source)
+    {
+        // Combine linked columns from both groups
+        var mergedColumns = target.LinkedColumns
+            .Concat(source.LinkedColumns)
+            .ToArray();
+
+        // Determine dominant type (most frequent)
+        var dominantType = mergedColumns
+            .GroupBy(c => c.DetectedType)
+            .OrderByDescending(g => g.Count())
+            .First().Key;
+
+        return new ColumnLink
+        {
+            SemanticName = target.SemanticName,
+            LinkedColumns = mergedColumns,
+            DominantType = dominantType,
+            IsAutoGrouped = false // Manual merge
+        };
+    }
+
+    public IReadOnlyList<ColumnLink> Ungroup(ColumnLink link)
+    {
+        if (link.LinkedColumns.Count <= 1)
+            return new[] { link };
+
+        return link.LinkedColumns
+            .Select(col => new ColumnLink
+            {
+                SemanticName = col.Name,
+                LinkedColumns = new[] { col },
+                DominantType = col.DetectedType,
+                IsAutoGrouped = false
+            })
+            .ToArray();
     }
 }

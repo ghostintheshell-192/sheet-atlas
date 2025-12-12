@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using CommunityToolkit.Mvvm.Input;
 using SheetAtlas.UI.Avalonia.Models;
 
@@ -78,4 +79,46 @@ public partial class MultiSidebar : UserControl
             item.IsOpen = true;
         }
     }
+
+    #region Resize Logic
+
+    private SidebarItem? _resizingItem;
+    private Point _resizeStartPoint;
+    private double _resizeStartWidth;
+
+    private void OnResizeGripPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border border && border.DataContext is SidebarItem item)
+        {
+            _resizingItem = item;
+            _resizeStartPoint = e.GetPosition(this);
+            _resizeStartWidth = item.Width;
+            e.Pointer.Capture(border);
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_resizingItem == null) return;
+
+        var currentPoint = e.GetPosition(this);
+        var delta = currentPoint.X - _resizeStartPoint.X;
+        var newWidth = _resizeStartWidth + delta;
+
+        // Clamp to min/max
+        newWidth = Math.Max(_resizingItem.MinWidth, Math.Min(_resizingItem.MaxWidth, newWidth));
+        _resizingItem.Width = newWidth;
+    }
+
+    private void OnResizeGripPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_resizingItem != null && sender is Border border)
+        {
+            e.Pointer.Capture(null);
+            _resizingItem = null;
+        }
+    }
+
+    #endregion
 }

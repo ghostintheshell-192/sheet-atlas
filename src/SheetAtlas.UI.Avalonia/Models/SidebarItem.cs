@@ -39,4 +39,16 @@ public partial class SidebarItem : ObservableObject
     /// </summary>
     [ObservableProperty]
     private double _width = 256;
+
+    /// <summary>
+    /// Minimum width when resizing.
+    /// </summary>
+    [ObservableProperty]
+    private double _minWidth = 180;
+
+    /// <summary>
+    /// Maximum width when resizing.
+    /// </summary>
+    [ObservableProperty]
+    private double _maxWidth = 500;
 }

@@ -79,21 +79,38 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border x:Name="SidebarBorder"
-                            x:DataType="models:SidebarItem"
-                            Background="{DynamicResource SecondaryBackground}"
-                            BorderBrush="{DynamicResource BorderColor}"
-                            BorderThickness="0,0,1,0"
-                            Width="{Binding Width}"
-                            IsVisible="{Binding IsOpen}">
-                        <Border.Transitions>
-                            <Transitions>
-                                <DoubleTransition Property="Width" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                            </Transitions>
-                        </Border.Transitions>
-                        <ContentControl Content="{Binding DataContext, RelativeSource={RelativeSource AncestorType=controls:MultiSidebar}}"
-                                        ContentTemplate="{Binding ContentTemplate}"/>
-                    </Border>
+                    <Grid x:DataType="models:SidebarItem"
+                          Width="{Binding Width}"
+                          IsVisible="{Binding IsOpen}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="4"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Main content area -->
+                        <Border Grid.Column="0"
+                                Background="{DynamicResource SecondaryBackground}"
+                                BorderBrush="{DynamicResource BorderColor}"
+                                BorderThickness="0,0,1,0">
+                            <ContentControl Content="{Binding DataContext, RelativeSource={RelativeSource AncestorType=controls:MultiSidebar}}"
+                                            ContentTemplate="{Binding ContentTemplate}"/>
+                        </Border>
+
+                        <!-- Resize grip -->
+                        <Border Grid.Column="1"
+                                Background="Transparent"
+                                Cursor="SizeWestEast"
+                                PointerPressed="OnResizeGripPointerPressed"
+                                PointerMoved="OnResizeGripPointerMoved"
+                                PointerReleased="OnResizeGripPointerReleased">
+                            <Border.Styles>
+                                <Style Selector="Border:pointerover">
+                                    <Setter Property="Background" Value="{DynamicResource AccentOrange}"/>
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Style>
+                            </Border.Styles>
+                        </Border>
+                    </Grid>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

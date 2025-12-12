@@ -14,6 +14,7 @@ public class ColumnLinkViewModel : ViewModelBase
     private ColumnLink _link;
     private bool _isExpanded;
     private string _semanticName;
+    private bool _isEditing;
 
     public ColumnLinkViewModel(ColumnLink link)
     {
@@ -54,6 +55,12 @@ public class ColumnLinkViewModel : ViewModelBase
     {
         get => _isExpanded;
         set => SetField(ref _isExpanded, value);
+    }
+
+    public bool IsEditing
+    {
+        get => _isEditing;
+        set => SetField(ref _isEditing, value);
     }
 
     public ObservableCollection<LinkedColumnViewModel> LinkedColumns { get; }
@@ -120,6 +127,59 @@ public class ColumnLinkingViewModel : ViewModelBase, IDisposable
             _filesManager.FileLoaded += OnFilesChanged;
             _filesManager.FileRemoved += OnFilesChanged;
         }
+    }
+
+    /// <summary>
+    /// Merge source column(s) into target.
+    /// </summary>
+    public void MergeColumns(ColumnLinkViewModel target, ColumnLinkViewModel source)
+    {
+        if (target == source) return;
+
+        var mergedLink = _columnLinkingService.MergeGroups(
+            target.GetUpdatedLink(),
+            source.GetUpdatedLink());
+
+        // Remove source and replace target
+        var targetIndex = ColumnLinks.IndexOf(target);
+        source.Cleanup();
+        ColumnLinks.Remove(source);
+        target.Cleanup();
+        ColumnLinks.Remove(target);
+
+        // Insert merged at original target position
+        var mergedVm = new ColumnLinkViewModel(mergedLink);
+        if (targetIndex >= 0 && targetIndex <= ColumnLinks.Count)
+            ColumnLinks.Insert(targetIndex, mergedVm);
+        else
+            ColumnLinks.Add(mergedVm);
+
+        OnPropertyChanged(nameof(HasColumns));
+    }
+
+    /// <summary>
+    /// Ungroup a column link into individual columns.
+    /// </summary>
+    public void UngroupColumn(ColumnLinkViewModel column)
+    {
+        var ungrouped = _columnLinkingService.Ungroup(column.GetUpdatedLink());
+        if (ungrouped.Count <= 1) return;
+
+        var index = ColumnLinks.IndexOf(column);
+        column.Cleanup();
+        ColumnLinks.Remove(column);
+
+        // Insert ungrouped items at the original position
+        foreach (var link in ungrouped.Reverse())
+        {
+            var vm = new ColumnLinkViewModel(link);
+            if (index >= 0 && index <= ColumnLinks.Count)
+                ColumnLinks.Insert(index, vm);
+            else
+                ColumnLinks.Add(vm);
+        }
+
+        OnPropertyChanged(nameof(HasColumns));
     }
 
     private void OnFilesChanged(object? sender, EventArgs e)
