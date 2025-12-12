@@ -3,6 +3,7 @@
         xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
         xmlns:views="using:SheetAtlas.UI.Avalonia.Views"
         xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
+        xmlns:models="using:SheetAtlas.UI.Avalonia.Models"
         xmlns:converters="using:SheetAtlas.UI.Avalonia.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -15,7 +16,6 @@
 
     <Window.Resources>
         <converters:CollectionNotEmptyConverter x:Key="CollectionNotEmptyConverter"/>
-        <converters:BoolToSidebarWidthConverter x:Key="BoolToSidebarWidthConverter"/>
         <converters:BoolToTextConverter x:Key="BoolToTextConverter"/>
     </Window.Resources>
 
@@ -100,158 +100,54 @@
         <!-- Main Content -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="{Binding IsSidebarExpanded, Converter={StaticResource BoolToSidebarWidthConverter}}"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Files Panel -->
-            <Grid Grid.Column="0" Background="{DynamicResource SecondaryBackground}" IsVisible="{Binding IsSidebarExpanded}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <!-- MultiSidebar with icon bar -->
+            <controls:MultiSidebar Grid.Column="0"
+                                   AllowMultipleOpen="False"
+                                   DataContext="{Binding}">
+                <controls:MultiSidebar.Items>
+                    <!-- Files Sidebar -->
+                    <models:SidebarItem IconData="{StaticResource FilesIconData}"
+                                        Tooltip="Loaded Files"
+                                        IsOpen="True"
+                                        Width="256">
+                        <models:SidebarItem.ContentTemplate>
+                            <DataTemplate x:DataType="vm:MainWindowViewModel">
+                                <views:FilesSidebarView DataContext="{Binding}"/>
+                            </DataTemplate>
+                        </models:SidebarItem.ContentTemplate>
+                    </models:SidebarItem>
 
-                <!-- Header with action buttons -->
-                <Grid Grid.Row="0" Margin="8,8,8,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="Loaded Files" FontWeight="SemiBold"
-                              FontSize="14"
-                              Foreground="{DynamicResource PrimaryText}"/>
-
-                    <Button Grid.Column="1" Content="Deselect"
-                            Padding="8,4"
-                            FontSize="11"
-                            Margin="0,0,4,0"
-                            ToolTip.Tip="Clear file selection"
-                            Click="OnClearSelectionClick"
-                            IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-
-                    <Button Grid.Column="2" Content="Unload"
-                            Classes="DangerButton"
-                            Padding="8,4"
-                            FontSize="11"
-                            ToolTip.Tip="Remove selected file from list"
-                            Click="OnUnloadFileClick"
-                            IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                </Grid>
-
-                <ListBox Grid.Row="1"
-                         x:Name="FilesListBox"
-                         ItemsSource="{Binding LoadedFiles}"
-                         SelectedItem="{Binding SelectedFile}"
-                         SelectionMode="Multiple"
-                         SelectionChanged="OnFilesSelectionChanged"
-                         Margin="4"
-                         Padding="0,0,0,-8"
-                         Background="{DynamicResource CardBackground}"
-                         BorderBrush="{DynamicResource BorderColor}"
-                         BorderThickness="1"
-                         CornerRadius="4">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Vertical" Margin="0">
-                                <Grid Tapped="OnFileItemTapped" Background="Transparent">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Status icon -->
-                                    <Panel Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center">
-                                        <TextBlock Text="⬢" FontSize="16" Foreground="{DynamicResource ErrorColor}" IsVisible="{Binding HasErrors}"/>
-                                        <TextBlock Text="△" FontSize="16" Foreground="{DynamicResource AccentOrange}">
-                                            <TextBlock.IsVisible>
-                                                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                    <Binding Path="HasWarnings"/>
-                                                    <Binding Path="HasErrors" Converter="{x:Static BoolConverters.Not}"/>
-                                                </MultiBinding>
-                                            </TextBlock.IsVisible>
-                                        </TextBlock>
-                                        <TextBlock Text="○" FontSize="16" Foreground="{DynamicResource SuccessColor}">
-                                            <TextBlock.IsVisible>
-                                                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                    <Binding Path="HasErrors" Converter="{x:Static BoolConverters.Not}"/>
-                                                    <Binding Path="HasWarnings" Converter="{x:Static BoolConverters.Not}"/>
-                                                </MultiBinding>
-                                            </TextBlock.IsVisible>
-                                        </TextBlock>
-                                    </Panel>
-
-                                    <!-- File name and path -->
-                                    <StackPanel Grid.Column="1" Orientation="Vertical">
-                                        <TextBlock Text="{Binding FileName}"
-                                                  FontWeight="Medium"
-                                                  Foreground="{DynamicResource PrimaryText}"/>
-                                        <TextBlock Text="{Binding FilePath}"
-                                                  FontSize="10"
-                                                  Foreground="{DynamicResource SecondaryText}"
-                                                  TextTrimming="CharacterEllipsis"/>
+                    <!-- Columns Sidebar (placeholder for Column Linking) -->
+                    <models:SidebarItem IconData="{StaticResource ColumnsIconData}"
+                                        Tooltip="Columns"
+                                        IsOpen="False"
+                                        Width="280">
+                        <models:SidebarItem.ContentTemplate>
+                            <DataTemplate x:DataType="vm:MainWindowViewModel">
+                                <Border Padding="12">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Columns"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource PrimaryText}"/>
+                                        <TextBlock Text="Column linking will be implemented here"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource SecondaryText}"
+                                                   TextWrapping="Wrap"/>
                                     </StackPanel>
-
-                                    <!-- Error count badge -->
-                                    <Border Grid.Column="2"
-                                           Background="{DynamicResource ErrorBackground}"
-                                           CornerRadius="10"
-                                           Padding="6,2"
-                                           Margin="4,0,4,0"
-                                           VerticalAlignment="Center">
-                                        <Border.IsVisible>
-                                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
-                                                <Binding Path="HasErrors"/>
-                                                <Binding Path="HasWarnings"/>
-                                            </MultiBinding>
-                                        </Border.IsVisible>
-                                        <TextBlock Text="{Binding Errors.Count, StringFormat='{}{0}'}"
-                                                  FontSize="10"
-                                                  FontWeight="SemiBold"
-                                                  Foreground="{DynamicResource ErrorColor}"/>
-                                    </Border>
-                                </Grid>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
-
-            <!-- Toggle Sidebar Bar (only visible when files are loaded) -->
-            <Button Grid.Column="1"
-                    Command="{Binding ToggleSidebarCommand}"
-                    Background="{DynamicResource BorderColor}"
-                    BorderThickness="0"
-                    Padding="0"
-                    CornerRadius="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    VerticalContentAlignment="Center"
-                    Cursor="Hand"
-                    Width="20"
-                    IsVisible="{Binding HasLoadedFiles}"
-                    ToolTip.Tip="{Binding IsSidebarExpanded, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Collapse Sidebar|Expand Sidebar'}">
-                <Button.Styles>
-                    <Style Selector="Button:pointerover">
-                        <Setter Property="Background" Value="{DynamicResource AccentOrange}"/>
-                    </Style>
-                    <Style Selector="Button:pressed">
-                        <Setter Property="Background" Value="{DynamicResource PrimaryNavyBlue}"/>
-                    </Style>
-                </Button.Styles>
-                <TextBlock Text="{Binding IsSidebarExpanded, Converter={StaticResource BoolToTextConverter}, ConverterParameter='◀|▶'}"
-                          FontSize="12"
-                          Foreground="{DynamicResource SecondaryText}"
-                          VerticalAlignment="Center"
-                          HorizontalAlignment="Center"/>
-            </Button>
+                                </Border>
+                            </DataTemplate>
+                        </models:SidebarItem.ContentTemplate>
+                    </models:SidebarItem>
+                </controls:MultiSidebar.Items>
+            </controls:MultiSidebar>
 
             <!-- Main Content Area -->
-            <Grid Grid.Column="2" Margin="12,0,0,0">
+            <Grid Grid.Column="1" Margin="12,0,0,0">
                 <!-- Welcome Message (when no tabs visible) -->
                 <Border IsVisible="{Binding HasAnyTabVisible, Converter={x:Static BoolConverters.Not}}"
                         HorizontalAlignment="Center"

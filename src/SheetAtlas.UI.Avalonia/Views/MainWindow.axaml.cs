@@ -1,4 +1,3 @@
-using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -19,39 +18,6 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.SelectedFile = null;
-        }
-    }
-
-    private void OnClearSelectionClick(object? sender, RoutedEventArgs e)
-    {
-        // Clear selection when clicking Deselect button
-        if (DataContext is MainWindowViewModel viewModel)
-        {
-            viewModel.SelectedFile = null;
-        }
-    }
-
-    private void OnUnloadFileClick(object? sender, RoutedEventArgs e)
-    {
-        // Unload the selected file
-        if (DataContext is MainWindowViewModel viewModel && viewModel.SelectedFile != null)
-        {
-            var fileToRemove = viewModel.SelectedFile;
-            viewModel.FileDetailsViewModel?.CleanAllDataCommand.Execute(null);
-        }
-    }
-
-    private void OnFileItemTapped(object? sender, TappedEventArgs e)
-    {
-        // Toggle IsExpanded for the tapped file
-        if (sender is Grid grid && grid.DataContext is IFileLoadResultViewModel fileViewModel)
-        {
-            fileViewModel.IsExpanded = !fileViewModel.IsExpanded;
-
-            // Note: Don't set SelectedFile here or block the event.
-            // Let the ListBox handle selection natively to support multi-select
-            // (Ctrl+Click, Shift+Click). The SelectionChanged event will update
-            // SelectedFile and TemplateManagementViewModel accordingly.
         }
     }
 
@@ -79,7 +45,6 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainWindowViewModel viewModel && viewModel.FileDetailsViewModel != null)
             {
-                // Invoke the existing event handler
                 viewModel.FileDetailsViewModel.SelectedFile = file;
                 viewModel.FileDetailsViewModel.RemoveFromListCommand.Execute(null);
             }
@@ -119,18 +84,6 @@ public partial class MainWindow : Window
                 viewModel.FileDetailsViewModel.SelectedFile = file;
                 viewModel.FileDetailsViewModel.TryAgainCommand.Execute(null);
             }
-        }
-    }
-
-    private void OnFilesSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel viewModel && sender is ListBox listBox)
-        {
-            var selectedFiles = listBox.SelectedItems?
-                .OfType<IFileLoadResultViewModel>()
-                .ToList() ?? new List<IFileLoadResultViewModel>();
-
-            viewModel.UpdateSelectedFiles(selectedFiles);
         }
     }
 }

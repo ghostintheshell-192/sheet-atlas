@@ -6,6 +6,7 @@
   <!-- Package versions - preserving existing versions from project files -->
   <ItemGroup>
     <!-- Core libraries -->
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.2.0" />
     <PackageVersion Include="ExcelDataReader" Version="3.7.0" />
     <PackageVersion Include="ExcelDataReader.DataSet" Version="3.7.0" />

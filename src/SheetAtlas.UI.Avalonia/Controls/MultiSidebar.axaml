@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="using:SheetAtlas.UI.Avalonia.Models"
+             xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
+             x:Class="SheetAtlas.UI.Avalonia.Controls.MultiSidebar"
+             x:Name="Root">
+
+    <UserControl.Styles>
+        <!-- Icon button base style -->
+        <Style Selector="Button.sidebar-icon">
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.sidebar-icon:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
+        </Style>
+        <Style Selector="Button.sidebar-icon.active">
+            <Setter Property="Background" Value="{DynamicResource TertiaryBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentOrange}"/>
+            <Setter Property="BorderThickness" Value="2,0,0,0"/>
+        </Style>
+        <Style Selector="Button.sidebar-icon PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryText}"/>
+        </Style>
+        <Style Selector="Button.sidebar-icon:pointerover PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryText}"/>
+        </Style>
+        <Style Selector="Button.sidebar-icon.active PathIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AccentOrange}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="48,*">
+        <!-- Icon Bar -->
+        <Border Grid.Column="0"
+                Background="{DynamicResource SecondaryBackground}"
+                BorderBrush="{DynamicResource BorderColor}"
+                BorderThickness="0,0,1,0">
+            <ItemsControl x:Name="IconBar"
+                          ItemsSource="{Binding Items, RelativeSource={RelativeSource AncestorType=controls:MultiSidebar}}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Vertical" Spacing="0"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:SidebarItem">
+                        <Button Classes="sidebar-icon"
+                                Classes.active="{Binding IsOpen}"
+                                ToolTip.Tip="{Binding Tooltip}"
+                                Command="{Binding ToggleSidebarCommand, RelativeSource={RelativeSource AncestorType=controls:MultiSidebar}}"
+                                CommandParameter="{Binding}">
+                            <PathIcon Data="{Binding IconData}"
+                                      Width="20"
+                                      Height="20"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+
+        <!-- Sidebar Content Area -->
+        <ItemsControl Grid.Column="1"
+                      x:Name="ContentArea"
+                      ItemsSource="{Binding Items, RelativeSource={RelativeSource AncestorType=controls:MultiSidebar}}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="0"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border x:Name="SidebarBorder"
+                            x:DataType="models:SidebarItem"
+                            Background="{DynamicResource SecondaryBackground}"
+                            BorderBrush="{DynamicResource BorderColor}"
+                            BorderThickness="0,0,1,0"
+                            Width="{Binding Width}"
+                            IsVisible="{Binding IsOpen}">
+                        <Border.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="Width" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                            </Transitions>
+                        </Border.Transitions>
+                        <ContentControl Content="{Binding DataContext, RelativeSource={RelativeSource AncestorType=controls:MultiSidebar}}"
+                                        ContentTemplate="{Binding ContentTemplate}"/>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>
