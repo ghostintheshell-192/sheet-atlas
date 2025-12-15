@@ -237,14 +237,21 @@
                                        TextWrapping="Wrap"
                                        Margin="0,8,0,0"/>
 
-                            <!-- Validate Button -->
-                            <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                    Content="Validate Selected Files"
-                                    Classes="CTAButton"
-                                    Command="{Binding ValidateCommand}"
-                                    IsEnabled="{Binding CanValidate}"
-                                    HorizontalAlignment="Left"
-                                    Margin="0,16,0,0"/>
+                            <!-- Action Buttons -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        Margin="0,16,0,0">
+                                <Button Content="Validate Selected Files"
+                                        Classes="CTAButton"
+                                        Command="{Binding ValidateCommand}"
+                                        IsEnabled="{Binding CanValidate}"/>
+                                <Button Content="Update Template"
+                                        Classes="SecondaryButton"
+                                        Command="{Binding UpdateTemplateCommand}"
+                                        IsEnabled="{Binding CanUpdateTemplate}"
+                                        ToolTip.Tip="Update this template with semantic names from column linking"/>
+                            </StackPanel>
                         </Grid>
                     </Border>
                 </controls:CollapsibleSection.Content>

@@ -28,6 +28,9 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
     private bool _isValidating;
     private bool _disposed;
 
+    // Provider for semantic names from column linking
+    private Func<string, IReadOnlyDictionary<string, string>>? _semanticNameProvider;
+
     // Selected files from main window (can be single or multiple)
     private IReadOnlyList<IFileLoadResultViewModel> _selectedFiles = Array.Empty<IFileLoadResultViewModel>();
 
@@ -178,6 +181,7 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
     public bool CanValidate => HasSelectedTemplate && HasSelectedFiles && !IsValidating;
     public bool CanDeleteTemplate => HasSelectedTemplate && !IsValidating;
     public bool CanImportTemplate => !IsValidating;
+    public bool CanUpdateTemplate => HasSelectedTemplate && HasSingleFileSelected && !IsValidating;
 
     // Commands
     public ICommand CreateTemplateCommand { get; }
@@ -185,6 +189,7 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
     public ICommand DeleteTemplateCommand { get; }
     public ICommand ImportTemplateCommand { get; }
     public ICommand RefreshLibraryCommand { get; }
+    public ICommand UpdateTemplateCommand { get; }
 
     public TemplateManagementViewModel(
         ILogService logger,
@@ -202,6 +207,7 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
         DeleteTemplateCommand = new RelayCommand(ExecuteDeleteTemplateAsync);
         ImportTemplateCommand = new RelayCommand(ExecuteImportTemplateAsync);
         RefreshLibraryCommand = new RelayCommand(async () => await LoadTemplateLibraryAsync());
+        UpdateTemplateCommand = new RelayCommand(ExecuteUpdateTemplateAsync);
 
         // Load templates on startup
         _ = LoadTemplateLibraryAsync();
@@ -224,6 +230,15 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
 
         // Clear validation when file selection changes
         ClearValidationResult();
+    }
+
+    /// <summary>
+    /// Set the provider function for semantic names from column linking.
+    /// The function takes a file name and returns a dictionary of column name -> semantic name.
+    /// </summary>
+    public void SetSemanticNameProvider(Func<string, IReadOnlyDictionary<string, string>> provider)
+    {
+        _semanticNameProvider = provider;
     }
 
     private async Task LoadTemplateLibraryAsync()
@@ -297,6 +312,9 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
             var template = await _templateValidationService.CreateTemplateFromFileAsync(
                 file.File,
                 templateName);
+
+            // Apply semantic names from column linking if available
+            ApplySemanticNamesToTemplate(template, file.FileName);
 
             await _templateRepository.SaveTemplateAsync(template);
 
@@ -433,6 +451,42 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task ExecuteUpdateTemplateAsync()
+    {
+        if (!CanUpdateTemplate || SelectedTemplateDetails == null) return;
+
+        var file = _selectedFiles[0];
+        if (file.File == null) return;
+
+        try
+        {
+            var template = SelectedTemplateDetails;
+            var templateName = template.Name;
+
+            _logger.LogInfo($"Updating template '{templateName}' with semantic names from '{file.FileName}'", "TemplateManagementViewModel");
+
+            // Apply semantic names from column linking
+            ApplySemanticNamesToTemplate(template, file.FileName);
+
+            // Save the updated template (overwrite existing)
+            await _templateRepository.SaveTemplateAsync(template, overwrite: true);
+
+            // Refresh library to show updated template
+            await LoadTemplateLibraryAsync();
+
+            // Re-select the template
+            SelectedTemplateSummary = TemplateLibrary.FirstOrDefault(t => t.Name == templateName);
+
+            _logger.LogInfo($"Template '{templateName}' updated successfully", "TemplateManagementViewModel");
+
+            TemplateUpdated?.Invoke(this, new TemplateEventArgs(template));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to update template: {SelectedTemplateDetails?.Name}", ex, "TemplateManagementViewModel");
+        }
+    }
+
     private void ClearValidationResult()
     {
         BatchValidationResults.Clear();
@@ -460,10 +514,35 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CanValidate));
         OnPropertyChanged(nameof(CanDeleteTemplate));
         OnPropertyChanged(nameof(CanImportTemplate));
+        OnPropertyChanged(nameof(CanUpdateTemplate));
+    }
+
+    /// <summary>
+    /// Apply semantic names from column linking to the template's columns.
+    /// </summary>
+    private void ApplySemanticNamesToTemplate(ExcelTemplate template, string fileName)
+    {
+        if (_semanticNameProvider == null) return;
+
+        var semanticNames = _semanticNameProvider(fileName);
+        if (semanticNames.Count == 0) return;
+
+        // Update columns with semantic names
+        for (int i = 0; i < template.Columns.Count; i++)
+        {
+            var column = template.Columns[i];
+            if (semanticNames.TryGetValue(column.Name, out var semanticName))
+            {
+                // Replace with updated column (ExpectedColumn is a record)
+                template.Columns[i] = column.WithSemanticName(semanticName);
+                _logger.LogInfo($"Applied semantic name '{semanticName}' to column '{column.Name}'", "TemplateManagementViewModel");
+            }
+        }
     }
 
     // Events
     public event EventHandler<TemplateEventArgs>? TemplateCreated;
+    public event EventHandler<TemplateEventArgs>? TemplateUpdated;
     public event EventHandler<TemplateEventArgs>? TemplateDeleted;
     public event EventHandler<TemplateEventArgs>? TemplateImported;
     public event EventHandler<ValidationCompletedEventArgs>? ValidationCompleted;
@@ -474,6 +553,7 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
         if (_disposed) return;
 
         TemplateCreated = null;
+        TemplateUpdated = null;
         TemplateDeleted = null;
         TemplateImported = null;
         ValidationCompleted = null;

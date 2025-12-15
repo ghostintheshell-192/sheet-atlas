@@ -50,6 +50,14 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         public IReadOnlyList<string>? AlternativeNames { get; init; }
 
         /// <summary>
+        /// User-defined semantic name for this column.
+        /// Used to give a meaningful name across different files (e.g., "Revenue" for "Rev 2016").
+        /// If set, this name is used for display and matching in column linking.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SemanticName { get; init; }
+
+        /// <summary>
         /// Creates an empty expected column.
         /// Use factory methods (Required, Optional, etc.) for convenience.
         /// </summary>
@@ -150,11 +158,15 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         public ExpectedColumn WithCurrency(string currencyCode) =>
             this with { ExpectedCurrency = currencyCode.ToUpperInvariant() };
 
+        /// <summary>Set semantic name for this column.</summary>
+        public ExpectedColumn WithSemanticName(string semanticName) =>
+            this with { SemanticName = semanticName };
+
         // === Matching Methods ===
 
         /// <summary>
         /// Check if a column name matches this expected column.
-        /// Matches primary name or any alternative names (case-insensitive).
+        /// Matches primary name, semantic name, or any alternative names (case-insensitive).
         /// </summary>
         public bool MatchesName(string columnName)
         {
@@ -164,6 +176,10 @@ namespace SheetAtlas.Core.Domain.ValueObjects
             var normalized = columnName.Trim();
 
             if (Name.Equals(normalized, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (!string.IsNullOrEmpty(SemanticName) &&
+                SemanticName.Equals(normalized, StringComparison.OrdinalIgnoreCase))
                 return true;
 
             if (AlternativeNames != null)

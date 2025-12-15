@@ -191,6 +191,19 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             // Connect template selection to column highlighting
             TemplateManagementViewModel.SelectedTemplateChanged += OnSelectedTemplateChanged;
+
+            // Connect semantic name provider from column linking
+            // Note: This requires ColumnLinkingViewModel to be set first or we defer the connection
+            ConnectSemanticNameProvider();
+        }
+
+        private void ConnectSemanticNameProvider()
+        {
+            if (TemplateManagementViewModel != null && ColumnLinkingViewModel != null)
+            {
+                TemplateManagementViewModel.SetSemanticNameProvider(
+                    fileName => ColumnLinkingViewModel.GetSemanticNamesForFile(fileName));
+            }
         }
 
         private void OnSelectedTemplateChanged(object? sender, SelectedTemplateChangedEventArgs e)
@@ -201,6 +214,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public void SetColumnLinkingViewModel(ColumnLinkingViewModel columnLinkingViewModel)
         {
             ColumnLinkingViewModel = columnLinkingViewModel ?? throw new ArgumentNullException(nameof(columnLinkingViewModel));
+
+            // Connect semantic name provider (in case TemplateManagementViewModel was set first)
+            ConnectSemanticNameProvider();
         }
 
         /// <summary>

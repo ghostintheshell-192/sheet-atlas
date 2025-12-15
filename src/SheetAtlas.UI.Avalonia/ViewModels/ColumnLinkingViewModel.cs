@@ -212,6 +212,34 @@ public class ColumnLinkingViewModel : ViewModelBase, IDisposable
         ApplyHighlighting();
     }
 
+    /// <summary>
+    /// Get semantic names for columns from a specific file.
+    /// Returns a dictionary mapping original column names to their semantic names.
+    /// Only includes columns where SemanticName differs from the original Name.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> GetSemanticNamesForFile(string fileName)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var columnLink in ColumnLinks)
+        {
+            // Find linked columns that belong to this file
+            foreach (var linkedColumn in columnLink.LinkedColumns)
+            {
+                if (string.Equals(linkedColumn.SourceFile, fileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Only add if semantic name differs from original
+                    if (!string.Equals(columnLink.SemanticName, linkedColumn.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        result[linkedColumn.Name] = columnLink.SemanticName;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
     public ObservableCollection<ColumnLinkViewModel> ColumnLinks { get; }
 
     public ICommand RefreshCommand { get; }
