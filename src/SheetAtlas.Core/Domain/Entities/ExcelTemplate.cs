@@ -166,14 +166,17 @@ namespace SheetAtlas.Core.Domain.Entities
         // === Lookup Methods ===
 
         /// <summary>Get all required columns.</summary>
+        [JsonIgnore]
         public IEnumerable<ExpectedColumn> RequiredColumns =>
             Columns.Where(c => c.IsRequired);
 
         /// <summary>Get all optional columns.</summary>
+        [JsonIgnore]
         public IEnumerable<ExpectedColumn> OptionalColumns =>
             Columns.Where(c => !c.IsRequired);
 
         /// <summary>Get columns that have fixed positions.</summary>
+        [JsonIgnore]
         public IEnumerable<ExpectedColumn> PositionedColumns =>
             Columns.Where(c => c.Position >= 0);
 
