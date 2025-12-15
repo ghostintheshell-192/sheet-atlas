@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SheetAtlas.Core.Application.Services;
+using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.UI.Avalonia.Commands;
 
@@ -15,6 +16,7 @@ public class ColumnLinkViewModel : ViewModelBase
     private bool _isExpanded;
     private string _semanticName;
     private bool _isEditing;
+    private bool _isHighlighted;
 
     public ColumnLinkViewModel(ColumnLink link)
     {
@@ -63,6 +65,12 @@ public class ColumnLinkViewModel : ViewModelBase
         set => SetField(ref _isEditing, value);
     }
 
+    public bool IsHighlighted
+    {
+        get => _isHighlighted;
+        set => SetField(ref _isHighlighted, value);
+    }
+
     public ObservableCollection<LinkedColumnViewModel> LinkedColumns { get; }
 
     /// <summary>
@@ -93,6 +101,8 @@ public class LinkedColumnViewModel : ViewModelBase
 
     public string Name => _column.Name;
 
+    public string? SourceFile => _column.SourceFile;
+
     public string SourceDisplay => _column.SourceDisplay;
 
     public DataType DetectedType => _column.DetectedType;
@@ -107,6 +117,7 @@ public class ColumnLinkingViewModel : ViewModelBase, IDisposable
     private readonly Func<IEnumerable<Core.Domain.Entities.ExcelFile>> _getLoadedFiles;
     private readonly Managers.Files.ILoadedFilesManager? _filesManager;
     private bool _disposed;
+    private ExcelTemplate? _currentHighlightTemplate;
 
     public ColumnLinkingViewModel(
         IColumnLinkingService columnLinkingService,
@@ -155,6 +166,9 @@ public class ColumnLinkingViewModel : ViewModelBase, IDisposable
             ColumnLinks.Add(mergedVm);
 
         OnPropertyChanged(nameof(HasColumns));
+
+        // Re-apply highlighting after merge
+        ApplyHighlighting();
     }
 
     /// <summary>
@@ -180,11 +194,22 @@ public class ColumnLinkingViewModel : ViewModelBase, IDisposable
         }
 
         OnPropertyChanged(nameof(HasColumns));
+
+        // Re-apply highlighting after ungroup
+        ApplyHighlighting();
     }
 
     private void OnFilesChanged(object? sender, EventArgs e)
     {
         Refresh();
+    }
+
+    /// <summary>
+    /// Called when a column is renamed. Re-applies highlighting.
+    /// </summary>
+    public void NotifyColumnRenamed()
+    {
+        ApplyHighlighting();
     }
 
     public ObservableCollection<ColumnLinkViewModel> ColumnLinks { get; }
@@ -218,6 +243,72 @@ public class ColumnLinkingViewModel : ViewModelBase, IDisposable
         }
 
         OnPropertyChanged(nameof(HasColumns));
+
+        // Re-apply highlighting after refresh
+        ApplyHighlighting();
+    }
+
+    /// <summary>
+    /// Update highlighting based on the selected template.
+    /// Columns matching the template (by name AND type) are highlighted.
+    /// </summary>
+    public void SetHighlightedColumns(ExcelTemplate? template)
+    {
+        _currentHighlightTemplate = template;
+        ApplyHighlighting();
+    }
+
+    /// <summary>
+    /// Re-apply highlighting using the current template.
+    /// Called internally after operations that modify ColumnLinks.
+    /// Matching is based on column name + source file (stronger than just name + type).
+    /// </summary>
+    private void ApplyHighlighting()
+    {
+        foreach (var columnLink in ColumnLinks)
+        {
+            if (_currentHighlightTemplate == null)
+            {
+                columnLink.IsHighlighted = false;
+                continue;
+            }
+
+            // Get the template's source file for precise matching
+            var templateSourceFile = _currentHighlightTemplate.SourceFilePath;
+
+            // Check if any linked column matches by name AND comes from the same file as the template
+            var matchesOriginal = columnLink.LinkedColumns.Any(lc =>
+            {
+                var nameMatches = _currentHighlightTemplate.FindColumn(lc.Name) != null;
+                if (!nameMatches) return false;
+
+                // If template has source file info, require exact file match
+                if (!string.IsNullOrEmpty(templateSourceFile))
+                {
+                    return FileNamesMatch(templateSourceFile, lc.SourceFile);
+                }
+
+                // Fallback: if no source file info in template, match by name only
+                return true;
+            });
+
+            columnLink.IsHighlighted = matchesOriginal;
+        }
+    }
+
+    /// <summary>
+    /// Check if two file references match (comparing just the file name).
+    /// templateSourcePath is a full path, columnSourceFile is just the file name.
+    /// </summary>
+    private static bool FileNamesMatch(string templateSourcePath, string? columnSourceFile)
+    {
+        if (string.IsNullOrEmpty(templateSourcePath) || string.IsNullOrEmpty(columnSourceFile))
+            return false;
+
+        // Extract just the file name from the template path (which is a full path)
+        var templateFileName = Path.GetFileName(templateSourcePath);
+
+        return string.Equals(templateFileName, columnSourceFile, StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()

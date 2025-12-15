@@ -67,6 +67,8 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
                 OnPropertyChanged(nameof(TemplateDescription));
                 // Notify command states after template details are loaded
                 NotifyCommandsCanExecuteChanged();
+                // Notify listeners (e.g., ColumnLinkingViewModel) for highlighting
+                SelectedTemplateChanged?.Invoke(this, new SelectedTemplateChangedEventArgs(value));
             }
         }
     }
@@ -465,6 +467,7 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
     public event EventHandler<TemplateEventArgs>? TemplateDeleted;
     public event EventHandler<TemplateEventArgs>? TemplateImported;
     public event EventHandler<ValidationCompletedEventArgs>? ValidationCompleted;
+    public event EventHandler<SelectedTemplateChangedEventArgs>? SelectedTemplateChanged;
 
     public void Dispose()
     {
@@ -474,6 +477,7 @@ public class TemplateManagementViewModel : ViewModelBase, IDisposable
         TemplateDeleted = null;
         TemplateImported = null;
         ValidationCompleted = null;
+        SelectedTemplateChanged = null;
 
         TemplateLibrary.Clear();
         BatchValidationResults.Clear();
@@ -582,5 +586,15 @@ public class ValidationCompletedEventArgs : EventArgs
     public ValidationCompletedEventArgs(ValidationReport report)
     {
         Report = report;
+    }
+}
+
+public class SelectedTemplateChangedEventArgs : EventArgs
+{
+    public ExcelTemplate? Template { get; }
+
+    public SelectedTemplateChangedEventArgs(ExcelTemplate? template)
+    {
+        Template = template;
     }
 }

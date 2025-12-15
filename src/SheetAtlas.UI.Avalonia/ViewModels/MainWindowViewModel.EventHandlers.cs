@@ -47,6 +47,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 FileDetailsViewModel.RemoveNotificationRequested -= OnRemoveNotificationRequested;
                 FileDetailsViewModel.TryAgainRequested -= OnTryAgainRequested;
             }
+
+            if (TemplateManagementViewModel != null)
+            {
+                TemplateManagementViewModel.SelectedTemplateChanged -= OnSelectedTemplateChanged;
+            }
         }
 
         private void OnFileLoaded(object? sender, FileLoadedEventArgs e)
@@ -183,6 +188,14 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public void SetTemplateManagementViewModel(TemplateManagementViewModel templateManagementViewModel)
         {
             TemplateManagementViewModel = templateManagementViewModel ?? throw new ArgumentNullException(nameof(templateManagementViewModel));
+
+            // Connect template selection to column highlighting
+            TemplateManagementViewModel.SelectedTemplateChanged += OnSelectedTemplateChanged;
+        }
+
+        private void OnSelectedTemplateChanged(object? sender, SelectedTemplateChangedEventArgs e)
+        {
+            ColumnLinkingViewModel?.SetHighlightedColumns(e.Template);
         }
 
         public void SetColumnLinkingViewModel(ColumnLinkingViewModel columnLinkingViewModel)

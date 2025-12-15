@@ -193,6 +193,7 @@ public partial class ColumnsSidebarView : UserControl
             if (e.Key == Key.Enter)
             {
                 vm.IsEditing = false;
+                NotifyParentColumnRenamed();
                 e.Handled = true;
             }
             else if (e.Key == Key.Escape)
@@ -208,6 +209,15 @@ public partial class ColumnsSidebarView : UserControl
         if (sender is TextBox textBox && textBox.DataContext is ColumnLinkViewModel vm)
         {
             vm.IsEditing = false;
+            NotifyParentColumnRenamed();
+        }
+    }
+
+    private void NotifyParentColumnRenamed()
+    {
+        if (DataContext is ColumnLinkingViewModel parentVm)
+        {
+            parentVm.NotifyColumnRenamed();
         }
     }
 

@@ -66,7 +66,15 @@
                                     Margin="0,0,0,4"
                                     Padding="8"
                                     DragDrop.AllowDrop="True"
-                                    PointerPressed="OnColumnPointerPressed">
+                                    PointerPressed="OnColumnPointerPressed"
+                                    Classes.highlighted="{Binding IsHighlighted}">
+
+                                <Border.Styles>
+                                    <Style Selector="Border.highlighted">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentOrange}"/>
+                                        <Setter Property="BorderThickness" Value="2"/>
+                                    </Style>
+                                </Border.Styles>
 
                                 <Border.ContextMenu>
                                     <ContextMenu>
