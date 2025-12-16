@@ -1,17 +1,30 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.UI.Avalonia.Commands;
 using SheetAtlas.UI.Avalonia.Models;
+using SheetAtlas.UI.Avalonia.Services;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Logging.Models;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels;
 
+/// <summary>
+/// ViewModel for file details display. Shows basic file information,
+/// notifications/errors, and export functionality.
+/// Template management has been moved to TemplateManagementViewModel.
+/// </summary>
 public class FileDetailsViewModel : ViewModelBase, IDisposable
 {
     private readonly ILogService _logger;
     private readonly IFileLogService _fileLogService;
+    private readonly IFilePickerService _filePickerService;
+    private readonly IDataNormalizationService _dataNormalizationService;
+    private readonly IExcelWriterService _excelWriterService;
+
     private IFileLoadResultViewModel? _selectedFile;
     private bool _isLoadingHistory;
     private bool _disposed;
@@ -41,20 +54,31 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public string FilePath => SelectedFile?.FilePath ?? string.Empty;
     public string FileSize => SelectedFile != null ? FormatFileSize(SelectedFile.FilePath) : string.Empty;
     public bool HasErrorLogs => ErrorLogs.Count > 0;
+    public bool HasSelectedFile => SelectedFile != null;
 
+    // Commands
     public ICommand RemoveFromListCommand { get; }
     public ICommand CleanAllDataCommand { get; }
     public ICommand RemoveNotificationCommand { get; }
     public ICommand TryAgainCommand { get; }
     public ICommand RetryCommand { get; }
     public ICommand ClearCommand { get; }
+    public ICommand ViewErrorLogCommand { get; }
+    public ICommand ExportExcelCommand { get; }
+    public ICommand ExportCsvCommand { get; }
 
     public FileDetailsViewModel(
         ILogService logger,
-        IFileLogService fileLogService)
+        IFileLogService fileLogService,
+        IFilePickerService filePickerService,
+        IDataNormalizationService dataNormalizationService,
+        IExcelWriterService excelWriterService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileLogService = fileLogService ?? throw new ArgumentNullException(nameof(fileLogService));
+        _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
+        _dataNormalizationService = dataNormalizationService ?? throw new ArgumentNullException(nameof(dataNormalizationService));
+        _excelWriterService = excelWriterService ?? throw new ArgumentNullException(nameof(excelWriterService));
 
         RemoveFromListCommand = new RelayCommand(() => { ExecuteRemoveFromList(); return Task.CompletedTask; });
         CleanAllDataCommand = new RelayCommand(() => { ExecuteCleanAllData(); return Task.CompletedTask; });
@@ -63,12 +87,16 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         ViewErrorLogCommand = new RelayCommand(OpenErrorLogAsync);
         RetryCommand = new RelayCommand(ExecuteRetryAsync);
         ClearCommand = new RelayCommand(ExecuteClearAsync);
+        ExportExcelCommand = new RelayCommand(ExecuteExportExcelAsync);
+        ExportCsvCommand = new RelayCommand(ExecuteExportCsvAsync);
     }
 
     private void UpdateDetails()
     {
         Properties.Clear();
         ErrorLogs.Clear();
+
+        OnPropertyChanged(nameof(HasSelectedFile));
 
         if (SelectedFile == null) return;
 
@@ -124,8 +152,6 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public ICommand ViewErrorLogCommand { get; }
-
     private async Task LoadErrorHistoryAsync()
     {
         if (SelectedFile == null || IsLoadingHistory)
@@ -139,7 +165,6 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
             ErrorLogs.Clear();
 
-            // Flatten all errors from all attempts into a single list
             foreach (var entry in logEntries.OrderByDescending(e => e.LoadAttempt.Timestamp))
             {
                 if (entry.Errors == null || entry.Errors.Count == 0)
@@ -239,19 +264,6 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         return Task.CompletedTask;
     }
 
-    private static string GetFileFormat(string filePath)
-    {
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
-        return extension switch
-        {
-            ".xlsx" => ".xlsx (Excel 2007+)",
-            ".xls" => ".xls (Legacy Excel)",
-            ".xlsm" => ".xlsm (Excel Macro)",
-            ".csv" => ".csv (Comma Separated)",
-            _ => $"{extension} (Unknown)"
-        };
-    }
-
     private static string FormatFileSize(string filePath)
     {
         try
@@ -270,23 +282,10 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private static string TruncatePath(string path, int maxLength)
-    {
-        if (path.Length <= maxLength) return path;
-        return string.Concat("...", path.AsSpan(path.Length - maxLength + 3));
-    }
-
-    private static string TruncateText(string text, int maxLength)
-    {
-        if (text.Length <= maxLength) return text;
-        return string.Concat(text.AsSpan(0, maxLength - 3), "...");
-    }
-
-    // Action handlers - these will be implemented to communicate with MainWindowViewModel
+    // Action handlers
     private void ExecuteRemoveFromList()
     {
         _logger.LogInfo($"Remove from list requested for: {SelectedFile?.FileName}", "FileDetailsViewModel");
-        // Will be handled by MainWindowViewModel
         RemoveFromListRequested?.Invoke(this, new FileActionEventArgs(SelectedFile));
     }
 
@@ -308,7 +307,116 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         TryAgainRequested?.Invoke(this, new FileActionEventArgs(SelectedFile));
     }
 
-    // Events to communicate with parent ViewModels
+    #region Export Methods
+
+    private async Task ExecuteExportExcelAsync()
+    {
+        if (SelectedFile?.File == null)
+            return;
+
+        try
+        {
+            var sheet = SelectedFile.File.Sheets.Values.FirstOrDefault();
+            if (sheet == null)
+            {
+                _logger.LogWarning("No sheet found to export", "FileDetailsViewModel");
+                return;
+            }
+
+            var originalPath = SelectedFile.FilePath;
+            var directory = Path.GetDirectoryName(originalPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var baseName = Path.GetFileNameWithoutExtension(originalPath);
+            var outputPath = Path.Combine(directory, $"{baseName}_normalized.xlsx");
+
+            var savedPath = await _filePickerService.SaveFileAsync(
+                "Export Normalized Excel",
+                outputPath,
+                new[] { "*.xlsx" });
+
+            if (string.IsNullOrEmpty(savedPath))
+                return;
+
+            _logger.LogInfo($"Exporting to Excel: {savedPath}", "FileDetailsViewModel");
+
+            var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath);
+
+            if (result.IsSuccess)
+            {
+                _logger.LogInfo($"Excel export completed: {result.RowsExported} rows, {result.NormalizedCellCount} normalized cells, {result.FileSizeBytes} bytes in {result.Duration.TotalMilliseconds:F0}ms", "FileDetailsViewModel");
+
+                ExportCompleted?.Invoke(this, new ExportCompletedEventArgs(
+                    savedPath,
+                    "Excel",
+                    result.RowsExported,
+                    result.NormalizedCellCount));
+            }
+            else
+            {
+                _logger.LogError($"Excel export failed: {result.ErrorMessage}", "FileDetailsViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to export Excel: {ex.Message}", ex, "FileDetailsViewModel");
+        }
+    }
+
+    private async Task ExecuteExportCsvAsync()
+    {
+        if (SelectedFile?.File == null)
+            return;
+
+        try
+        {
+            var sheet = SelectedFile.File.Sheets.Values.FirstOrDefault();
+            if (sheet == null)
+            {
+                _logger.LogWarning("No sheet found to export", "FileDetailsViewModel");
+                return;
+            }
+
+            var originalPath = SelectedFile.FilePath;
+            var directory = Path.GetDirectoryName(originalPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var baseName = Path.GetFileNameWithoutExtension(originalPath);
+            var outputPath = Path.Combine(directory, $"{baseName}_normalized.csv");
+
+            var savedPath = await _filePickerService.SaveFileAsync(
+                "Export Normalized CSV",
+                outputPath,
+                new[] { "*.csv" });
+
+            if (string.IsNullOrEmpty(savedPath))
+                return;
+
+            _logger.LogInfo($"Exporting to CSV: {savedPath}", "FileDetailsViewModel");
+
+            var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath);
+
+            if (result.IsSuccess)
+            {
+                _logger.LogInfo($"CSV export completed: {result.RowsExported} rows, {result.NormalizedCellCount} normalized cells, {result.FileSizeBytes} bytes in {result.Duration.TotalMilliseconds:F0}ms", "FileDetailsViewModel");
+
+                ExportCompleted?.Invoke(this, new ExportCompletedEventArgs(
+                    savedPath,
+                    "CSV",
+                    result.RowsExported,
+                    result.NormalizedCellCount));
+            }
+            else
+            {
+                _logger.LogError($"CSV export failed: {result.ErrorMessage}", "FileDetailsViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to export CSV: {ex.Message}", ex, "FileDetailsViewModel");
+        }
+    }
+
+    #endregion
+
+    // Events
+    public event EventHandler<ExportCompletedEventArgs>? ExportCompleted;
     public event EventHandler<FileActionEventArgs>? RemoveFromListRequested;
     public event EventHandler<FileActionEventArgs>? CleanAllDataRequested;
     public event EventHandler<FileActionEventArgs>? RemoveNotificationRequested;
@@ -318,17 +426,15 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     {
         if (_disposed) return;
 
-        // Clear event subscribers to prevent memory leaks
         RemoveFromListRequested = null;
         CleanAllDataRequested = null;
         RemoveNotificationRequested = null;
         TryAgainRequested = null;
+        ExportCompleted = null;
 
-        // Clear collections
         Properties.Clear();
         ErrorLogs.Clear();
 
-        // Release reference
         _selectedFile = null;
 
         _disposed = true;

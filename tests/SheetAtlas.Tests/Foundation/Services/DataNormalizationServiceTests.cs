@@ -134,7 +134,7 @@ namespace SheetAtlas.Tests.Foundation.Services
             // Assert
             result.IsSuccess.Should().BeTrue();
             result.DetectedType.Should().Be(DataType.Number);
-            result.CleanedValue?.AsNumber().Should().BeApproximately(expected, 0.01);
+            result.CleanedValue?.AsFloatingPoint().Should().BeApproximately(expected, 0.01);
         }
 
         [Theory]
@@ -494,7 +494,7 @@ namespace SheetAtlas.Tests.Foundation.Services
             // Assert
             result.IsSuccess.Should().BeTrue();
             result.DetectedType.Should().Be(DataType.Percentage);
-            result.CleanedValue?.AsNumber().Should().BeApproximately(0.50, 0.01);
+            result.CleanedValue?.AsFloatingPoint().Should().BeApproximately(0.50, 0.01);
         }
 
         [Fact]
@@ -506,7 +506,7 @@ namespace SheetAtlas.Tests.Foundation.Services
             // Assert
             result.IsSuccess.Should().BeTrue();
             result.DetectedType.Should().Be(DataType.Percentage);
-            result.CleanedValue?.AsNumber().Should().BeApproximately(0.50, 0.01);
+            result.CleanedValue?.AsFloatingPoint().Should().BeApproximately(0.50, 0.01);
         }
 
         #endregion

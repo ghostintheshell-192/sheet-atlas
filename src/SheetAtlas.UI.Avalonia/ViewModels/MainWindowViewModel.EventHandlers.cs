@@ -47,6 +47,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 FileDetailsViewModel.RemoveNotificationRequested -= OnRemoveNotificationRequested;
                 FileDetailsViewModel.TryAgainRequested -= OnTryAgainRequested;
             }
+
+            if (TemplateManagementViewModel != null)
+            {
+                TemplateManagementViewModel.SelectedTemplateChanged -= OnSelectedTemplateChanged;
+            }
         }
 
         private void OnFileLoaded(object? sender, FileLoadedEventArgs e)
@@ -180,6 +185,58 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             TreeSearchResultsViewModel.RowComparisonCreated += OnRowComparisonCreated;
         }
 
+        public void SetTemplateManagementViewModel(TemplateManagementViewModel templateManagementViewModel)
+        {
+            TemplateManagementViewModel = templateManagementViewModel ?? throw new ArgumentNullException(nameof(templateManagementViewModel));
+
+            // Connect template selection to column highlighting
+            TemplateManagementViewModel.SelectedTemplateChanged += OnSelectedTemplateChanged;
+
+            // Connect semantic name provider from column linking
+            // Note: This requires ColumnLinkingViewModel to be set first or we defer the connection
+            ConnectSemanticNameProvider();
+        }
+
+        private void ConnectSemanticNameProvider()
+        {
+            if (TemplateManagementViewModel != null && ColumnLinkingViewModel != null)
+            {
+                TemplateManagementViewModel.SetSemanticNameProvider(
+                    fileName => ColumnLinkingViewModel.GetSemanticNamesForFile(fileName));
+            }
+        }
+
+        private void OnSelectedTemplateChanged(object? sender, SelectedTemplateChangedEventArgs e)
+        {
+            ColumnLinkingViewModel?.SetHighlightedColumns(e.Template);
+        }
+
+        public void SetColumnLinkingViewModel(ColumnLinkingViewModel columnLinkingViewModel)
+        {
+            ColumnLinkingViewModel = columnLinkingViewModel ?? throw new ArgumentNullException(nameof(columnLinkingViewModel));
+
+            // Connect semantic name provider (in case TemplateManagementViewModel was set first)
+            ConnectSemanticNameProvider();
+        }
+
+        /// <summary>
+        /// Update the list of selected files from the sidebar.
+        /// Called by MainWindow code-behind when ListBox selection changes.
+        /// </summary>
+        public void UpdateSelectedFiles(IReadOnlyList<IFileLoadResultViewModel> selectedFiles)
+        {
+            // Pass the full list to TemplateManagementViewModel for multi-file operations
+            TemplateManagementViewModel?.SetSelectedFiles(selectedFiles);
+
+            // Update SelectedFile to the first selected (for FileDetails compatibility)
+            // Note: SelectedFile binding will also update, but this ensures sync
+            if (selectedFiles.Count > 0 && SelectedFile != selectedFiles[0])
+            {
+                // Don't update if already correct - avoids infinite loop with SelectedItem binding
+                // The ListBox SelectedItem binding handles single selection
+            }
+        }
+
         private void OnRowComparisonCreated(object? sender, RowComparison comparison)
         {
             _comparisonCoordinator.CreateComparison(comparison);
@@ -258,6 +315,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 "FileDetails" => 0,  // First TabItem in XAML
                 "Search" => 1,       // Second TabItem in XAML
                 "Comparison" => 2,   // Third TabItem in XAML
+                "Templates" => 3,    // Fourth TabItem in XAML
                 _ => -1              // Invalid tab name
             };
         }
@@ -274,9 +332,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Each tab type has its preferred fallback sequence
             var tabPriorities = closedTabName switch
             {
-                "FileDetails" => new[] { "Search", "Comparison" },
-                "Search" => new[] { "FileDetails", "Comparison" },
-                "Comparison" => new[] { "Search", "FileDetails" },
+                "FileDetails" => new[] { "Search", "Comparison", "Templates" },
+                "Search" => new[] { "FileDetails", "Comparison", "Templates" },
+                "Comparison" => new[] { "Search", "FileDetails", "Templates" },
+                "Templates" => new[] { "Search", "FileDetails", "Comparison" },
                 _ => Array.Empty<string>()
             };
 
@@ -287,6 +346,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                     "FileDetails" => IsFileDetailsTabVisible,
                     "Search" => IsSearchTabVisible,
                     "Comparison" => IsComparisonTabVisible,
+                    "Templates" => IsTemplatesTabVisible,
                     _ => false
                 };
 

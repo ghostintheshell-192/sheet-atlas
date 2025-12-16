@@ -21,42 +21,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnClearSelectionClick(object? sender, RoutedEventArgs e)
-    {
-        // Clear selection when clicking Deselect button
-        if (DataContext is MainWindowViewModel viewModel)
-        {
-            viewModel.SelectedFile = null;
-        }
-    }
-
-    private void OnUnloadFileClick(object? sender, RoutedEventArgs e)
-    {
-        // Unload the selected file
-        if (DataContext is MainWindowViewModel viewModel && viewModel.SelectedFile != null)
-        {
-            var fileToRemove = viewModel.SelectedFile;
-            viewModel.FileDetailsViewModel?.CleanAllDataCommand.Execute(null);
-        }
-    }
-
-    private void OnFileItemTapped(object? sender, TappedEventArgs e)
-    {
-        // Toggle IsExpanded for the tapped file
-        if (sender is Grid grid && grid.DataContext is IFileLoadResultViewModel fileViewModel)
-        {
-            fileViewModel.IsExpanded = !fileViewModel.IsExpanded;
-
-            // Update the selected file in MainWindowViewModel
-            if (DataContext is MainWindowViewModel mainViewModel)
-            {
-                mainViewModel.SelectedFile = fileViewModel;
-            }
-
-            e.Handled = true;
-        }
-    }
-
     private void OnSearchTextBoxKeyDown(object? sender, KeyEventArgs e)
     {
         // Trigger search when Enter key is pressed
@@ -81,7 +45,6 @@ public partial class MainWindow : Window
         {
             if (DataContext is MainWindowViewModel viewModel && viewModel.FileDetailsViewModel != null)
             {
-                // Invoke the existing event handler
                 viewModel.FileDetailsViewModel.SelectedFile = file;
                 viewModel.FileDetailsViewModel.RemoveFromListCommand.Execute(null);
             }

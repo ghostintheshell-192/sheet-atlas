@@ -123,7 +123,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             // Numeric types (both Integer and Number/floating-point)
             // NOTE: SACellValue distinguishes Integer (long) from Number (double) for memory efficiency
             //       but for column analysis, both are treated as numeric data types
-            if (cell.IsInteger || cell.IsNumber)
+            if (cell.IsInteger || cell.IsFloatingPoint)
             {
                 // Check format for specific type
                 if (NumberFormatHelper.IsPercentageFormat(numberFormat))

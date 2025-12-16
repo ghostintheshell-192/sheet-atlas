@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.UI.Avalonia.ViewModels;
 using SheetAtlas.Logging.Services;
 
@@ -15,6 +16,7 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
     private readonly ILogService _logger;
     private readonly ILogService _comparisonViewModelLogger;
     private readonly IThemeManager _themeManager;
+    private readonly ColumnLinkingViewModel? _columnLinkingViewModel;
 
     private readonly ObservableCollection<RowComparisonViewModel> _rowComparisons = new();
     private RowComparisonViewModel? _selectedComparison;
@@ -46,11 +48,13 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
     public RowComparisonCoordinator(
         ILogService logger,
         ILogService comparisonViewModelLogger,
-        IThemeManager themeManager)
+        IThemeManager themeManager,
+        ColumnLinkingViewModel? columnLinkingViewModel = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _comparisonViewModelLogger = comparisonViewModelLogger ?? throw new ArgumentNullException(nameof(comparisonViewModelLogger));
         _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
+        _columnLinkingViewModel = columnLinkingViewModel;
 
         RowComparisons = new ReadOnlyObservableCollection<RowComparisonViewModel>(_rowComparisons);
     }
@@ -63,7 +67,30 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
             return;
         }
 
-        var comparisonViewModel = new RowComparisonViewModel(comparison, _comparisonViewModelLogger, _themeManager);
+        // Build semantic name resolver from current column links
+        Func<string, string?>? semanticNameResolver = null;
+        if (_columnLinkingViewModel != null)
+        {
+            var currentLinks = _columnLinkingViewModel.ColumnLinks
+                .Select(vm => vm.GetUpdatedLink())
+                .ToList();
+
+            semanticNameResolver = rawHeader =>
+            {
+                foreach (var link in currentLinks)
+                {
+                    if (link.Matches(rawHeader))
+                        return link.SemanticName;
+                }
+                return null;
+            };
+        }
+
+        var comparisonViewModel = new RowComparisonViewModel(
+            comparison,
+            _comparisonViewModelLogger,
+            _themeManager,
+            semanticNameResolver);
 
         comparisonViewModel.CloseRequested += OnComparisonCloseRequested;
 
@@ -133,7 +160,26 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
                     comparisonViewModel.Comparison.Name
                 );
 
-                var newViewModel = new RowComparisonViewModel(updatedComparison, _comparisonViewModelLogger, _themeManager);
+                // Re-build semantic name resolver
+                Func<string, string?>? resolver = null;
+                if (_columnLinkingViewModel != null)
+                {
+                    var currentLinks = _columnLinkingViewModel.ColumnLinks
+                        .Select(vm => vm.GetUpdatedLink())
+                        .ToList();
+
+                    resolver = rawHeader =>
+                    {
+                        foreach (var link in currentLinks)
+                        {
+                            if (link.Matches(rawHeader))
+                                return link.SemanticName;
+                        }
+                        return null;
+                    };
+                }
+
+                var newViewModel = new RowComparisonViewModel(updatedComparison, _comparisonViewModelLogger, _themeManager, resolver);
                 newViewModel.CloseRequested += OnComparisonCloseRequested;
 
                 var index = _rowComparisons.IndexOf(comparisonViewModel);

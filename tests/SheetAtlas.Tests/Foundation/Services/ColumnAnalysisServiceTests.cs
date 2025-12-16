@@ -77,11 +77,11 @@ namespace SheetAtlas.Tests.Foundation.Services
             var columnName = "Revenue";
             var sampleCells = new List<SACellValue>
             {
-                SACellValue.FromNumber((double)1000m),
-                SACellValue.FromNumber((double)2000m),
-                SACellValue.FromNumber((double)3000m),
-                SACellValue.FromNumber((double)4000m),
-                SACellValue.FromNumber((double)5000m)
+                SACellValue.FromFloatingPoint((double)1000m),
+                SACellValue.FromFloatingPoint((double)2000m),
+                SACellValue.FromFloatingPoint((double)3000m),
+                SACellValue.FromFloatingPoint((double)4000m),
+                SACellValue.FromFloatingPoint((double)5000m)
             };
             var numberFormats = Enumerable.Repeat("[$€-407] #,##0.00", 5).ToList();
 
@@ -226,11 +226,11 @@ namespace SheetAtlas.Tests.Foundation.Services
             // Arrange
             var sampleCells = new List<SACellValue>
             {
-                SACellValue.FromNumber((double)1000m),
-                SACellValue.FromNumber((double)2000m),
-                SACellValue.FromNumber((double)3000m),
-                SACellValue.FromNumber((double)4000m),
-                SACellValue.FromNumber((double)5000m)
+                SACellValue.FromFloatingPoint((double)1000m),
+                SACellValue.FromFloatingPoint((double)2000m),
+                SACellValue.FromFloatingPoint((double)3000m),
+                SACellValue.FromFloatingPoint((double)4000m),
+                SACellValue.FromFloatingPoint((double)5000m)
             };
             var numberFormats = new List<string>
             {
@@ -256,9 +256,9 @@ namespace SheetAtlas.Tests.Foundation.Services
             // Arrange
             var sampleCells = new List<SACellValue>
             {
-                SACellValue.FromNumber(1000),
-                SACellValue.FromNumber(2000),
-                SACellValue.FromNumber(3000)
+                SACellValue.FromFloatingPoint(1000),
+                SACellValue.FromFloatingPoint(2000),
+                SACellValue.FromFloatingPoint(3000)
             };
             var numberFormats = new List<string>
             {
@@ -400,7 +400,7 @@ namespace SheetAtlas.Tests.Foundation.Services
                 SACellValue.FromText("text"),
                 SACellValue.FromBoolean(true),
                 SACellValue.FromInteger(45292),
-                SACellValue.FromNumber(3.14)
+                SACellValue.FromFloatingPoint(3.14)
             };
             var numberFormats = new List<string>
             {
@@ -563,11 +563,11 @@ namespace SheetAtlas.Tests.Foundation.Services
             // Arrange
             var sampleCells = new List<SACellValue>
             {
-                SACellValue.FromNumber(0.10),   // 10%
-                SACellValue.FromNumber(0.25),   // 25%
-                SACellValue.FromNumber(0.50),   // 50%
-                SACellValue.FromNumber(0.75),   // 75%
-                SACellValue.FromNumber(0.95)    // 95%
+                SACellValue.FromFloatingPoint(0.10),   // 10%
+                SACellValue.FromFloatingPoint(0.25),   // 25%
+                SACellValue.FromFloatingPoint(0.50),   // 50%
+                SACellValue.FromFloatingPoint(0.75),   // 75%
+                SACellValue.FromFloatingPoint(0.95)    // 95%
             };
             var numberFormats = Enumerable.Repeat("0.00%", 5).ToList();
 

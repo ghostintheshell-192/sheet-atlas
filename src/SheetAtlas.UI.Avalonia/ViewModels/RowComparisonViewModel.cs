@@ -12,6 +12,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
     {
         private readonly ILogService _logger;
         private readonly IThemeManager? _themeManager;
+        private readonly Func<string, string?>? _semanticNameResolver;
         private RowComparison? _comparison;
 
         private bool _disposed = false;
@@ -52,10 +53,14 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         public event EventHandler? CloseRequested;
 
-        public RowComparisonViewModel(ILogService logger, IThemeManager? themeManager = null)
+        public RowComparisonViewModel(
+            ILogService logger,
+            IThemeManager? themeManager = null,
+            Func<string, string?>? semanticNameResolver = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _themeManager = themeManager;
+            _semanticNameResolver = semanticNameResolver;
 
             CloseCommand = new RelayCommand(() =>
             {
@@ -69,8 +74,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             }
         }
 
-        public RowComparisonViewModel(RowComparison comparison, ILogService logger, IThemeManager? themeManager = null)
-            : this(logger, themeManager)
+        public RowComparisonViewModel(
+            RowComparison comparison,
+            ILogService logger,
+            IThemeManager? themeManager = null,
+            Func<string, string?>? semanticNameResolver = null)
+            : this(logger, themeManager, semanticNameResolver)
         {
             Comparison = comparison;
         }
@@ -114,17 +123,56 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 }
             }
 
-            for (int i = 0; i < allHeaders.Count; i++)
+            // Group raw headers by their semantic name (or by themselves if no semantic name)
+            var headerGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var rawHeader in allHeaders)
             {
-                var header = allHeaders[i];
-                var columnViewModel = new RowComparisonColumnViewModel(header, i, Comparison.Rows);
+                var displayHeader = rawHeader;
+                if (_semanticNameResolver != null)
+                {
+                    var semanticName = _semanticNameResolver(rawHeader);
+                    if (!string.IsNullOrEmpty(semanticName))
+                    {
+                        displayHeader = semanticName;
+                    }
+                }
+
+                if (!headerGroups.TryGetValue(displayHeader, out var rawHeaders))
+                {
+                    rawHeaders = new List<string>();
+                    headerGroups[displayHeader] = rawHeaders;
+                }
+                rawHeaders.Add(rawHeader);
+            }
+
+            int columnIndex = 0;
+            int mergedColumns = 0;
+            foreach (var group in headerGroups)
+            {
+                var displayHeader = group.Key;
+                var rawHeaders = group.Value;
+
+                if (rawHeaders.Count > 1)
+                {
+                    mergedColumns++;
+                }
+
+                var columnViewModel = new RowComparisonColumnViewModel(displayHeader, rawHeaders, columnIndex++, Comparison.Rows);
                 Columns.Add(columnViewModel);
             }
 
             // Populate flat cache of all cells for fast theme refresh (O(n) instead of O(n×m))
             _allCells = Columns.SelectMany(col => col.Cells).ToList();
 
-            _logger.LogInfo($"Created row comparison with {allHeaders.Count} columns for {Comparison.Rows.Count} rows using intelligent header mapping", "RowComparisonViewModel");
+            if (mergedColumns > 0)
+            {
+                _logger.LogInfo($"Created row comparison with {headerGroups.Count} columns ({mergedColumns} merged from {allHeaders.Count} raw headers) for {Comparison.Rows.Count} rows", "RowComparisonViewModel");
+            }
+            else
+            {
+                _logger.LogInfo($"Created row comparison with {allHeaders.Count} columns for {Comparison.Rows.Count} rows using intelligent header mapping", "RowComparisonViewModel");
+            }
 
             OnPropertyChanged(nameof(RowCount));
             OnPropertyChanged(nameof(HasRows));
@@ -166,18 +214,29 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
     {
         private bool _disposed = false;
 
+        /// <summary>
+        /// Display header (semantic name if available, otherwise raw header).
+        /// </summary>
         public string Header { get; }
+
+        /// <summary>
+        /// Raw header names from files (used for cell value lookup).
+        /// Multiple headers when columns with different names are merged by semantic name.
+        /// </summary>
+        public IReadOnlyList<string> RawHeaders { get; }
+
         public int ColumnIndex { get; }
         public ObservableCollection<RowComparisonCellViewModel> Cells { get; }
 
-        public RowComparisonColumnViewModel(string header, int columnIndex, IReadOnlyList<ExcelRow> rows)
+        public RowComparisonColumnViewModel(string displayHeader, IReadOnlyList<string> rawHeaders, int columnIndex, IReadOnlyList<ExcelRow> rows)
         {
-            Header = header;
+            Header = displayHeader;
+            RawHeaders = rawHeaders;
             ColumnIndex = columnIndex;
             Cells = new ObservableCollection<RowComparisonCellViewModel>();
 
-            // Use intelligent header-based mapping instead of positional mapping
-            var allValues = rows.Select(row => row.GetCellAsStringByHeader(header) ?? string.Empty).ToList();
+            // Try each raw header to find a value (supports merged columns with different original names)
+            var allValues = rows.Select(row => GetCellValueFromAnyHeader(row, rawHeaders)).ToList();
 
             // PRE-COMPUTE column-level data ONCE instead of N times (N = row count)
             // This eliminates massive computational waste in DetermineComparisonResult
@@ -192,6 +251,23 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
                 Cells.Add(cellViewModel);
             }
+        }
+
+        /// <summary>
+        /// Try to get a cell value using any of the provided headers.
+        /// Returns the first non-empty value found, or empty string if none.
+        /// </summary>
+        private static string GetCellValueFromAnyHeader(ExcelRow row, IReadOnlyList<string> headers)
+        {
+            foreach (var header in headers)
+            {
+                var value = row.GetCellAsStringByHeader(header);
+                if (!string.IsNullOrEmpty(value))
+                {
+                    return value;
+                }
+            }
+            return string.Empty;
         }
 
         private static ColumnComparisonData PrecomputeColumnComparisonData(IList<string> allValues)

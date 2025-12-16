@@ -86,7 +86,7 @@ namespace SheetAtlas.Core.Application.Services
                 {
                     return SACellValue.FromInteger((long)numericValue);
                 }
-                return SACellValue.FromNumber(numericValue);
+                return SACellValue.FromFloatingPoint(numericValue);
             }
 
             // Fallback: treat as text
