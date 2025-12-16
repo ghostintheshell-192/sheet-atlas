@@ -17,17 +17,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SemanticName persistence in template JSON files
 - "Update Template" button to save semantic names to existing templates
 - Export to Excel (.xlsx) and CSV with preserved data types
+- VSCode-style MultiSidebar control for flexible sidebar layouts
+- Preserve NormalizationResult in cell metadata for typed export
 
 ### Fixed
 
 - Prevent computed properties from being serialized in template JSON (was causing 3x column duplication)
 - Re-apply column highlighting after Refresh, Rename, Merge, Ungroup operations
 - Remove 'x' from boolean parsing to avoid text conflicts
+- Pass original values to ColumnAnalysisService for accurate anomaly detection
+- Add informative logging for Unknown cell types in sparse columns
 
 ### Refactored
 
 - Extract Template Management from FileDetails into dedicated tab
 - Streamline FileDetails to show only Basic Info, Notifications, and Export
+- Rename Number to FloatingPoint and improve Integer handling in cell types
 
 ### Miscellaneous
 
