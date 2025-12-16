@@ -43,15 +43,10 @@ backups/
 *_backup.vssx
 *_backup.vstx
 
-# Ignore temporary documentation and internal reports
-docs/vista.pdf
-# Note: docs/images/ now contains website assets, not ignored
-
 # Ignore sample files and test data
 samples/
 
-# Ignore personal files (NEVER commit this directory!)
-# Contains: business strategies, private notes, personal scripts
+# Ignore personal files
 .personal/
 
 # Legacy private directory (deprecated - use .personal/ instead)
@@ -62,15 +57,3 @@ samples/
 **/temp-todos*.md
 .claude
 
-# Legacy ignore rules
-/src/VisioHandler/Resources/Results
-/src/ExcelHandler/Resources/LogsExcel
-/src/ExcelHandler/Resources/LogsVisio
-/src/ExcelHandler/Resources/Logs
-/src/ExcelHandler/Resources/Output
-
-src/*/*.bak
-
-/src/VisioHandler/Resources/backup code.txt
-/src/VisioHandler/Resources/stencil_good.vssx
-/src/VisioHandler/Resources/prova.xlsx

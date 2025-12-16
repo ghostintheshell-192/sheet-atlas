@@ -5,11 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2025-12-16
+
+### Added
+
+- Dedicated Templates tab with separated library and workspace panels
+- Multi-file selection in sidebar (Ctrl+Click, Shift+Click)
+- Batch template validation across multiple files
+- Column Linking sidebar with visual grouping by source file
+- Column highlighting when template is selected (orange border)
+- SemanticName persistence in template JSON files
+- "Update Template" button to save semantic names to existing templates
+- Export to Excel (.xlsx) and CSV with preserved data types
 
 ### Fixed
 
+- Prevent computed properties from being serialized in template JSON (was causing 3x column duplication)
+- Re-apply column highlighting after Refresh, Rename, Merge, Ungroup operations
 - Remove 'x' from boolean parsing to avoid text conflicts
+
+### Refactored
+
+- Extract Template Management from FileDetails into dedicated tab
+- Streamline FileDetails to show only Basic Info, Notifications, and Export
 
 ### Miscellaneous
 

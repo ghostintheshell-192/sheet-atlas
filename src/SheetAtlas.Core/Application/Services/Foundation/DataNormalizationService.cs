@@ -41,7 +41,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             bool isPotentialDate = NumberFormatHelper.IsDateFormat(numberFormat);
 
             // Normalize based on detected type
-            if (isPotentialDate && original.IsNumber)
+            if (isPotentialDate && original.IsFloatingPoint)
             {
                 return NormalizeExcelSerialDate(original, dateSystem);
             }
@@ -51,7 +51,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 return NormalizeText(original, numberFormat);
             }
 
-            if (original.IsNumber)
+            if (original.IsFloatingPoint)
             {
                 return NormalizeNumber(original, numberFormat);
             }
@@ -90,7 +90,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         private NormalizationResult NormalizeExcelSerialDate(SACellValue original, DateSystem dateSystem)
         {
-            double serial = original.AsNumber();
+            double serial = original.AsFloatingPoint();
 
             // Validate serial range
             if (serial < 0)
@@ -144,24 +144,24 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         private static NormalizationResult NormalizeNumber(SACellValue original, string? numberFormat)
         {
-            double value = original.AsNumber();
+            double value = original.AsFloatingPoint();
 
             // Detect if it's currency
             if (NumberFormatHelper.IsCurrencyFormat(numberFormat))
             {
-                var cleaned = SACellValue.FromNumber(value);
+                var cleaned = SACellValue.FromFloatingPoint(value);
                 return NormalizationResult.Success(original, cleaned, DataType.Currency);
             }
 
             // Detect if it's percentage
             if (NumberFormatHelper.IsPercentageFormat(numberFormat))
             {
-                var cleaned = SACellValue.FromNumber(value);
+                var cleaned = SACellValue.FromFloatingPoint(value);
                 return NormalizationResult.Success(original, cleaned, DataType.Percentage);
             }
 
             // Regular number
-            var cleanedValue = SACellValue.FromNumber(value);
+            var cleanedValue = SACellValue.FromFloatingPoint(value);
             return NormalizationResult.Success(original, cleanedValue, DataType.Number);
         }
 
@@ -202,7 +202,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 if (isPercentage && !text.Contains('%') && numberValue > 1)
                     numberValue /= 100.0;
 
-                var cleaned = SACellValue.FromNumber(numberValue);
+                var cleaned = SACellValue.FromFloatingPoint(numberValue);
                 var dataType = isPercentage ? DataType.Percentage : DataType.Number;
                 return NormalizationResult.Success(original, cleaned, dataType);
             }
@@ -221,7 +221,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 if (isPercentage && !text.Contains('%') && numberValue > 1)
                     numberValue /= 100.0;
 
-                var cleaned = SACellValue.FromNumber(numberValue);
+                var cleaned = SACellValue.FromFloatingPoint(numberValue);
                 var dataType = isPercentage ? DataType.Percentage : DataType.Number;
                 return NormalizationResult.Success(original, cleaned, dataType);
             }
@@ -392,8 +392,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return rawValue switch
             {
                 SACellValue sacValue => sacValue,
-                double d => SACellValue.FromNumber(d),
-                float f => SACellValue.FromNumber(f),
+                double d => SACellValue.FromFloatingPoint(d),
+                float f => SACellValue.FromFloatingPoint(f),
                 int i => SACellValue.FromInteger(i),
                 long l => SACellValue.FromInteger(l),
                 bool b => SACellValue.FromBoolean(b),

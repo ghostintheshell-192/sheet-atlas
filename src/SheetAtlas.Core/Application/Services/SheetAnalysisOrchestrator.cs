@@ -120,6 +120,7 @@ namespace SheetAtlas.Core.Application.Services
         /// Enriches sheet data with column analysis using foundation services.
         /// Samples cells from each column, normalizes data, runs analysis, populates metadata, adds anomalies as ExcelErrors.
         /// NOTE: Only analyzes DATA rows (skips header rows).
+        /// Also saves NormalizationResult in cell metadata for export support.
         /// </summary>
         private void EnrichSheetWithColumnAnalysis(SASheetData sheetData, List<ExcelError> errors)
         {
@@ -131,6 +132,7 @@ namespace SheetAtlas.Core.Application.Services
                 var sampleCells = new List<SACellValue>();
                 var numberFormats = new List<string?>();
                 var absoluteRowIndices = new List<int>(); // Track absolute row indices for anomaly reporting
+                var normalizationResults = new List<NormalizationResult>(); // Store results for cell update
 
                 // Iterate ONLY over data rows (skip header rows)
                 for (int dataRowIndex = 0; dataRowIndex < maxSampleSize && dataRowIndex < sheetData.DataRowCount; dataRowIndex++)
@@ -138,13 +140,13 @@ namespace SheetAtlas.Core.Application.Services
                     int absoluteRow = sheetData.HeaderRowCount + dataRowIndex;
                     var cellData = sheetData.GetCellData(absoluteRow, colIndex);
 
-                    // Normalize cell value (soft normalization: trim whitespace, clean text)
-                    // NOTE: Empty cells are included in sample for anomaly detection
-                    var normalized = cellData.Value.IsEmpty
-                        ? cellData.Value
-                        : NormalizeCellValue(cellData.Value, cellData.Metadata?.NumberFormat);
+                    // Normalize cell value and preserve full result (for export)
+                    var normResult = NormalizeCellValue(cellData.Value, cellData.Metadata?.NumberFormat);
+                    normalizationResults.Add(normResult);
 
-                    sampleCells.Add(normalized);
+                    // IMPORTANT: Pass ORIGINAL values to ColumnAnalysisService for anomaly detection
+                    // If we pass normalized values, dirty data gets "cleaned" and anomalies are masked
+                    sampleCells.Add(cellData.Value);
                     // Extract numberFormat from metadata (saved during file read)
                     numberFormats.Add(cellData.Metadata?.NumberFormat);
                     // Track absolute row index for this cell (for anomaly reporting)
@@ -166,6 +168,32 @@ namespace SheetAtlas.Core.Application.Services
 
                 // Populate column metadata
                 sheetData.SetColumnMetadata(colIndex, analysisResult.ToMetadata());
+
+                // Log informative message when type is Unknown due to sparse data
+                if (analysisResult.DetectedType == DataType.Unknown && sheetData.DataRowCount > maxSampleSize)
+                {
+                    var nonEmptyCount = sampleCells.Count(c => !c.IsEmpty);
+                    if (nonEmptyCount == 0)
+                    {
+                        _logger.LogInfo(
+                            $"Column '{sheetData.ColumnNames[colIndex]}' has Unknown type: no data found in first {maxSampleSize} rows " +
+                            $"(file has {sheetData.DataRowCount} data rows - values may exist beyond sample range)",
+                            "SheetAnalysisOrchestrator");
+                    }
+                }
+
+                // Update cell metadata with normalization results
+                for (int i = 0; i < absoluteRowIndices.Count; i++)
+                {
+                    var absoluteRow = absoluteRowIndices[i];
+                    var normResult = normalizationResults[i];
+
+                    // Only update cells that have meaningful normalization results
+                    if (normResult.IsSuccess && normResult.CleanedValue.HasValue)
+                    {
+                        UpdateCellWithNormalizationResult(sheetData, absoluteRow, colIndex, normResult);
+                    }
+                }
 
                 // Add anomalies to errors list (will be saved in structured JSON log)
                 // Map sample row index to absolute row index
@@ -193,26 +221,65 @@ namespace SheetAtlas.Core.Application.Services
         }
 
         /// <summary>
-        /// Normalizes a cell value using DataNormalizationService (soft normalization: trim whitespace, clean text).
-        /// Returns normalized SACellValue for improved type detection accuracy.
+        /// Updates a cell's metadata with normalization result.
+        /// Creates new CellMetadata if needed, preserves existing metadata fields.
         /// </summary>
-        private SACellValue NormalizeCellValue(SACellValue original, string? numberFormat)
+        private static void UpdateCellWithNormalizationResult(
+            SASheetData sheetData,
+            int row,
+            int column,
+            NormalizationResult normResult)
         {
+            var currentCell = sheetData.GetCellData(row, column);
+
+            // Build new metadata (preserve existing fields, add normalization data)
+            var newMetadata = new CellMetadata
+            {
+                // Preserve existing fields
+                NumberFormat = currentCell.Metadata?.NumberFormat,
+                Formula = currentCell.Metadata?.Formula,
+                Style = currentCell.Metadata?.Style,
+                Validation = currentCell.Metadata?.Validation,
+                Currency = currentCell.Metadata?.Currency,
+                CustomData = currentCell.Metadata?.CustomData,
+
+                // Add normalization results
+                OriginalValue = normResult.OriginalValue,
+                CleanedValue = normResult.CleanedValue,
+                DetectedType = normResult.DetectedType,
+                QualityIssue = normResult.QualityIssue != DataQualityIssue.None
+                    ? normResult.QualityIssue
+                    : currentCell.Metadata?.QualityIssue
+            };
+
+            // Create new cell with updated metadata
+            var updatedCell = new SACellData(currentCell.Value, newMetadata);
+            sheetData.SetCellData(row, column, updatedCell);
+        }
+
+        /// <summary>
+        /// Normalizes a cell value using DataNormalizationService.
+        /// Returns full NormalizationResult for storage in cell metadata.
+        /// </summary>
+        private NormalizationResult NormalizeCellValue(SACellValue original, string? numberFormat)
+        {
+            // Empty cells don't need normalization
+            if (original.IsEmpty)
+                return NormalizationResult.Empty;
+
             // Convert SACellValue to object for normalization service
             object? rawValue = original.IsText ? original.AsText()
-                : original.IsNumber ? original.AsNumber()
+                : original.IsFloatingPoint ? original.AsFloatingPoint()
+                : original.IsInteger ? original.AsInteger()
                 : original.IsBoolean ? original.AsBoolean()
                 : original.IsDateTime ? original.AsDateTime()
                 : null;
 
             if (rawValue == null)
-                return original;
+                return NormalizationResult.Empty;
 
-            // Normalize using DataNormalizationService
-            var result = _normalizationService.Normalize(rawValue, numberFormat);
-
-            // Return cleaned value if successful, otherwise return original
-            return result.IsSuccess && result.CleanedValue != null ? result.CleanedValue.Value : original;
+            // Normalize using DataNormalizationService and return full result
+            return _normalizationService.Normalize(rawValue, numberFormat);
         }
 
         /// <summary>

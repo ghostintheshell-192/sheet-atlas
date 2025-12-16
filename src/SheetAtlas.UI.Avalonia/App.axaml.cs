@@ -18,6 +18,7 @@ using SheetAtlas.Core.Application.Services;
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Infrastructure.External;
 using SheetAtlas.Infrastructure.External.Readers;
+using SheetAtlas.Infrastructure.External.Writers;
 using SheetAtlas.UI.Avalonia.Managers;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Core.Configuration;
@@ -50,10 +51,14 @@ public partial class App : Application
             var searchViewModel = _host.Services.GetRequiredService<SearchViewModel>();
             var fileDetailsViewModel = _host.Services.GetRequiredService<FileDetailsViewModel>();
             var treeSearchResultsViewModel = _host.Services.GetRequiredService<TreeSearchResultsViewModel>();
+            var templateManagementViewModel = _host.Services.GetRequiredService<TemplateManagementViewModel>();
+            var columnLinkingViewModel = _host.Services.GetRequiredService<ColumnLinkingViewModel>();
 
             mainViewModel.SetSearchViewModel(searchViewModel);
             mainViewModel.SetFileDetailsViewModel(fileDetailsViewModel);
             mainViewModel.SetTreeSearchResultsViewModel(treeSearchResultsViewModel);
+            mainViewModel.SetTemplateManagementViewModel(templateManagementViewModel);
+            mainViewModel.SetColumnLinkingViewModel(columnLinkingViewModel);
 
             mainWindow.DataContext = mainViewModel;
             desktop.MainWindow = mainWindow;
@@ -84,6 +89,8 @@ public partial class App : Application
                 services.AddSingleton<IDataNormalizationService, SheetAtlas.Core.Application.Services.Foundation.DataNormalizationService>();
                 services.AddSingleton<IColumnAnalysisService, SheetAtlas.Core.Application.Services.Foundation.ColumnAnalysisService>();
                 services.AddSingleton<IMergedCellResolver, SheetAtlas.Core.Application.Services.Foundation.MergedCellResolver>();
+                services.AddSingleton<ITemplateValidationService, SheetAtlas.Core.Application.Services.Foundation.TemplateValidationService>();
+                services.AddSingleton<ITemplateRepository, SheetAtlas.Core.Application.Services.Foundation.TemplateRepository>();
 
                 services.AddSingleton<ISheetAnalysisOrchestrator>(sp =>
                 {
@@ -111,8 +118,10 @@ public partial class App : Application
                 services.AddSingleton<IFileFormatReader, CsvFileReader>();
 
                 services.AddSingleton<IExcelReaderService, ExcelReaderService>();
+                services.AddSingleton<IExcelWriterService, ExcelWriterService>();
                 services.AddSingleton<ISearchService, SearchService>();
                 services.AddSingleton<IRowComparisonService, RowComparisonService>();
+                services.AddSingleton<IColumnLinkingService, ColumnLinkingService>();
                 services.AddSingleton<IExceptionHandler, ExceptionHandler>();
                 services.AddSingleton<IFileLogService, FileLogService>();
 
@@ -130,7 +139,13 @@ public partial class App : Application
                 services.AddSingleton<ISelectionManager, SheetAtlas.UI.Avalonia.Managers.Selection.SelectionManager>();
                 services.AddSingleton<IThemeManager, ThemeManager>();
                 services.AddSingleton<ILoadedFilesManager, LoadedFilesManager>();
-                services.AddSingleton<IRowComparisonCoordinator, RowComparisonCoordinator>();
+                services.AddSingleton<IRowComparisonCoordinator>(sp =>
+                {
+                    var logger = sp.GetRequiredService<ILogService>();
+                    var themeManager = sp.GetRequiredService<IThemeManager>();
+                    var columnLinkingViewModel = sp.GetRequiredService<ColumnLinkingViewModel>();
+                    return new RowComparisonCoordinator(logger, logger, themeManager, columnLinkingViewModel);
+                });
                 services.AddSingleton<ITabNavigationCoordinator, TabNavigationCoordinator>();
                 services.AddSingleton<IFileDetailsCoordinator, FileDetailsCoordinator>();
 
@@ -139,6 +154,18 @@ public partial class App : Application
                 services.AddSingleton<SearchViewModel>();
                 services.AddSingleton<FileDetailsViewModel>();
                 services.AddSingleton<TreeSearchResultsViewModel>();
+                services.AddSingleton<TemplateManagementViewModel>();
+                services.AddSingleton<ColumnLinkingViewModel>(sp =>
+                {
+                    var columnLinkingService = sp.GetRequiredService<IColumnLinkingService>();
+                    var filesManager = sp.GetRequiredService<ILoadedFilesManager>();
+                    return new ColumnLinkingViewModel(
+                        columnLinkingService,
+                        () => filesManager.LoadedFiles
+                            .Where(f => f.File != null)
+                            .Select(f => f.File!),
+                        filesManager);
+                });
 
                 // Register Views
                 services.AddSingleton<MainWindow>();

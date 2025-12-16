@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
+             xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
@@ -13,195 +14,197 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- BASIC INFORMATION Header + Toolbar -->
-            <RowDefinition Height="Auto"/>  <!-- BASIC INFORMATION Content -->
+            <RowDefinition Height="Auto"/>  <!-- BASIC INFORMATION -->
             <RowDefinition Height="*"/>     <!-- NOTIFICATIONS AND ERRORS -->
         </Grid.RowDefinitions>
 
-        <!-- BASIC INFORMATION Header with Toolbar -->
-        <Border Grid.Row="0"
-                Background="{DynamicResource SecondaryBackground}"
-                BorderBrush="{DynamicResource BorderColor}"
-                BorderThickness="0,0,0,1"
-                Padding="12,8">
-            <Grid ColumnDefinitions="*,Auto">
-                <!-- Section Title (Left) -->
-                <TextBlock Grid.Column="0"
-                          Text="BASIC INFORMATION"
-                          FontWeight="Bold"
-                          FontSize="12"
-                          VerticalAlignment="Center"
-                          Foreground="{DynamicResource SecondaryText}"/>
-
-                <!-- Toolbar Buttons (Right) -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Content="Retry"
-                            Classes="ModernButton"
-                            Command="{Binding RetryCommand}"
-                            FontSize="13"/>
-                    <Button Content="Clear"
-                            Classes="SecondaryButton"
-                            Command="{Binding ClearCommand}"
-                            FontSize="13"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- BASIC INFORMATION Content -->
-        <Border Grid.Row="1"
-                BorderBrush="{DynamicResource BorderColor}"
-                BorderThickness="0,0,0,1"
-                Padding="12"
-                Background="{DynamicResource CardBackground}">
-            <StackPanel>
-
-                <!-- Information Grid -->
-                <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto">
-                    <!-- File Path -->
-                    <TextBlock Grid.Row="0" Grid.Column="0"
-                              Text="FILE PATH"
-                              FontWeight="SemiBold"
-                              FontSize="11"
-                              Foreground="{DynamicResource SecondaryText}"
-                              Margin="0,0,8,6"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1"
-                              Text="{Binding FilePath}"
-                              FontSize="11"
-                              Foreground="{DynamicResource PrimaryText}"
-                              TextWrapping="Wrap"
-                              Margin="0,0,0,6"/>
-
-                    <!-- File Size -->
-                    <TextBlock Grid.Row="1" Grid.Column="0"
-                              Text="FILE SIZE"
-                              FontWeight="SemiBold"
-                              FontSize="11"
-                              Foreground="{DynamicResource SecondaryText}"
-                              Margin="0,0,8,0"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1"
-                              Text="{Binding FileSize}"
-                              FontSize="11"
-                              Foreground="{DynamicResource PrimaryText}"/>
+        <!-- BASIC INFORMATION Section -->
+        <controls:CollapsibleSection Grid.Row="0"
+                                     IsExpanded="True"
+                                     IsVisible="{Binding HasSelectedFile}">
+            <controls:CollapsibleSection.Header>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0"
+                               Text="BASIC INFORMATION"
+                               FontWeight="Bold"
+                               FontSize="12"
+                               Foreground="{DynamicResource SearchQueryText}"/>
+                    <!-- Toolbar Buttons (Right) -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Export Excel"
+                                Classes="ModernButton"
+                                Command="{Binding ExportExcelCommand}"
+                                ToolTip.Tip="Export normalized data to Excel file"
+                                FontSize="11"/>
+                        <Button Content="Export CSV"
+                                Classes="SecondaryButton"
+                                Command="{Binding ExportCsvCommand}"
+                                ToolTip.Tip="Export normalized data to CSV file"
+                                FontSize="11"/>
+                        <Button Content="Retry"
+                                Classes="SecondaryButton"
+                                Command="{Binding RetryCommand}"
+                                FontSize="11"/>
+                        <Button Content="Clear"
+                                Classes="SecondaryButton"
+                                Command="{Binding ClearCommand}"
+                                FontSize="11"/>
+                    </StackPanel>
                 </Grid>
-            </StackPanel>
-        </Border>
-
-        <!-- NOTIFICATIONS AND ERRORS Section -->
-        <Border Grid.Row="2"
-                Background="{DynamicResource MainBackground}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>  <!-- Section Header -->
-                    <RowDefinition Height="Auto"/>  <!-- Table Header -->
-                    <RowDefinition Height="*"/>     <!-- Table Content -->
-                </Grid.RowDefinitions>
-
-                <!-- Section Header -->
-                <Border Grid.Row="0"
-                        Background="{DynamicResource SecondaryBackground}"
-                        BorderBrush="{DynamicResource BorderColor}"
-                        BorderThickness="0,0,0,1"
-                        Padding="12,8">
-                    <TextBlock Text="NOTIFICATIONS AND ERRORS"
-                              FontWeight="Bold"
-                              FontSize="12"
-                              Foreground="{DynamicResource SecondaryText}"/>
-                </Border>
-
-                <!-- Table Header -->
-                <Border Grid.Row="1"
-                        Background="{DynamicResource CardBackground}"
-                        BorderBrush="{DynamicResource BorderColor}"
-                        BorderThickness="0,0,0,1"
-                        Padding="12,8">
-                    <Grid ColumnDefinitions="180,120,*">
-                        <TextBlock Grid.Column="0"
-                                  Text="TIMESTAMP"
-                                  FontWeight="Bold"
+            </controls:CollapsibleSection.Header>
+            <controls:CollapsibleSection.Content>
+                <Border Background="{DynamicResource CardBackground}"
+                        Padding="12">
+                    <!-- Information Grid -->
+                    <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto">
+                        <!-- File Path -->
+                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                  Text="FILE PATH"
+                                  FontWeight="SemiBold"
                                   FontSize="11"
-                                  Foreground="{DynamicResource SecondaryText}"/>
-                        <TextBlock Grid.Column="1"
-                                  Text="LOG LEVEL"
-                                  FontWeight="Bold"
+                                  Foreground="{DynamicResource SecondaryText}"
+                                  Margin="0,0,8,6"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1"
+                                  Text="{Binding FilePath}"
                                   FontSize="11"
-                                  Foreground="{DynamicResource SecondaryText}"/>
-                        <TextBlock Grid.Column="2"
-                                  Text="MESSAGE"
-                                  FontWeight="Bold"
+                                  Foreground="{DynamicResource PrimaryText}"
+                                  TextWrapping="Wrap"
+                                  Margin="0,0,0,6"/>
+
+                        <!-- File Size -->
+                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="FILE SIZE"
+                                  FontWeight="SemiBold"
                                   FontSize="11"
-                                  Foreground="{DynamicResource SecondaryText}"/>
+                                  Foreground="{DynamicResource SecondaryText}"
+                                  Margin="0,0,8,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1"
+                                  Text="{Binding FileSize}"
+                                  FontSize="11"
+                                  Foreground="{DynamicResource PrimaryText}"/>
                     </Grid>
                 </Border>
+            </controls:CollapsibleSection.Content>
+        </controls:CollapsibleSection>
 
-                <!-- Table Content -->
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <!-- Loading Indicator -->
-                        <ProgressBar IsVisible="{Binding IsLoadingHistory}"
-                                    IsIndeterminate="True"
-                                    Margin="12"/>
+        <!-- NOTIFICATIONS AND ERRORS Section -->
+        <controls:CollapsibleSection Grid.Row="1"
+                                     IsExpanded="True"
+                                     IsVisible="{Binding HasSelectedFile}">
+            <controls:CollapsibleSection.Header>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0"
+                               Text="NOTIFICATIONS AND ERRORS"
+                               FontWeight="Bold"
+                               FontSize="12"
+                               Foreground="{DynamicResource SearchQueryText}"/>
+                    <!-- Error count indicator -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding ErrorLogs.Count, StringFormat='({0})'}"
+                               FontSize="11"
+                               Foreground="{DynamicResource SearchQueryText}"
+                               IsVisible="{Binding HasErrorLogs}"/>
+                </Grid>
+            </controls:CollapsibleSection.Header>
+            <controls:CollapsibleSection.Content>
+                <Border Background="{DynamicResource CardBackground}">
+                    <Grid RowDefinitions="Auto,*">
+                        <!-- Table Header -->
+                        <Border Grid.Row="0"
+                                Background="{DynamicResource SecondaryBackground}"
+                                BorderBrush="{DynamicResource SubtleBorder}"
+                                BorderThickness="0,0,0,1"
+                                Padding="8,6">
+                            <Grid ColumnDefinitions="160,100,*">
+                                <TextBlock Grid.Column="0"
+                                          Text="TIMESTAMP"
+                                          FontWeight="Bold"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource SecondaryText}"/>
+                                <TextBlock Grid.Column="1"
+                                          Text="LOG LEVEL"
+                                          FontWeight="Bold"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource SecondaryText}"/>
+                                <TextBlock Grid.Column="2"
+                                          Text="MESSAGE"
+                                          FontWeight="Bold"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource SecondaryText}"/>
+                            </Grid>
+                        </Border>
 
-                        <!-- Error Log Rows -->
-                        <ItemsControl ItemsSource="{Binding ErrorLogs}"
-                                     IsVisible="{Binding !IsLoadingHistory}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="{DynamicResource BorderColor}"
-                                           BorderThickness="0,0,0,1"
-                                           Padding="12,8"
-                                           Background="Transparent">
-                                        <Border.Styles>
-                                            <Style Selector="Border:pointerover">
-                                                <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
-                                            </Style>
-                                        </Border.Styles>
+                        <!-- Table Content -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <!-- Loading Indicator -->
+                                <ProgressBar IsVisible="{Binding IsLoadingHistory}"
+                                            IsIndeterminate="True"
+                                            Margin="12"/>
 
-                                        <Grid ColumnDefinitions="180,120,*">
-                                            <!-- Timestamp -->
-                                            <TextBlock Grid.Column="0"
-                                                      Text="{Binding TimestampFormatted}"
-                                                      FontSize="11"
-                                                      VerticalAlignment="Center"
-                                                      Foreground="{DynamicResource PrimaryText}"/>
+                                <!-- Error Log Rows -->
+                                <ItemsControl ItemsSource="{Binding ErrorLogs}"
+                                             IsVisible="{Binding !IsLoadingHistory}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ErrorLogRowViewModel">
+                                            <Border BorderBrush="{DynamicResource SubtleBorder}"
+                                                   BorderThickness="0,0,0,1"
+                                                   Padding="8,4"
+                                                   Background="Transparent">
+                                                <Border.Styles>
+                                                    <Style Selector="Border:pointerover">
+                                                        <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
+                                                    </Style>
+                                                </Border.Styles>
 
-                                            <!-- Log Level -->
-                                            <TextBlock Grid.Column="1"
-                                                      Text="{Binding LogLevelText}"
-                                                      FontSize="11"
-                                                      FontWeight="SemiBold"
-                                                      VerticalAlignment="Center"
-                                                      Foreground="{Binding LogLevelColor}"/>
+                                                <Grid ColumnDefinitions="160,100,*">
+                                                    <!-- Timestamp -->
+                                                    <TextBlock Grid.Column="0"
+                                                              Text="{Binding TimestampFormatted}"
+                                                              FontSize="11"
+                                                              VerticalAlignment="Center"
+                                                              Foreground="{DynamicResource SecondaryText}"/>
 
-                                            <!-- Message -->
-                                            <TextBlock Grid.Column="2"
-                                                      Text="{Binding Message}"
-                                                      FontSize="11"
-                                                      TextWrapping="Wrap"
-                                                      VerticalAlignment="Center"
-                                                      Foreground="{DynamicResource PrimaryText}"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                                    <!-- Log Level -->
+                                                    <TextBlock Grid.Column="1"
+                                                              Text="{Binding LogLevelText}"
+                                                              FontSize="11"
+                                                              FontWeight="SemiBold"
+                                                              VerticalAlignment="Center"
+                                                              Foreground="{Binding LogLevelColor}"/>
 
-                        <!-- Empty State -->
-                        <TextBlock Text="No error logs available. File load attempts will appear here."
-                                  FontStyle="Italic"
-                                  Foreground="Gray"
-                                  HorizontalAlignment="Center"
-                                  Margin="0,40,0,0"
-                                  IsVisible="{Binding !HasErrorLogs}"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </Grid>
-        </Border>
+                                                    <!-- Message -->
+                                                    <TextBlock Grid.Column="2"
+                                                              Text="{Binding Message}"
+                                                              FontSize="12"
+                                                              TextWrapping="Wrap"
+                                                              VerticalAlignment="Center"
+                                                              Foreground="{DynamicResource PrimaryText}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Empty State -->
+                                <TextBlock Text="No error logs available. File load attempts will appear here."
+                                          FontStyle="Italic"
+                                          Foreground="{DynamicResource SecondaryText}"
+                                          HorizontalAlignment="Center"
+                                          Margin="0,40,0,40"
+                                          IsVisible="{Binding !HasErrorLogs}"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </controls:CollapsibleSection.Content>
+        </controls:CollapsibleSection>
 
         <!-- Empty State (no file selected) -->
         <TextBlock Text="Select a file from the list to view details"
-                  Grid.RowSpan="3"
+                  Grid.RowSpan="2"
                   FontStyle="Italic"
-                  Foreground="Gray"
+                  Foreground="{DynamicResource SecondaryText}"
                   HorizontalAlignment="Center"
                   VerticalAlignment="Center"
                   Margin="0,40,0,0"

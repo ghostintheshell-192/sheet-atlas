@@ -33,7 +33,7 @@ namespace SheetAtlas.Core.Domain.ValueObjects
             _type = CellType.Empty;
 
             _numberValue = value;
-            _type = CellType.Number;
+            _type = CellType.FloatingPoint;
         }
 
         private SACellValue(long value)
@@ -98,7 +98,7 @@ namespace SheetAtlas.Core.Domain.ValueObjects
             _type = type;
         }
 
-        public static SACellValue FromNumber(double value) => new(value);
+        public static SACellValue FromFloatingPoint(double value) => new(value);
         public static SACellValue FromInteger(long value) => new(value);
         public static SACellValue FromBoolean(bool value) => new(value);
         public static SACellValue FromDateTime(DateTime value) => new(value);
@@ -114,7 +114,7 @@ namespace SheetAtlas.Core.Domain.ValueObjects
                 return FromInteger(longValue);
 
             if (double.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double doubleValue))
-                return FromNumber(doubleValue);
+                return FromFloatingPoint(doubleValue);
 
             if (bool.TryParse(value, out bool boolValue))
                 return FromBoolean(boolValue);
@@ -132,13 +132,13 @@ namespace SheetAtlas.Core.Domain.ValueObjects
 
         public CellType Type => _type;
         public bool IsEmpty => _type == CellType.Empty;
-        public bool IsNumber => _type == CellType.Number;
+        public bool IsFloatingPoint => _type == CellType.FloatingPoint;
         public bool IsInteger => _type == CellType.Integer;
         public bool IsBoolean => _type == CellType.Boolean;
         public bool IsDateTime => _type == CellType.DateTime;
         public bool IsText => _type == CellType.Text;
 
-        public double AsNumber() => _type == CellType.Number ? _numberValue : 0.0;
+        public double AsFloatingPoint() => _type == CellType.FloatingPoint ? _numberValue : 0.0;
         public long AsInteger() => _type == CellType.Integer ? _integerValue : 0L;
         public bool AsBoolean() => _type == CellType.Boolean && _booleanValue;
         public DateTime AsDateTime() => _type == CellType.DateTime ? _dateTimeValue : DateTime.MinValue;
@@ -148,7 +148,7 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         {
             return _type switch
             {
-                CellType.Number => _numberValue.ToString(CultureInfo.InvariantCulture),
+                CellType.FloatingPoint => _numberValue.ToString(CultureInfo.InvariantCulture),
                 CellType.Integer => _integerValue.ToString(CultureInfo.InvariantCulture),
                 CellType.Boolean => _booleanValue.ToString(),
                 CellType.DateTime => _dateTimeValue.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
@@ -165,7 +165,7 @@ namespace SheetAtlas.Core.Domain.ValueObjects
 
             return _type switch
             {
-                CellType.Number => Math.Abs(AsNumber() - other.AsNumber()) < double.Epsilon,
+                CellType.FloatingPoint => Math.Abs(AsFloatingPoint() - other.AsFloatingPoint()) < double.Epsilon,
                 CellType.Integer => AsInteger() == other.AsInteger(),
                 CellType.Boolean => AsBoolean() == other.AsBoolean(),
                 CellType.DateTime => AsDateTime() == other.AsDateTime(),
@@ -181,7 +181,7 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         {
             return _type switch
             {
-                CellType.Number => HashCode.Combine(_type, _numberValue),
+                CellType.FloatingPoint => HashCode.Combine(_type, _numberValue),
                 CellType.Integer => HashCode.Combine(_type, _integerValue),
                 CellType.Boolean => HashCode.Combine(_type, _booleanValue),
                 CellType.DateTime => HashCode.Combine(_type, _dateTimeValue),
@@ -204,7 +204,7 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         Empty = 0,    // No value (null/whitespace)
         Text = 1,     // String data (reference type - unavoidable for text)
         Integer = 2,  // Whole numbers (long, 8 bytes)
-        Number = 3,   // Decimal numbers (double, 8 bytes)
+        FloatingPoint = 3,   // Floating-point/decimal numbers (double, 8 bytes)
         Boolean = 4,  // True/False (bool, 1 byte)
         DateTime = 5  // Date/time values (DateTime, 8 bytes)
     }

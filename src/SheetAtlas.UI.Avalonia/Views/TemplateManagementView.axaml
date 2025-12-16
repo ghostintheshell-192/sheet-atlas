@@ -1,0 +1,426 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
+             xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+             x:Class="SheetAtlas.UI.Avalonia.Views.TemplateManagementView"
+             x:DataType="vm:TemplateManagementViewModel"
+             Background="{DynamicResource MainBackground}">
+
+    <Design.DataContext>
+        <vm:TemplateManagementViewModel/>
+    </Design.DataContext>
+
+    <Grid ColumnDefinitions="280,*" Margin="8">
+
+        <!-- LEFT PANEL: Template Library -->
+        <Border Grid.Column="0"
+                Background="{DynamicResource SecondaryBackground}"
+                CornerRadius="4"
+                Margin="0,0,8,0">
+            <Grid RowDefinitions="Auto,*,Auto">
+
+                <!-- Library Header -->
+                <Border Grid.Row="0"
+                        Background="{DynamicResource CardBackground}"
+                        Padding="12,10"
+                        BorderBrush="{DynamicResource SubtleBorder}"
+                        BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="TEMPLATE LIBRARY"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SearchQueryText}"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                Content="Refresh"
+                                Classes="SecondaryButton"
+                                Command="{Binding RefreshLibraryCommand}"
+                                FontSize="10"
+                                Padding="8,4"/>
+                    </Grid>
+                </Border>
+
+                <!-- Template List -->
+                <Grid Grid.Row="1">
+                    <!-- Loading indicator -->
+                    <ProgressBar IsVisible="{Binding IsLoadingTemplates}"
+                                 IsIndeterminate="True"
+                                 Margin="12"
+                                 VerticalAlignment="Top"/>
+
+                    <!-- Template list -->
+                    <ListBox ItemsSource="{Binding TemplateLibrary}"
+                             SelectedItem="{Binding SelectedTemplateSummary}"
+                             Background="Transparent"
+                             Padding="4"
+                             IsVisible="{Binding !IsLoadingTemplates}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="8,6"
+                                        Background="Transparent"
+                                        CornerRadius="4">
+                                    <Border.Styles>
+                                        <Style Selector="Border:pointerover">
+                                            <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
+                                        </Style>
+                                    </Border.Styles>
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontWeight="Medium"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource PrimaryText}"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock FontSize="11"
+                                                       Foreground="{DynamicResource SecondaryText}">
+                                                <Run Text="{Binding ColumnCount}"/>
+                                                <Run Text=" columns"/>
+                                            </TextBlock>
+                                            <TextBlock Text="|"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource SecondaryText}"/>
+                                            <TextBlock FontSize="11"
+                                                       Foreground="{DynamicResource SecondaryText}">
+                                                <Run Text="{Binding RequiredColumnCount}"/>
+                                                <Run Text=" required"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Empty state -->
+                    <StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                Spacing="8"
+                                IsVisible="{Binding !TemplateLibrary.Count}">
+                        <TextBlock Text="No templates yet"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource SecondaryText}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Create one from a loaded file"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SecondaryText}"
+                                   Opacity="0.7"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Library Actions -->
+                <Border Grid.Row="2"
+                        Background="{DynamicResource CardBackground}"
+                        Padding="8"
+                        BorderBrush="{DynamicResource SubtleBorder}"
+                        BorderThickness="0,1,0,0">
+                    <StackPanel Spacing="6">
+                        <Button Content="Import Template..."
+                                Classes="SecondaryButton"
+                                Command="{Binding ImportTemplateCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"/>
+                        <Button Content="Delete Selected"
+                                Classes="DangerButton"
+                                Command="{Binding DeleteTemplateCommand}"
+                                IsEnabled="{Binding CanDeleteTemplate}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- RIGHT PANEL: Workspace -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*">
+
+            <!-- Section 1: Selected Files Info -->
+            <controls:CollapsibleSection Grid.Row="0"
+                                         IsExpanded="True"
+                                         Margin="0,0,0,8">
+                <controls:CollapsibleSection.Header>
+                    <TextBlock Text="SELECTED FILES"
+                               FontWeight="Bold"
+                               FontSize="12"
+                               Foreground="{DynamicResource SearchQueryText}"/>
+                </controls:CollapsibleSection.Header>
+                <controls:CollapsibleSection.Content>
+                    <Border Background="{DynamicResource CardBackground}"
+                            Padding="12">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <!-- File icon -->
+                            <TextBlock Grid.Column="0"
+                                       Text="&#128196;"
+                                       FontSize="24"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,12,0"
+                                       Opacity="0.6"/>
+
+                            <!-- File info -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedFilesText}"
+                                           FontWeight="Medium"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource PrimaryText}"/>
+                                <TextBlock IsVisible="{Binding !HasSelectedFiles}"
+                                           Text="Select files from the sidebar to work with templates"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource SecondaryText}"
+                                           FontStyle="Italic"/>
+                            </StackPanel>
+
+                            <!-- Create Template button -->
+                            <Button Grid.Column="2"
+                                    Content="Create Template"
+                                    Classes="ModernButton"
+                                    Command="{Binding CreateTemplateCommand}"
+                                    IsEnabled="{Binding CanCreateTemplate}"
+                                    ToolTip.Tip="Create a new template from the selected file"
+                                    VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </controls:CollapsibleSection.Content>
+            </controls:CollapsibleSection>
+
+            <!-- Section 2: Selected Template Details -->
+            <controls:CollapsibleSection Grid.Row="1"
+                                         IsExpanded="True"
+                                         Margin="0,0,0,8"
+                                         IsVisible="{Binding HasSelectedTemplate}">
+                <controls:CollapsibleSection.Header>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="SELECTED TEMPLATE"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SearchQueryText}"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding SelectedTemplateSummary.Name}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource AccentOrange}"
+                                   FontWeight="SemiBold"/>
+                    </Grid>
+                </controls:CollapsibleSection.Header>
+                <controls:CollapsibleSection.Content>
+                    <Border Background="{DynamicResource CardBackground}"
+                            Padding="12">
+                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="120,*">
+                            <!-- Columns -->
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="COLUMNS"
+                                       FontWeight="SemiBold"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SecondaryText}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource PrimaryText}">
+                                <Run Text="{Binding TemplateColumnCount}"/>
+                                <Run Text=" total, "/>
+                                <Run Text="{Binding TemplateRequiredColumnCount}"/>
+                                <Run Text=" required"/>
+                            </TextBlock>
+
+                            <!-- Description -->
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="DESCRIPTION"
+                                       FontWeight="SemiBold"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SecondaryText}"
+                                       Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1"
+                                       Text="{Binding TemplateDescription}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource PrimaryText}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,8,0,0"/>
+
+                            <!-- Action Buttons -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        Margin="0,16,0,0">
+                                <Button Content="Validate Selected Files"
+                                        Classes="CTAButton"
+                                        Command="{Binding ValidateCommand}"
+                                        IsEnabled="{Binding CanValidate}"/>
+                                <Button Content="Update Template"
+                                        Classes="SecondaryButton"
+                                        Command="{Binding UpdateTemplateCommand}"
+                                        IsEnabled="{Binding CanUpdateTemplate}"
+                                        ToolTip.Tip="Update this template with semantic names from column linking"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </controls:CollapsibleSection.Content>
+            </controls:CollapsibleSection>
+
+            <!-- Section 3: Validation Progress -->
+            <ProgressBar Grid.Row="2"
+                         IsVisible="{Binding IsValidating}"
+                         IsIndeterminate="True"
+                         Height="4"
+                         Margin="0,0,0,8"/>
+
+            <!-- Section 4: Validation Results -->
+            <controls:CollapsibleSection Grid.Row="3"
+                                         IsExpanded="True"
+                                         IsVisible="{Binding HasValidationResult}">
+                <controls:CollapsibleSection.Header>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="VALIDATION RESULTS"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SearchQueryText}"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding ValidationStatusIcon}"
+                                       FontSize="14"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ValidationStatusText}"
+                                       FontSize="11"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource SearchQueryText}"/>
+                        </StackPanel>
+                    </Grid>
+                </controls:CollapsibleSection.Header>
+                <controls:CollapsibleSection.Content>
+                    <Border Background="{DynamicResource CardBackground}"
+                            Padding="12">
+                        <StackPanel Spacing="8">
+                            <!-- Summary -->
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Border Grid.Column="0"
+                                        Background="{Binding ValidationResultBackground}"
+                                        CornerRadius="4"
+                                        Padding="8,4"
+                                        Margin="0,0,12,0">
+                                    <TextBlock Text="{Binding ValidationResultStatus}"
+                                               FontWeight="SemiBold"
+                                               Foreground="White"/>
+                                </Border>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding ValidationSummary}"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <!-- Per-File Results List -->
+                            <ScrollViewer MaxHeight="400"
+                                          VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding BatchValidationResults}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:FileValidationResultViewModel">
+                                            <Border Margin="0,4"
+                                                    Background="{DynamicResource SecondaryBackground}"
+                                                    CornerRadius="4"
+                                                    Padding="0">
+                                                <StackPanel>
+                                                    <!-- File Header (clickable to expand) -->
+                                                    <Border Padding="10,8"
+                                                            Background="Transparent"
+                                                            PointerPressed="OnFileResultHeaderPressed">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                                            <!-- Expand/Collapse indicator -->
+                                                            <Panel Grid.Column="0" Margin="0,0,8,0" IsVisible="{Binding HasIssues}">
+                                                                <TextBlock Text="&#x25BC;"
+                                                                           FontSize="8"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{DynamicResource SecondaryText}"
+                                                                           IsVisible="{Binding IsExpanded}"/>
+                                                                <TextBlock Text="&#x25B6;"
+                                                                           FontSize="8"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{DynamicResource SecondaryText}"
+                                                                           IsVisible="{Binding !IsExpanded}"/>
+                                                            </Panel>
+                                                            <!-- File name -->
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding FileName}"
+                                                                       FontWeight="Medium"
+                                                                       FontSize="13"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource PrimaryText}"/>
+                                                            <!-- Status icon -->
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding StatusIcon}"
+                                                                       FontSize="14"
+                                                                       Margin="8,0"
+                                                                       VerticalAlignment="Center"/>
+                                                            <!-- Status text -->
+                                                            <TextBlock Grid.Column="3"
+                                                                       Text="{Binding StatusText}"
+                                                                       FontSize="11"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource SecondaryText}"/>
+                                                        </Grid>
+                                                    </Border>
+
+                                                    <!-- Expanded Issues List -->
+                                                    <ItemsControl ItemsSource="{Binding Issues}"
+                                                                  IsVisible="{Binding IsExpanded}"
+                                                                  Margin="24,0,8,8">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:ValidationIssueViewModel">
+                                                                <Border Padding="6,3"
+                                                                        BorderThickness="0,0,0,1"
+                                                                        BorderBrush="{DynamicResource SubtleBorder}">
+                                                                    <Grid ColumnDefinitions="Auto,Auto,*">
+                                                                        <TextBlock Grid.Column="0"
+                                                                                   Text="{Binding SeverityIcon}"
+                                                                                   Margin="0,0,6,0"
+                                                                                   FontSize="11"/>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding Location}"
+                                                                                   FontWeight="SemiBold"
+                                                                                   Foreground="{DynamicResource AccentOrange}"
+                                                                                   FontSize="10"
+                                                                                   Margin="0,0,6,0"/>
+                                                                        <TextBlock Grid.Column="2"
+                                                                                   Text="{Binding Message}"
+                                                                                   TextWrapping="Wrap"
+                                                                                   FontSize="11"
+                                                                                   Foreground="{DynamicResource PrimaryText}"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Border>
+                </controls:CollapsibleSection.Content>
+            </controls:CollapsibleSection>
+
+            <!-- Empty State (no template selected and no validation) -->
+            <Border Grid.Row="1" Grid.RowSpan="3"
+                    IsVisible="{Binding !HasSelectedTemplate}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="40">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <TextBlock Text="&#128203;"
+                               FontSize="48"
+                               HorizontalAlignment="Center"
+                               Opacity="0.4"/>
+                    <TextBlock Text="Select a template from the library"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryText}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Or create a new one from a loaded file"
+                               FontSize="14"
+                               Foreground="{DynamicResource SecondaryText}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
