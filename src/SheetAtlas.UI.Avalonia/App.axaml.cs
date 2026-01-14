@@ -42,6 +42,10 @@ public partial class App : Application
 
         _ = _host.Services.GetRequiredService<ILogService>();
 
+        // Load user settings
+        var settingsService = _host.Services.GetRequiredService<ISettingsService>();
+        _ = settingsService.LoadAsync();
+
         var themeManager = _host.Services.GetRequiredService<IThemeManager>();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -124,6 +128,7 @@ public partial class App : Application
                 services.AddSingleton<IColumnLinkingService, ColumnLinkingService>();
                 services.AddSingleton<IExceptionHandler, ExceptionHandler>();
                 services.AddSingleton<IFileLogService, FileLogService>();
+                services.AddSingleton<ISettingsService, SettingsService>();
 
                 // Register Avalonia-specific services
                 services.AddSingleton<IDialogService, AvaloniaDialogService>();
