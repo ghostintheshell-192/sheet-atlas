@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
+using Avalonia;
+using Avalonia.Styling;
 using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.UI.Avalonia.Commands;
+using SheetAtlas.UI.Avalonia.Managers;
 using SheetAtlas.UI.Avalonia.Services;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels;
@@ -18,6 +21,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
     private readonly ILogService _logService;
     private readonly IFilePickerService _filePickerService;
+    private readonly IThemeManager _themeManager;
 
     // Working copy of settings (edited by user, not saved until Save clicked)
     private UserSettings _workingSettings;
@@ -35,11 +39,13 @@ public class SettingsViewModel : ViewModelBase
     public SettingsViewModel(
         ISettingsService settingsService,
         ILogService logService,
-        IFilePickerService filePickerService)
+        IFilePickerService filePickerService,
+        IThemeManager themeManager)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logService = logService ?? throw new ArgumentNullException(nameof(logService));
         _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
+        _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
 
         // Load current settings
         _workingSettings = _settingsService.Current;
@@ -185,6 +191,9 @@ public class SettingsViewModel : ViewModelBase
             // Save to disk
             await _settingsService.SaveAsync(newSettings);
 
+            // Apply theme immediately
+            ApplyThemeFromPreference(SelectedTheme);
+
             // Update working copy
             _workingSettings = newSettings;
             HasUnsavedChanges = false;
@@ -284,6 +293,32 @@ public class SettingsViewModel : ViewModelBase
     {
         HasUnsavedChanges = true;
         (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Applies theme based on user preference (Light/Dark/System)
+    /// </summary>
+    private void ApplyThemeFromPreference(ThemePreference preference)
+    {
+        Theme theme = preference switch
+        {
+            ThemePreference.Light => Theme.Light,
+            ThemePreference.Dark => Theme.Dark,
+            ThemePreference.System => DetectSystemTheme(),
+            _ => Theme.Light
+        };
+
+        _themeManager.SetTheme(theme);
+        _logService.LogInfo($"Applied theme: {preference} → {theme}", "SettingsViewModel");
+    }
+
+    /// <summary>
+    /// Detects the current system theme preference
+    /// </summary>
+    private static Theme DetectSystemTheme()
+    {
+        var actualTheme = Application.Current?.ActualThemeVariant;
+        return actualTheme == ThemeVariant.Dark ? Theme.Dark : Theme.Light;
     }
 
     #endregion
