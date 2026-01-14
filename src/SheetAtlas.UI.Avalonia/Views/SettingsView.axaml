@@ -1,0 +1,183 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
+             xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="SheetAtlas.UI.Avalonia.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <Design.DataContext>
+        <vm:SettingsViewModel/>
+    </Design.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>    <!-- Settings sections -->
+            <RowDefinition Height="Auto"/> <!-- Action buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Settings Sections (scrollable) -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="0">
+
+                <!-- APPEARANCE Section -->
+                <controls:CollapsibleSection IsExpanded="True">
+                    <controls:CollapsibleSection.Header>
+                        <TextBlock Text="APPEARANCE"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SearchQueryText}"/>
+                    </controls:CollapsibleSection.Header>
+                    <controls:CollapsibleSection.Content>
+                        <Border Background="{DynamicResource CardBackground}"
+                                Padding="16">
+                            <Grid ColumnDefinitions="150,*" RowDefinitions="Auto">
+                                <!-- Theme -->
+                                <TextBlock Grid.Row="0" Grid.Column="0"
+                                          Text="Theme"
+                                          FontWeight="SemiBold"
+                                          FontSize="13"
+                                          Foreground="{DynamicResource PrimaryText}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,12,0"/>
+                                <ComboBox Grid.Row="0" Grid.Column="1"
+                                         ItemsSource="{Binding AvailableThemes}"
+                                         SelectedItem="{Binding SelectedTheme}"
+                                         MinWidth="200"
+                                         HorizontalAlignment="Left"/>
+                            </Grid>
+                        </Border>
+                    </controls:CollapsibleSection.Content>
+                </controls:CollapsibleSection>
+
+                <!-- DATA PROCESSING Section -->
+                <controls:CollapsibleSection IsExpanded="True">
+                    <controls:CollapsibleSection.Header>
+                        <TextBlock Text="DATA PROCESSING"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SearchQueryText}"/>
+                    </controls:CollapsibleSection.Header>
+                    <controls:CollapsibleSection.Content>
+                        <Border Background="{DynamicResource CardBackground}"
+                                Padding="16">
+                            <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto,Auto">
+                                <!-- Default Header Rows -->
+                                <TextBlock Grid.Row="0" Grid.Column="0"
+                                          Text="Default header rows"
+                                          FontWeight="SemiBold"
+                                          FontSize="13"
+                                          Foreground="{DynamicResource PrimaryText}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,12,12"/>
+                                <ComboBox Grid.Row="0" Grid.Column="1"
+                                         ItemsSource="{Binding AvailableHeaderRowCounts}"
+                                         SelectedItem="{Binding SelectedHeaderRowCount}"
+                                         MinWidth="100"
+                                         HorizontalAlignment="Left"
+                                         Margin="0,0,0,12"/>
+
+                                <!-- Export Format -->
+                                <TextBlock Grid.Row="1" Grid.Column="0"
+                                          Text="Default export format"
+                                          FontWeight="SemiBold"
+                                          FontSize="13"
+                                          Foreground="{DynamicResource PrimaryText}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,12,12"/>
+                                <ComboBox Grid.Row="1" Grid.Column="1"
+                                         ItemsSource="{Binding AvailableExportFormats}"
+                                         SelectedItem="{Binding SelectedExportFormat}"
+                                         MinWidth="150"
+                                         HorizontalAlignment="Left"
+                                         Margin="0,0,0,12"/>
+
+                                <!-- Naming Pattern -->
+                                <TextBlock Grid.Row="2" Grid.Column="0"
+                                          Text="Normalized file naming"
+                                          FontWeight="SemiBold"
+                                          FontSize="13"
+                                          Foreground="{DynamicResource PrimaryText}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,12,0"/>
+                                <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                                    <ComboBox ItemsSource="{Binding AvailableNamingPatterns}"
+                                             SelectedItem="{Binding SelectedNamingPattern}"
+                                             MinWidth="200"
+                                             HorizontalAlignment="Left"/>
+                                    <TextBlock Text="Pattern used when saving processed files"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource SecondaryText}"
+                                              TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </controls:CollapsibleSection.Content>
+                </controls:CollapsibleSection>
+
+                <!-- FILE LOCATIONS Section -->
+                <controls:CollapsibleSection IsExpanded="True">
+                    <controls:CollapsibleSection.Header>
+                        <TextBlock Text="FILE LOCATIONS"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SearchQueryText}"/>
+                    </controls:CollapsibleSection.Header>
+                    <controls:CollapsibleSection.Content>
+                        <Border Background="{DynamicResource CardBackground}"
+                                Padding="16">
+                            <Grid ColumnDefinitions="150,*,Auto" RowDefinitions="Auto">
+                                <!-- Output Folder -->
+                                <TextBlock Grid.Row="0" Grid.Column="0"
+                                          Text="Output folder"
+                                          FontWeight="SemiBold"
+                                          FontSize="13"
+                                          Foreground="{DynamicResource PrimaryText}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,12,0"/>
+                                <TextBox Grid.Row="0" Grid.Column="1"
+                                        Text="{Binding OutputFolder}"
+                                        IsReadOnly="True"
+                                        Watermark="~/Documents/SheetAtlas/output"
+                                        Margin="0,0,8,0"/>
+                                <Button Grid.Row="0" Grid.Column="2"
+                                       Content="Browse..."
+                                       Command="{Binding BrowseOutputFolderCommand}"
+                                       Padding="12,6"/>
+                            </Grid>
+                        </Border>
+                    </controls:CollapsibleSection.Content>
+                </controls:CollapsibleSection>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Action Buttons (bottom) -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource SecondaryBackground}"
+                BorderBrush="{DynamicResource BorderColor}"
+                BorderThickness="0,1,0,0"
+                Padding="16">
+            <StackPanel Orientation="Horizontal"
+                       HorizontalAlignment="Right"
+                       Spacing="8">
+                <Button Content="Reset to Defaults"
+                       Command="{Binding ResetCommand}"
+                       Padding="12,6"
+                       ToolTip.Tip="Reset all settings to their default values"/>
+                <Button Content="Cancel"
+                       Command="{Binding CancelCommand}"
+                       Padding="12,6"
+                       ToolTip.Tip="Discard unsaved changes"/>
+                <Button Content="Save"
+                       Command="{Binding SaveCommand}"
+                       Classes="CTAButton"
+                       Padding="12,6"
+                       IsEnabled="{Binding HasUnsavedChanges}"
+                       ToolTip.Tip="Save settings to disk"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -18,6 +18,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand CloseComparisonTabCommand { get; private set; } = null!;
         public ICommand ShowTemplatesTabCommand { get; private set; } = null!;
         public ICommand CloseTemplatesTabCommand { get; private set; } = null!;
+        public ICommand ShowSettingsTabCommand { get; private set; } = null!;
+        public ICommand CloseSettingsTabCommand { get; private set; } = null!;
         public ICommand ShowSearchResultsCommand { get; private set; } = null!;
         public ICommand ShowAboutCommand { get; private set; } = null!;
         public ICommand ShowDocumentationCommand { get; private set; } = null!;
@@ -101,6 +103,20 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 IsTemplatesTabVisible = false;
                 SwitchToNextVisibleTab("Templates");
+                return Task.CompletedTask;
+            });
+
+            ShowSettingsTabCommand = new RelayCommand(() =>
+            {
+                IsSettingsTabVisible = true;
+                SelectedTabIndex = GetTabIndex("Settings");
+                return Task.CompletedTask;
+            });
+
+            CloseSettingsTabCommand = new RelayCommand(() =>
+            {
+                IsSettingsTabVisible = false;
+                SwitchToNextVisibleTab("Settings");
                 return Task.CompletedTask;
             });
 

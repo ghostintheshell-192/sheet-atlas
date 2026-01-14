@@ -181,4 +181,54 @@ public class AvaloniaFilePickerService : IFilePickerService
             return null;
         }
     }
+
+    public async Task<string?> SelectFolderAsync(string title)
+    {
+        try
+        {
+            var storageProvider = GetStorageProvider();
+            if (storageProvider == null)
+            {
+                _logger.LogWarning("StorageProvider not available for folder picker", "AvaloniaFilePickerService");
+                return null;
+            }
+
+            var options = new FolderPickerOpenOptions
+            {
+                Title = title,
+                AllowMultiple = false
+            };
+
+            var result = await storageProvider.OpenFolderPickerAsync(options);
+
+            if (result == null || !result.Any())
+            {
+                _logger.LogInfo("User cancelled folder picker", "AvaloniaFilePickerService");
+                return null;
+            }
+
+            var folderPath = result[0].Path.LocalPath;
+            _logger.LogInfo($"User selected folder: {folderPath}", "AvaloniaFilePickerService");
+
+            return folderPath;
+        }
+        catch (OperationCanceledException)
+        {
+            // User cancelled - this is normal operation
+            _logger.LogInfo("Folder picker cancelled by user", "AvaloniaFilePickerService");
+            return null;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // Permission denied to access file system
+            _logger.LogError("Access denied when opening folder picker", ex, "AvaloniaFilePickerService");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            // Unexpected errors - platform issues, file system errors, etc.
+            _logger.LogError("Unexpected error opening folder picker", ex, "AvaloniaFilePickerService");
+            return null;
+        }
+    }
 }
