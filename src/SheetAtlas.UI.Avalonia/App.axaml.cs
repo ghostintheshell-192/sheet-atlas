@@ -42,11 +42,21 @@ public partial class App : Application
 
         _ = _host.Services.GetRequiredService<ILogService>();
 
-        // Load user settings
+        // Load user settings synchronously at startup (use Task.Run to avoid deadlock)
         var settingsService = _host.Services.GetRequiredService<ISettingsService>();
-        _ = settingsService.LoadAsync();
+        Task.Run(() => settingsService.LoadAsync()).GetAwaiter().GetResult();
 
+        // Apply theme from loaded settings
         var themeManager = _host.Services.GetRequiredService<IThemeManager>();
+        var themePreference = settingsService.Current.Appearance.Theme;
+        var theme = themePreference switch
+        {
+            Core.Application.DTOs.ThemePreference.Light => Theme.Light,
+            Core.Application.DTOs.ThemePreference.Dark => Theme.Dark,
+            Core.Application.DTOs.ThemePreference.System => Application.Current?.ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Dark ? Theme.Dark : Theme.Light,
+            _ => Theme.Light
+        };
+        themeManager.SetTheme(theme);
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

@@ -127,9 +127,39 @@ public class AvaloniaFilePickerService : IFilePickerService
                 Title = title
             };
 
+            // defaultExtension can be a full path (with suggested filename) or just an extension
             if (!string.IsNullOrEmpty(defaultExtension))
             {
-                options.DefaultExtension = defaultExtension;
+                // Check if it's a full path (contains directory separator)
+                if (defaultExtension.Contains(Path.DirectorySeparatorChar) || defaultExtension.Contains(Path.AltDirectorySeparatorChar))
+                {
+                    // Extract directory for start location
+                    var directory = Path.GetDirectoryName(defaultExtension);
+                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+                    {
+                        var folderUri = new Uri("file://" + directory);
+                        options.SuggestedStartLocation = await storageProvider.TryGetFolderFromPathAsync(folderUri);
+                    }
+
+                    // Extract filename for suggestion
+                    var suggestedFileName = Path.GetFileName(defaultExtension);
+                    if (!string.IsNullOrEmpty(suggestedFileName))
+                    {
+                        options.SuggestedFileName = suggestedFileName;
+                    }
+
+                    // Extract extension
+                    var ext = Path.GetExtension(defaultExtension)?.TrimStart('.');
+                    if (!string.IsNullOrEmpty(ext))
+                    {
+                        options.DefaultExtension = ext;
+                    }
+                }
+                else
+                {
+                    // It's just an extension
+                    options.DefaultExtension = defaultExtension.TrimStart('.');
+                }
             }
 
             if (fileTypeFilters != null && fileTypeFilters.Any())
