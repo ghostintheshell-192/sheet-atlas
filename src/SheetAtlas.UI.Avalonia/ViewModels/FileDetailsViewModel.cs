@@ -29,6 +29,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private IFileLoadResultViewModel? _selectedFile;
     private bool _isLoadingHistory;
     private bool _disposed;
+    private Func<string, IReadOnlyDictionary<string, string>>? _getSemanticNamesForFile;
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -56,6 +57,15 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public string FileSize => SelectedFile != null ? FormatFileSize(SelectedFile.FilePath) : string.Empty;
     public bool HasErrorLogs => ErrorLogs.Count > 0;
     public bool HasSelectedFile => SelectedFile != null;
+
+    /// <summary>
+    /// Sets the provider for semantic names used during export.
+    /// When set, export will use semantic names for column headers instead of original names.
+    /// </summary>
+    public void SetSemanticNameProvider(Func<string, IReadOnlyDictionary<string, string>> provider)
+    {
+        _getSemanticNamesForFile = provider ?? throw new ArgumentNullException(nameof(provider));
+    }
 
     // Commands
     public ICommand RemoveFromListCommand { get; }
@@ -341,7 +351,14 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
             _logger.LogInfo($"Exporting to Excel: {savedPath}", "FileDetailsViewModel");
 
-            var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath);
+            // Get semantic names for this file if available
+            var semanticNames = _getSemanticNamesForFile?.Invoke(SelectedFile.FileName);
+            var options = new ExcelExportOptions
+            {
+                SemanticNames = semanticNames
+            };
+
+            var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath, options);
 
             if (result.IsSuccess)
             {
@@ -393,7 +410,14 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
             _logger.LogInfo($"Exporting to CSV: {savedPath}", "FileDetailsViewModel");
 
-            var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath);
+            // Get semantic names for this file if available
+            var semanticNames = _getSemanticNamesForFile?.Invoke(SelectedFile.FileName);
+            var options = new CsvExportOptions
+            {
+                SemanticNames = semanticNames
+            };
+
+            var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath, options);
 
             if (result.IsSuccess)
             {

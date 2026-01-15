@@ -51,4 +51,10 @@ public partial class SidebarItem : ObservableObject
     /// </summary>
     [ObservableProperty]
     private double _maxWidth = 500;
+
+    /// <summary>
+    /// Badge count to display on the icon. Null or 0 hides the badge.
+    /// </summary>
+    [ObservableProperty]
+    private int? _badgeCount;
 }

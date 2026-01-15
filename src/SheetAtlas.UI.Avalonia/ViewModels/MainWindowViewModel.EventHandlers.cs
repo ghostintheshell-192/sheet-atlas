@@ -52,6 +52,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 TemplateManagementViewModel.SelectedTemplateChanged -= OnSelectedTemplateChanged;
             }
+
+            if (ColumnLinkingViewModel != null)
+            {
+                ColumnLinkingViewModel.ColumnLinks.CollectionChanged -= OnColumnLinksCollectionChanged;
+            }
         }
 
         private void OnFileLoaded(object? sender, FileLoadedEventArgs e)
@@ -59,6 +64,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             _logger.LogInfo($"File loaded: {e.File.FileName} (HasErrors: {e.HasErrors})", "MainWindowViewModel");
 
             OnPropertyChanged(nameof(HasLoadedFiles));
+            OnPropertyChanged(nameof(StatusText));
 
             if (LoadedFiles.Count == 1)
             {
@@ -81,6 +87,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             _logger.LogInfo($"File removed: {e.File.FileName} (isRetry: {e.IsRetry})", "MainWindowViewModel");
 
             OnPropertyChanged(nameof(HasLoadedFiles));
+            OnPropertyChanged(nameof(StatusText));
 
             if (!e.IsRetry && SelectedFile == e.File)
             {
@@ -175,6 +182,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             FileDetailsViewModel.RemoveNotificationRequested += OnRemoveNotificationRequested;
             FileDetailsViewModel.TryAgainRequested += OnTryAgainRequested;
 
+            // Connect semantic name provider (in case ColumnLinkingViewModel was set first)
+            ConnectSemanticNameProvider();
+
             FileDetailsViewModel.SelectedFile = SelectedFile;
         }
 
@@ -199,10 +209,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         private void ConnectSemanticNameProvider()
         {
-            if (TemplateManagementViewModel != null && ColumnLinkingViewModel != null)
+            if (ColumnLinkingViewModel != null)
             {
-                TemplateManagementViewModel.SetSemanticNameProvider(
-                    fileName => ColumnLinkingViewModel.GetSemanticNamesForFile(fileName));
+                var provider = (string fileName) => ColumnLinkingViewModel.GetSemanticNamesForFile(fileName);
+
+                TemplateManagementViewModel?.SetSemanticNameProvider(provider);
+                FileDetailsViewModel?.SetSemanticNameProvider(provider);
             }
         }
 
@@ -215,8 +227,17 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             ColumnLinkingViewModel = columnLinkingViewModel ?? throw new ArgumentNullException(nameof(columnLinkingViewModel));
 
+            // Subscribe to ColumnLinks changes for badge and status bar updates
+            ColumnLinkingViewModel.ColumnLinks.CollectionChanged += OnColumnLinksCollectionChanged;
+
             // Connect semantic name provider (in case TemplateManagementViewModel was set first)
             ConnectSemanticNameProvider();
+        }
+
+        private void OnColumnLinksCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(ColumnCount));
+            OnPropertyChanged(nameof(StatusText));
         }
 
         public void SetSettingsViewModel(SettingsViewModel settingsViewModel)
