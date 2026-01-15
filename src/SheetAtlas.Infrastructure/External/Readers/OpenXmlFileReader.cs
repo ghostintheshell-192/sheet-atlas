@@ -3,6 +3,7 @@ using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Configuration;
 using SheetAtlas.Logging.Services;
+using SheetAtlas.Core.Application.DTOs;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -23,6 +24,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
         private readonly IMergedRangeExtractor<WorksheetPart> _mergedRangeExtractor;
         private readonly ICellValueReader _cellValueReader;
         private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
+        private readonly ISettingsService _settingsService;
         private readonly SecuritySettings _securitySettings;
 
         public OpenXmlFileReader(
@@ -31,6 +33,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             IMergedRangeExtractor<WorksheetPart> mergedRangeExtractor,
             ICellValueReader cellValueReader,
             ISheetAnalysisOrchestrator analysisOrchestrator,
+            ISettingsService settingsService,
             IOptions<AppSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -38,6 +41,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             _mergedRangeExtractor = mergedRangeExtractor ?? throw new ArgumentNullException(nameof(mergedRangeExtractor));
             _cellValueReader = cellValueReader ?? throw new ArgumentNullException(nameof(cellValueReader));
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _securitySettings = settings?.Value?.Security ?? new SecuritySettings();
         }
 
@@ -287,7 +291,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns);
 
-            const int headerRowCount = 1;
+            var headerRowCount = _settingsService.Current.DataProcessing.DefaultHeaderRowCount;
             sheetData.SetHeaderRowCount(headerRowCount);
 
             sheetData.TrimExcess();
