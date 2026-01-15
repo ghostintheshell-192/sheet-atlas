@@ -86,7 +86,11 @@ namespace SheetAtlas.Infrastructure.External.Writers
                         for (int col = 0; col < sheetData.ColumnCount; col++)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
-                            var cell = CreateTextCell(sheetData.ColumnNames[col], GetColumnReference(col), rowIndex);
+                            var originalName = sheetData.ColumnNames[col];
+                            var headerName = options.SemanticNames?.TryGetValue(originalName, out var semantic) == true
+                                ? semantic
+                                : originalName;
+                            var cell = CreateTextCell(headerName, GetColumnReference(col), rowIndex);
                             headerRow.Append(cell);
                         }
                         sheetData2.Append(headerRow);
@@ -197,8 +201,12 @@ namespace SheetAtlas.Infrastructure.External.Writers
                     // Write header row if requested
                     if (options.IncludeHeaders)
                     {
+                        var headerNames = sheetData.ColumnNames.Select(originalName =>
+                            options.SemanticNames?.TryGetValue(originalName, out var semantic) == true
+                                ? semantic
+                                : originalName);
                         var headerLine = string.Join(options.Delimiter,
-                            sheetData.ColumnNames.Select(name => EscapeCsvField(name, options.Delimiter)));
+                            headerNames.Select(name => EscapeCsvField(name, options.Delimiter)));
                         writer.WriteLine(headerLine);
                     }
 

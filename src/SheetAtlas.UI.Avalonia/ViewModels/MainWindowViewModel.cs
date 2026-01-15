@@ -162,6 +162,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         set => SetField(ref _isStatusBarVisible, value);
     }
 
+    /// <summary>
+    /// Number of column groups in Column Linking sidebar.
+    /// Used for badge display on Columns sidebar icon.
+    /// </summary>
+    public int ColumnCount => ColumnLinkingViewModel?.ColumnLinks.Count ?? 0;
+
+    /// <summary>
+    /// Status text shown in the status bar.
+    /// Shows file count and column count when columns are loaded.
+    /// </summary>
+    public string StatusText => ColumnCount > 0
+        ? $"{LoadedFiles.Count} files, {ColumnCount} columns"
+        : LoadedFiles.Count > 0
+            ? $"{LoadedFiles.Count} files loaded"
+            : "Ready";
+
     public IThemeManager ThemeManager { get; }
     // public ICommand ShowAllFilesCommand => SearchViewModel?.ShowAllFilesCommand ?? new RelayCommand(() => Task.CompletedTask);
 

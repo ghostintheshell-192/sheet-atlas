@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="using:SheetAtlas.UI.Avalonia.Models"
              xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
+             xmlns:converters="using:SheetAtlas.UI.Avalonia.Converters"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
              x:Class="SheetAtlas.UI.Avalonia.Controls.MultiSidebar"
              x:Name="Root">
@@ -59,9 +60,28 @@
                                 ToolTip.Tip="{Binding Tooltip}"
                                 Command="{Binding ToggleSidebarCommand, RelativeSource={RelativeSource AncestorType=controls:MultiSidebar}}"
                                 CommandParameter="{Binding}">
-                            <PathIcon Data="{Binding IconData}"
-                                      Width="20"
-                                      Height="20"/>
+                            <Panel>
+                                <PathIcon Data="{Binding IconData}"
+                                          Width="20"
+                                          Height="20"/>
+                                <!-- Badge -->
+                                <Border Background="{DynamicResource AccentOrange}"
+                                        CornerRadius="8"
+                                        MinWidth="16"
+                                        Height="16"
+                                        Padding="4,0"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="0,-2,-2,0"
+                                        IsVisible="{Binding BadgeCount, Converter={x:Static converters:GreaterThanZeroConverter.Instance}, FallbackValue=False}">
+                                    <TextBlock Text="{Binding BadgeCount}"
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                            </Panel>
                         </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

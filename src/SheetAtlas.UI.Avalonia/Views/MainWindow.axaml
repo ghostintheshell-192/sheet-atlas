@@ -97,7 +97,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- MultiSidebar with icon bar -->
-            <controls:MultiSidebar Grid.Column="0"
+            <controls:MultiSidebar x:Name="MainSidebar"
+                                   Grid.Column="0"
                                    AllowMultipleOpen="False"
                                    DataContext="{Binding}">
                 <controls:MultiSidebar.Items>
@@ -446,13 +447,7 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0"
-                          Text="{Binding LoadedFiles.Count, StringFormat='{}{0} files loaded'}"
-                          Foreground="{DynamicResource SecondaryText}"
-                          FontSize="12"
-                          VerticalAlignment="Center"/>
-
-                <TextBlock Grid.Column="1"
-                          Text="Ready"
+                          Text="{Binding StatusText}"
                           Foreground="{DynamicResource SecondaryText}"
                           FontSize="12"
                           VerticalAlignment="Center"/>
