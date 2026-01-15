@@ -1,6 +1,7 @@
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Application.Services;
 using SheetAtlas.Core.Application.Services.Foundation;
+using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.Exceptions;
 using SheetAtlas.Core.Domain.ValueObjects;
@@ -300,6 +301,10 @@ namespace SheetAtlas.Tests.Services
             var settingsMock = new Mock<IOptions<AppSettings>>();
             settingsMock.Setup(s => s.Value).Returns(settings);
 
+            // Create user settings mock
+            var userSettingsMock = new Mock<ISettingsService>();
+            userSettingsMock.Setup(s => s.Current).Returns(UserSettings.CreateDefault());
+
             // Create OpenXmlFileReader with orchestrator
             var openXmlReader = new OpenXmlFileReader(
                 readerLogger.Object,
@@ -307,6 +312,7 @@ namespace SheetAtlas.Tests.Services
                 mergedRangeExtractor,
                 cellValueReader,
                 orchestrator,
+                userSettingsMock.Object,
                 settingsMock.Object);
             var readers = new List<IFileFormatReader> { openXmlReader };
 

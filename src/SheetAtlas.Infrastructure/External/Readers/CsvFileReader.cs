@@ -23,16 +23,19 @@ namespace SheetAtlas.Infrastructure.External.Readers
     {
         private readonly ILogService _logger;
         private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
+        private readonly ISettingsService _settingsService;
         private readonly SecuritySettings _securitySettings;
         private CsvReaderOptions _options;
 
         public CsvFileReader(
             ILogService logger,
             ISheetAnalysisOrchestrator analysisOrchestrator,
+            ISettingsService settingsService,
             IOptions<AppSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _securitySettings = settings?.Value?.Security ?? new SecuritySettings();
             _options = CsvReaderOptions.Default;
         }
@@ -257,8 +260,8 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var memorySaved = stringPool.EstimatedMemorySaved(totalStrings);
             _logger.LogInfo($"String interning: {stringPool.Count} unique from {totalStrings} total (~{memorySaved / 1024} KB saved)", "CsvFileReader");
 
-            // Set header row count (currently single-row headers only)
-            const int headerRowCount = 1;
+            // Set header row count from user settings
+            var headerRowCount = _settingsService.Current.DataProcessing.DefaultHeaderRowCount;
             sheetData.SetHeaderRowCount(headerRowCount);
 
             // Trim excess capacity to save memory

@@ -20,6 +20,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
     {
         private readonly ILogService _logger;
         private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
+        private readonly ISettingsService _settingsService;
         private readonly SecuritySettings _securitySettings;
         private static bool _encodingProviderRegistered = false;
         private static readonly object _encodingLock = new object();
@@ -27,10 +28,12 @@ namespace SheetAtlas.Infrastructure.External.Readers
         public XlsFileReader(
             ILogService logger,
             ISheetAnalysisOrchestrator analysisOrchestrator,
+            ISettingsService settingsService,
             IOptions<AppSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _securitySettings = settings?.Value?.Security ?? new SecuritySettings();
             RegisterEncodingProvider();
         }
@@ -236,8 +239,8 @@ namespace SheetAtlas.Infrastructure.External.Readers
                 }
             }
 
-            // Set header row count (currently single-row headers only)
-            const int headerRowCount = 1;
+            // Set header row count from user settings
+            var headerRowCount = _settingsService.Current.DataProcessing.DefaultHeaderRowCount;
             sheetData.SetHeaderRowCount(headerRowCount);
 
             // Trim excess capacity to save memory

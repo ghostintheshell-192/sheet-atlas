@@ -26,6 +26,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isSearchTabVisible;
     private bool _isComparisonTabVisible;
     private bool _isTemplatesTabVisible;
+    private bool _isSettingsTabVisible;
     private bool _isStatusBarVisible = true;
     private bool _disposed = false;
 
@@ -44,6 +45,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public TreeSearchResultsViewModel? TreeSearchResultsViewModel { get; private set; }
     public TemplateManagementViewModel? TemplateManagementViewModel { get; private set; }
     public ColumnLinkingViewModel? ColumnLinkingViewModel { get; private set; }
+    public SettingsViewModel? SettingsViewModel { get; private set; }
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -140,7 +142,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible;
+    public bool IsSettingsTabVisible
+    {
+        get => _isSettingsTabVisible;
+        set
+        {
+            if (SetField(ref _isSettingsTabVisible, value))
+            {
+                OnPropertyChanged(nameof(HasAnyTabVisible));
+            }
+        }
+    }
+
+    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible;
 
     public bool IsStatusBarVisible
     {

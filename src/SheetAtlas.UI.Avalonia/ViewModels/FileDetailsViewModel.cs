@@ -24,6 +24,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private readonly IFilePickerService _filePickerService;
     private readonly IDataNormalizationService _dataNormalizationService;
     private readonly IExcelWriterService _excelWriterService;
+    private readonly ISettingsService _settingsService;
 
     private IFileLoadResultViewModel? _selectedFile;
     private bool _isLoadingHistory;
@@ -72,13 +73,15 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         IFileLogService fileLogService,
         IFilePickerService filePickerService,
         IDataNormalizationService dataNormalizationService,
-        IExcelWriterService excelWriterService)
+        IExcelWriterService excelWriterService,
+        ISettingsService settingsService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileLogService = fileLogService ?? throw new ArgumentNullException(nameof(fileLogService));
         _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
         _dataNormalizationService = dataNormalizationService ?? throw new ArgumentNullException(nameof(dataNormalizationService));
         _excelWriterService = excelWriterService ?? throw new ArgumentNullException(nameof(excelWriterService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
         RemoveFromListCommand = new RelayCommand(() => { ExecuteRemoveFromList(); return Task.CompletedTask; });
         CleanAllDataCommand = new RelayCommand(() => { ExecuteCleanAllData(); return Task.CompletedTask; });
@@ -324,9 +327,9 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             }
 
             var originalPath = SelectedFile.FilePath;
-            var directory = Path.GetDirectoryName(originalPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var outputFolder = _settingsService.Current.FileLocations.OutputFolder;
             var baseName = Path.GetFileNameWithoutExtension(originalPath);
-            var outputPath = Path.Combine(directory, $"{baseName}_normalized.xlsx");
+            var outputPath = Path.Combine(outputFolder, $"{baseName}_normalized.xlsx");
 
             var savedPath = await _filePickerService.SaveFileAsync(
                 "Export Normalized Excel",
@@ -376,9 +379,9 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             }
 
             var originalPath = SelectedFile.FilePath;
-            var directory = Path.GetDirectoryName(originalPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var outputFolder = _settingsService.Current.FileLocations.OutputFolder;
             var baseName = Path.GetFileNameWithoutExtension(originalPath);
-            var outputPath = Path.Combine(directory, $"{baseName}_normalized.csv");
+            var outputPath = Path.Combine(outputFolder, $"{baseName}_normalized.csv");
 
             var savedPath = await _filePickerService.SaveFileAsync(
                 "Export Normalized CSV",

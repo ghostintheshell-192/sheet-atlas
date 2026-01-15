@@ -219,6 +219,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             ConnectSemanticNameProvider();
         }
 
+        public void SetSettingsViewModel(SettingsViewModel settingsViewModel)
+        {
+            SettingsViewModel = settingsViewModel ?? throw new ArgumentNullException(nameof(settingsViewModel));
+        }
+
         /// <summary>
         /// Update the list of selected files from the sidebar.
         /// Called by MainWindow code-behind when ListBox selection changes.
@@ -316,6 +321,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 "Search" => 1,       // Second TabItem in XAML
                 "Comparison" => 2,   // Third TabItem in XAML
                 "Templates" => 3,    // Fourth TabItem in XAML
+                "Settings" => 4,     // Fifth TabItem in XAML
                 _ => -1              // Invalid tab name
             };
         }
@@ -332,10 +338,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Each tab type has its preferred fallback sequence
             var tabPriorities = closedTabName switch
             {
-                "FileDetails" => new[] { "Search", "Comparison", "Templates" },
-                "Search" => new[] { "FileDetails", "Comparison", "Templates" },
-                "Comparison" => new[] { "Search", "FileDetails", "Templates" },
-                "Templates" => new[] { "Search", "FileDetails", "Comparison" },
+                "FileDetails" => new[] { "Search", "Comparison", "Templates", "Settings" },
+                "Search" => new[] { "FileDetails", "Comparison", "Templates", "Settings" },
+                "Comparison" => new[] { "Search", "FileDetails", "Templates", "Settings" },
+                "Templates" => new[] { "Search", "FileDetails", "Comparison", "Settings" },
+                "Settings" => new[] { "Search", "FileDetails", "Comparison", "Templates" },
                 _ => Array.Empty<string>()
             };
 
@@ -347,6 +354,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                     "Search" => IsSearchTabVisible,
                     "Comparison" => IsComparisonTabVisible,
                     "Templates" => IsTemplatesTabVisible,
+                    "Settings" => IsSettingsTabVisible,
                     _ => false
                 };
 

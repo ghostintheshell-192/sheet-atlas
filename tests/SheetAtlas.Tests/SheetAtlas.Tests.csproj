@@ -14,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="../../src/SheetAtlas.Core/SheetAtlas.Core.csproj" />
     <ProjectReference Include="../../src/SheetAtlas.Infrastructure/SheetAtlas.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/SheetAtlas.UI.Avalonia/SheetAtlas.UI.Avalonia.csproj" />
   </ItemGroup>
 </Project>
