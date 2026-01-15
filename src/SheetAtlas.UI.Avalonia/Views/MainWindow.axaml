@@ -87,15 +87,6 @@
                          InputGesture="F1"/>
             </MenuItem>
 
-            <!-- Temporary theme toggle (will move to Settings) -->
-            <MenuItem Header="🎨 Theme"
-                     HorizontalAlignment="Right"
-                     Margin="0,0,20,0">
-                <MenuItem Header="{Binding ThemeManager.ThemeButtonText, StringFormat='Switch to {0} Theme'}"
-                         Command="{Binding ToggleThemeCommand}"
-                         InputGesture="Ctrl+T"/>
-            </MenuItem>
-
         </Menu>
 
         <!-- Main Content -->

@@ -7,7 +7,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
     {
         public ICommand LoadFileCommand { get; private set; } = null!;
         public ICommand UnloadAllFilesCommand { get; private set; } = null!;
-        public ICommand ToggleThemeCommand { get; private set; } = null!;
         public ICommand ToggleSidebarCommand { get; private set; } = null!;
         public ICommand ToggleStatusBarCommand { get; private set; } = null!;
         public ICommand ShowFileDetailsTabCommand { get; private set; } = null!;
@@ -117,12 +116,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 IsSettingsTabVisible = false;
                 SwitchToNextVisibleTab("Settings");
-                return Task.CompletedTask;
-            });
-
-            ToggleThemeCommand = new RelayCommand(() =>
-            {
-                ThemeManager.ToggleTheme();
                 return Task.CompletedTask;
             });
 
