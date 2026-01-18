@@ -209,26 +209,20 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    private async Task ResetAsync()
+    private Task ResetAsync()
     {
-        try
-        {
-            await _settingsService.ResetToDefaultsAsync();
+        // Load defaults into UI without saving to disk
+        // User must click Save to persist the changes
+        _workingSettings = UserSettings.CreateDefault();
+        LoadSettingsIntoProperties();
+        HasUnsavedChanges = true;
 
-            // Reload defaults into UI
-            _workingSettings = _settingsService.Current;
-            LoadSettingsIntoProperties();
-            HasUnsavedChanges = false;
+        _logService.LogInfo("Settings reset to defaults (not yet saved)", "SettingsViewModel");
 
-            _logService.LogInfo("Settings reset to defaults", "SettingsViewModel");
+        // Notify command states
+        (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
 
-            // Notify command states
-            (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
-        }
-        catch (Exception ex)
-        {
-            _logService.LogError("Failed to reset settings", ex, "SettingsViewModel");
-        }
+        return Task.CompletedTask;
     }
 
     private Task CancelAsync()

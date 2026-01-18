@@ -171,7 +171,7 @@
                 <Button Content="Reset to Defaults"
                        Command="{Binding ResetCommand}"
                        Padding="12,6"
-                       ToolTip.Tip="Reset all settings to their default values"/>
+                       ToolTip.Tip="Load default values (click Save to apply)"/>
                 <Button Content="Cancel"
                        Command="{Binding CancelCommand}"
                        Padding="12,6"
