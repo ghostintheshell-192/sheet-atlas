@@ -44,7 +44,25 @@
         "priceCurrency": "USD"
       },
       "downloadUrl": "https://github.com/ghostintheshell-192/sheet-atlas/releases/latest",
-      "softwareVersion": "${VERSION_NUMBER}"
+      "softwareVersion": "${VERSION_NUMBER}",
+      "featureList": [
+        "Search across multiple Excel files with regex",
+        "Compare rows with intelligent column mapping",
+        "Template validation and batch processing",
+        "Column linking with semantic names",
+        "Export to Excel and CSV with preserved types",
+        "100% offline - data never leaves your computer"
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://ghostintheshell-192.github.io/sheet-atlas/"},
+        {"@type": "ListItem", "position": 2, "name": "Download", "item": "https://ghostintheshell-192.github.io/sheet-atlas/download.html"}
+      ]
     }
     </script>
 </head>

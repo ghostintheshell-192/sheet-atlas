@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SheetAtlas Features - Advanced Excel Search, Comparison & Analysis Tool</title>
-    <meta name="description" content="Explore SheetAtlas features: multi-file Excel search with regex, row comparison with intelligent column mapping, 100% offline processing, and cross-platform support for Windows, Linux, macOS.">
-    <meta name="keywords" content="excel search regex, compare excel rows, offline excel tool, excel column mapping, cross-platform excel viewer">
+    <meta name="description" content="Explore SheetAtlas features: multi-file Excel search with regex, row comparison with intelligent column mapping, template validation, column linking, export to Excel/CSV, and 100% offline processing for Windows, Linux, macOS.">
+    <meta name="keywords" content="excel search regex, compare excel rows, offline excel tool, excel column mapping, excel template validation, column linking, export excel csv, cross-platform excel viewer">
     <meta name="author" content="SheetAtlas Team">
 
     <!-- Open Graph -->
@@ -30,6 +30,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://ghostintheshell-192.github.io/sheet-atlas/"},
+            {"@type": "ListItem", "position": 2, "name": "Features", "item": "https://ghostintheshell-192.github.io/sheet-atlas/features.html"}
+        ]
+    }
+    </script>
 </head>
 <body>
     <!-- Navigation -->
@@ -191,7 +203,89 @@
         </div>
     </section>
 
-    <!-- Feature 4: Privacy & Offline Processing -->
+    <!-- Feature 4: Template Validation (NEW in v0.4.0) -->
+    <section class="features" style="background-color: var(--bg-secondary);">
+        <div class="container">
+            <div class="feature-detail" style="flex-direction: row-reverse;">
+                <div class="feature-detail-content">
+                    <div class="feature-icon icon-template" style="font-size: 2rem; margin-bottom: 1rem;">TPL</div>
+                    <h2>Template Validation & Column Linking</h2>
+                    <p>Create templates from your file structures and validate other files against them. Link columns across files with semantic names to ensure consistency in your data analysis workflow.</p>
+
+                    <h3 style="margin-top: 2rem;">Template Features</h3>
+                    <ul style="line-height: 1.8; color: var(--text-secondary);">
+                        <li><strong>Create from file:</strong> Generate a template from any loaded Excel file's column structure</li>
+                        <li><strong>Template library:</strong> Save and manage multiple templates for different file types</li>
+                        <li><strong>Batch validation:</strong> Validate multiple files against a template simultaneously</li>
+                        <li><strong>Column matching:</strong> See which columns match, are missing, or are extra</li>
+                        <li><strong>Warning badges:</strong> Visual indicators for case variations and type inconsistencies</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Column Linking</h3>
+                    <ul style="line-height: 1.8; color: var(--text-secondary);">
+                        <li><strong>Semantic names:</strong> Assign meaningful names to columns (e.g., "Revenue" for "REV_2024_Q1")</li>
+                        <li><strong>Visual grouping:</strong> See linked columns grouped in the sidebar</li>
+                        <li><strong>Filter columns:</strong> Include or exclude columns from search and comparison</li>
+                        <li><strong>Cross-file consistency:</strong> Ensure the same data is compared across different file structures</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Use Cases</h3>
+                    <ul style="line-height: 1.8; color: var(--text-secondary);">
+                        <li>Validate monthly reports match the expected format</li>
+                        <li>Ensure data exports from different systems have compatible structures</li>
+                        <li>Standardize column naming across teams and departments</li>
+                    </ul>
+                </div>
+                <div class="feature-detail-image">
+                    <img src="images/templates-dark.png" alt="Template validation showing column matching and validation results" loading="lazy" style="border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
+                    <p style="text-align: center; color: var(--text-muted); margin-top: 1rem; font-size: 0.875rem;">
+                        Template library with batch validation and column linking sidebar
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 5: Settings & Customization (NEW in v0.5.0) -->
+    <section class="features">
+        <div class="container">
+            <div class="feature-detail">
+                <div class="feature-detail-content">
+                    <div class="feature-icon icon-settings" style="font-size: 2rem; margin-bottom: 1rem;">⚙</div>
+                    <h2>Settings & Customization</h2>
+                    <p>Configure SheetAtlas to match your workflow with persistent user preferences. Set defaults for themes, export formats, and file handling options.</p>
+
+                    <h3 style="margin-top: 2rem;">Appearance</h3>
+                    <ul style="line-height: 1.8; color: var(--text-secondary);">
+                        <li><strong>Theme selection:</strong> Choose Light, Dark, or System theme</li>
+                        <li><strong>System detection:</strong> Automatically matches your OS theme (Windows, Linux GNOME, macOS)</li>
+                        <li><strong>Persistent preferences:</strong> Your theme choice is remembered across sessions</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">Data Processing</h3>
+                    <ul style="line-height: 1.8; color: var(--text-secondary);">
+                        <li><strong>Default header rows:</strong> Set how many rows to treat as headers when loading files</li>
+                        <li><strong>Export format:</strong> Choose Excel (.xlsx) or CSV as default export format</li>
+                        <li><strong>File naming:</strong> Configure naming patterns for exported files (date prefix, original name, etc.)</li>
+                    </ul>
+
+                    <h3 style="margin-top: 2rem;">File Locations</h3>
+                    <ul style="line-height: 1.8; color: var(--text-secondary);">
+                        <li><strong>Output folder:</strong> Set a default folder for all exported files</li>
+                        <li><strong>Browse integration:</strong> Quick folder selection with system file picker</li>
+                    </ul>
+                </div>
+                <div class="feature-detail-image">
+                    <img src="images/settings-dark.png" alt="Settings panel showing theme, export, and file location options" loading="lazy" style="border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
+                    <p style="text-align: center; color: var(--text-muted); margin-top: 1rem; font-size: 0.875rem;">
+                        Settings tab with appearance, data processing, and file location preferences
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 6: Privacy & Offline Processing -->
     <section class="features" style="background-color: var(--bg-secondary);">
         <div class="container">
             <div class="section-header">
@@ -299,6 +393,26 @@
                             <td style="padding: 0.75rem; border: 1px solid var(--gray-300);">MIT license, fully open source</td>
                         </tr>
                         <tr>
+                            <td style="padding: 0.75rem; border: 1px solid var(--gray-300);"><strong>Template validation</strong></td>
+                            <td style="padding: 0.75rem; text-align: center; border: 1px solid var(--gray-300); color: var(--success-color);">Yes</td>
+                            <td style="padding: 0.75rem; border: 1px solid var(--gray-300);">Create templates, validate file structures, batch validation</td>
+                        </tr>
+                        <tr style="background-color: var(--bg-secondary);">
+                            <td style="padding: 0.75rem; border: 1px solid var(--gray-300);"><strong>Column linking</strong></td>
+                            <td style="padding: 0.75rem; text-align: center; border: 1px solid var(--gray-300); color: var(--success-color);">Yes</td>
+                            <td style="padding: 0.75rem; border: 1px solid var(--gray-300);">Semantic names, visual grouping, column filtering</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.75rem; border: 1px solid var(--gray-300);"><strong>Export results</strong></td>
+                            <td style="padding: 0.75rem; text-align: center; border: 1px solid var(--gray-300); color: var(--success-color);">Yes</td>
+                            <td style="padding: 0.75rem; border: 1px solid var(--gray-300);">Export to Excel (.xlsx) or CSV with preserved data types</td>
+                        </tr>
+                        <tr style="background-color: var(--bg-secondary);">
+                            <td style="padding: 0.75rem; border: 1px solid var(--gray-300);"><strong>User settings</strong></td>
+                            <td style="padding: 0.75rem; text-align: center; border: 1px solid var(--gray-300); color: var(--success-color);">Yes</td>
+                            <td style="padding: 0.75rem; border: 1px solid var(--gray-300);">Persistent preferences for theme, export format, output folder</td>
+                        </tr>
+                        <tr>
                             <td style="padding: 0.75rem; border: 1px solid var(--gray-300);"><strong>Cell editing</strong></td>
                             <td style="padding: 0.75rem; text-align: center; border: 1px solid var(--gray-300); color: var(--danger-color);">No</td>
                             <td style="padding: 0.75rem; border: 1px solid var(--gray-300);">Read-only tool - use Excel for editing</td>
@@ -385,7 +499,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 SheetAtlas. Released under the <a href="https://github.com/ghostintheshell-192/sheet-atlas/blob/main/LICENSE">MIT License</a>.</p>
+                <p>&copy; 2026 SheetAtlas. Released under the <a href="https://github.com/ghostintheshell-192/sheet-atlas/blob/main/LICENSE">MIT License</a>.</p>
                 <p>Developed with ❤️ and <a href="https://claude.ai/claude-code" target="_blank" rel="noopener">Claude Code</a></p>
             </div>
         </div>

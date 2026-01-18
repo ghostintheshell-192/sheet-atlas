@@ -368,6 +368,85 @@ Creating release:
 - [ ] Test download links work
 - [ ] Announce release (GitHub Discussions, social media, etc.)
 
+Post-release (major releases only):
+
+- [ ] Update external listings (SourceForge, AlternativeTo) - see "External Listings" section
+- [ ] Update website screenshots if UI changed significantly - see "Updating Screenshots" section
+
+## External Listings
+
+SheetAtlas is listed on external software directories. Update these after **major releases** (new features, significant changes):
+
+### Platforms to Update
+
+| Platform | URL | Update Method |
+|----------|-----|---------------|
+| **SourceForge** | https://sourceforge.net/projects/sheet-atlas/ | Web UI (Project Admin) |
+| **AlternativeTo** | https://alternativeto.net/software/sheetatlas/about/ | Web UI (Edit suggestion) |
+| **GitHub README** | Repository root | Git commit |
+
+### What to Update
+
+1. **Project description** - Reflect new features
+2. **Feature list** - Add new capabilities
+3. **Screenshots** - If UI changed significantly
+4. **Version info** - Current version number
+
+### Template Descriptions
+
+See `.personal/planning/external-listings.md` for ready-to-use descriptions (create this file with current marketing copy).
+
+---
+
+## Updating Screenshots
+
+Screenshots should be updated when the UI changes significantly (new tabs, redesigned views, etc.).
+
+### Current Screenshots
+
+Located in `docs/website/images/`:
+
+| Screenshot | Shows | Used on |
+|------------|-------|---------|
+| `main-dark.png` | Main interface with files loaded | screenshots.html, OG image |
+| `file-details-dark.png` | File details panel | screenshots.html |
+| `treeview-dark.png` | Search results tree | screenshots.html |
+| `search-data-dark.png` | Search data view | screenshots.html |
+| `comparison-dark.png` | Row comparison view | screenshots.html |
+
+Light theme variants (`*-light.png`) are kept as backup but not displayed.
+
+### Taking New Screenshots
+
+1. **Resolution**: 1920x1080 or similar 16:9 aspect ratio
+2. **Theme**: Use dark theme for consistency (matches current website)
+3. **Content**: Use realistic sample data, not test data
+4. **Window**: Capture full application window, not cropped
+
+### Updating Process
+
+```bash
+# 1. Take new screenshots, save to docs/website/images/
+
+# 2. Commit and push
+git add docs/website/images/*.png
+git commit -m "docs: update screenshots for v0.X.0"
+git push origin develop
+
+# 3. After merge to main, deploy website
+gh workflow run deploy-pages.yml
+```
+
+### Suggested New Screenshots (v0.5.0+)
+
+Consider adding screenshots for new features:
+
+- `settings-dark.png` - Settings tab with preferences
+- `templates-dark.png` - Templates tab with validation
+- `column-linking-dark.png` - Column linking sidebar
+
+---
+
 ## Future Enhancements (Phase 3)
 
 Planned improvements for future releases:
@@ -398,6 +477,6 @@ Planned improvements for future releases:
 
 ---
 
-**Last Updated**: 2025-10-14
-**Version**: 1.0
+**Last Updated**: 2026-01-19
+**Version**: 1.1
 **Maintained by**: SheetAtlas Team
