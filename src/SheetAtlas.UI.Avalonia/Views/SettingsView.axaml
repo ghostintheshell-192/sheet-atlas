@@ -40,13 +40,18 @@
                                           FontWeight="SemiBold"
                                           FontSize="13"
                                           Foreground="{DynamicResource PrimaryText}"
-                                          VerticalAlignment="Center"
-                                          Margin="0,0,12,0"/>
-                                <ComboBox Grid.Row="0" Grid.Column="1"
-                                         ItemsSource="{Binding AvailableThemes}"
-                                         SelectedItem="{Binding SelectedTheme}"
-                                         MinWidth="200"
-                                         HorizontalAlignment="Left"/>
+                                          VerticalAlignment="Top"
+                                          Margin="0,6,12,0"/>
+                                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                                    <ComboBox ItemsSource="{Binding AvailableThemes}"
+                                             SelectedItem="{Binding SelectedTheme}"
+                                             MinWidth="200"
+                                             HorizontalAlignment="Left"/>
+                                    <TextBlock Text="'System' may not detect theme on some Linux desktops"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource SecondaryText}"
+                                              TextWrapping="Wrap"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
                     </controls:CollapsibleSection.Content>

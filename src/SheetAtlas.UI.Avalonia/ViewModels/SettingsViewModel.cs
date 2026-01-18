@@ -313,12 +313,32 @@ public class SettingsViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Detects the current system theme preference
+    /// Detects the current system theme preference using PlatformSettings.
+    /// Falls back to Light if detection fails.
     /// </summary>
     private static Theme DetectSystemTheme()
     {
-        var actualTheme = Application.Current?.ActualThemeVariant;
-        return actualTheme == ThemeVariant.Dark ? Theme.Dark : Theme.Light;
+        try
+        {
+            // Try PlatformSettings first (more reliable)
+            var platformSettings = Application.Current?.PlatformSettings;
+            if (platformSettings != null)
+            {
+                var colorValues = platformSettings.GetColorValues();
+                if (colorValues.ThemeVariant == global::Avalonia.Platform.PlatformThemeVariant.Dark)
+                    return Theme.Dark;
+            }
+
+            // Fallback to ActualThemeVariant
+            if (Application.Current?.ActualThemeVariant == ThemeVariant.Dark)
+                return Theme.Dark;
+        }
+        catch
+        {
+            // Ignore detection errors
+        }
+
+        return Theme.Light;
     }
 
     #endregion

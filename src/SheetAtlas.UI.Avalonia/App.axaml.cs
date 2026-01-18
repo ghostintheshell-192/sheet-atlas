@@ -1,6 +1,9 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
+using Avalonia.Styling;
+using Avalonia.Threading;
 using SheetAtlas.UI.Avalonia.Views;
 using SheetAtlas.UI.Avalonia.ViewModels;
 using SheetAtlas.UI.Avalonia.Services;
@@ -49,14 +52,24 @@ public partial class App : Application
         // Apply theme from loaded settings
         var themeManager = _host.Services.GetRequiredService<IThemeManager>();
         var themePreference = settingsService.Current.Appearance.Theme;
-        var theme = themePreference switch
+
+        if (themePreference == Core.Application.DTOs.ThemePreference.System)
         {
-            Core.Application.DTOs.ThemePreference.Light => Theme.Light,
-            Core.Application.DTOs.ThemePreference.Dark => Theme.Dark,
-            Core.Application.DTOs.ThemePreference.System => Application.Current?.ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Dark ? Theme.Dark : Theme.Light,
-            _ => Theme.Light
-        };
-        themeManager.SetTheme(theme);
+            // For System theme, delay detection until platform is fully initialized
+            Dispatcher.UIThread.Post(() =>
+            {
+                var detectedTheme = DetectSystemTheme();
+                themeManager.SetTheme(detectedTheme);
+            }, DispatcherPriority.Loaded);
+        }
+        else
+        {
+            // For explicit Light/Dark, apply immediately
+            var theme = themePreference == Core.Application.DTOs.ThemePreference.Dark
+                ? Theme.Dark
+                : Theme.Light;
+            themeManager.SetTheme(theme);
+        }
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -197,4 +210,32 @@ public partial class App : Application
             });
     }
 
+    /// <summary>
+    /// Detects the system theme preference using PlatformSettings.
+    /// Falls back to Light if detection fails.
+    /// </summary>
+    private static Theme DetectSystemTheme()
+    {
+        try
+        {
+            // Try PlatformSettings first (more reliable)
+            var platformSettings = Application.Current?.PlatformSettings;
+            if (platformSettings != null)
+            {
+                var colorValues = platformSettings.GetColorValues();
+                if (colorValues.ThemeVariant == PlatformThemeVariant.Dark)
+                    return Theme.Dark;
+            }
+
+            // Fallback to ActualThemeVariant
+            if (Application.Current?.ActualThemeVariant == ThemeVariant.Dark)
+                return Theme.Dark;
+        }
+        catch
+        {
+            // Ignore detection errors
+        }
+
+        return Theme.Light;
+    }
 }
