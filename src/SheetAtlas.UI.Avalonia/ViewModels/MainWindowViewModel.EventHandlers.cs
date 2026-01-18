@@ -151,6 +151,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             SearchViewModel.Initialize(LoadedFiles);
             OnPropertyChanged(nameof(ShowAllFilesCommand));
 
+            // Connect column filter to search (in case ColumnLinkingViewModel was set first)
+            ConnectColumnFilterToSearch();
+
             if (SearchViewModel != null)
             {
                 _searchViewModelPropertyChangedHandler = (s, e) =>
@@ -215,6 +218,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
                 TemplateManagementViewModel?.SetSemanticNameProvider(provider);
                 FileDetailsViewModel?.SetSemanticNameProvider(provider);
+
+                // Also connect included columns provider for export filtering
+                FileDetailsViewModel?.SetIncludedColumnsProvider(() => ColumnLinkingViewModel.GetIncludedColumnNames());
             }
         }
 
@@ -232,6 +238,17 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             // Connect semantic name provider (in case TemplateManagementViewModel was set first)
             ConnectSemanticNameProvider();
+
+            // Connect column filter to search
+            ConnectColumnFilterToSearch();
+        }
+
+        private void ConnectColumnFilterToSearch()
+        {
+            if (SearchViewModel != null && ColumnLinkingViewModel != null)
+            {
+                SearchViewModel.SetIncludedColumnsProvider(() => ColumnLinkingViewModel.GetIncludedColumnNames());
+            }
         }
 
         private void OnColumnLinksCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)

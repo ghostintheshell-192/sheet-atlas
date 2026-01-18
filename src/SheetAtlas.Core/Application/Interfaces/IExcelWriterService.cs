@@ -84,6 +84,13 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// When provided, semantic names are used for header row instead of original names.
         /// </summary>
         public IReadOnlyDictionary<string, string>? SemanticNames { get; init; }
+
+        /// <summary>
+        /// Optional set of column names to include in export.
+        /// When provided, only these columns are exported (by original name).
+        /// When null, all columns are exported.
+        /// </summary>
+        public IReadOnlyCollection<string>? IncludedColumns { get; init; }
     }
 
     /// <summary>
@@ -127,5 +134,12 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// When provided, semantic names are used for header row instead of original names.
         /// </summary>
         public IReadOnlyDictionary<string, string>? SemanticNames { get; init; }
+
+        /// <summary>
+        /// Optional set of column names to include in export.
+        /// When provided, only these columns are exported (by original name).
+        /// When null, all columns are exported.
+        /// </summary>
+        public IReadOnlyCollection<string>? IncludedColumns { get; init; }
     }
 }

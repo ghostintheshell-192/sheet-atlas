@@ -15,6 +15,7 @@ public class SearchResultsManager : ISearchResultsManager
     private readonly ISearchResultFactory _factory;
 
     private IReadOnlyCollection<IFileLoadResultViewModel> _searchableFiles;
+    private Func<IEnumerable<string>>? _includedColumnsProvider;
     private readonly List<SearchResult> _results = new();
     private readonly ObservableCollection<IGroupedSearchResult> _groupedResults = new();
     private readonly ObservableCollection<string> _suggestions = new();
@@ -45,6 +46,11 @@ public class SearchResultsManager : ISearchResultsManager
     public void SetSearchableFiles(IReadOnlyCollection<IFileLoadResultViewModel> files)
     {
         _searchableFiles = files ?? throw new ArgumentNullException(nameof(files));
+    }
+
+    public void SetIncludedColumnsProvider(Func<IEnumerable<string>>? provider)
+    {
+        _includedColumnsProvider = provider;
     }
 
     public void RemoveResultsForFile(ExcelFile file)
@@ -80,6 +86,23 @@ public class SearchResultsManager : ISearchResultsManager
 
         try
         {
+            // Get included columns from provider (if set)
+            var includedColumns = _includedColumnsProvider?.Invoke()?.ToList();
+
+            // Debug logging for column filtering
+            if (includedColumns != null)
+            {
+                _logger.LogInfo($"Search with column filter: {includedColumns.Count} columns included", "SearchResultsManager");
+                if (includedColumns.Count <= 10)
+                {
+                    _logger.LogInfo($"Included columns: [{string.Join(", ", includedColumns)}]", "SearchResultsManager");
+                }
+            }
+            else
+            {
+                _logger.LogInfo("Search without column filter (all columns)", "SearchResultsManager");
+            }
+
             // Perform search asynchronously to not block UI
             var allResults = await Task.Run(() =>
             {
@@ -90,7 +113,7 @@ public class SearchResultsManager : ISearchResultsManager
                         continue;
 
                     var searchOptions = options ?? new SearchOptions();
-                    var searchResults = _searchService.Search(fileViewModel.File, query, searchOptions);
+                    var searchResults = _searchService.Search(fileViewModel.File, query, searchOptions, includedColumns);
                     results.AddRange(searchResults);
                 }
                 return results;
