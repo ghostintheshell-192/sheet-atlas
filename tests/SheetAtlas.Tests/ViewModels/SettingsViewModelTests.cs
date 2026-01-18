@@ -181,23 +181,22 @@ public class SettingsViewModelTests
     #region Reset Command Tests
 
     [Fact]
-    public async Task ResetCommand_ResetsToDefaults()
+    public async Task ResetCommand_ResetsToDefaults_RequiresSave()
     {
         // Arrange
         _viewModel.SelectedTheme = ThemePreference.Dark;
         _viewModel.SelectedHeaderRowCount = 5;
 
         var defaultSettings = UserSettings.CreateDefault();
-        _mockSettingsService.Setup(s => s.Current).Returns(defaultSettings);
 
         // Act
         await ExecuteCommandAsync(_viewModel.ResetCommand);
 
-        // Assert
-        _mockSettingsService.Verify(s => s.ResetToDefaultsAsync(default), Times.Once);
+        // Assert - Reset loads defaults locally but does NOT save
+        // User must click Save to persist the changes
         _viewModel.SelectedTheme.Should().Be(defaultSettings.Appearance.Theme);
         _viewModel.SelectedHeaderRowCount.Should().Be(defaultSettings.DataProcessing.DefaultHeaderRowCount);
-        _viewModel.HasUnsavedChanges.Should().BeFalse();
+        _viewModel.HasUnsavedChanges.Should().BeTrue(); // Requires Save to persist
     }
 
     #endregion
