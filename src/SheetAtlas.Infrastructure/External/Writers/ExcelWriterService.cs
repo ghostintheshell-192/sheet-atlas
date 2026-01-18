@@ -77,21 +77,29 @@ namespace SheetAtlas.Infrastructure.External.Writers
                             : sheetData.SheetName
                     });
 
+                    // Build list of column indices to include
+                    var columnIndicesToInclude = BuildIncludedColumnIndices(sheetData, options.IncludedColumns);
+
                     uint rowIndex = 1;
 
                     // Write header row if requested
                     if (options.IncludeHeaders)
                     {
                         var headerRow = new Row { RowIndex = rowIndex };
+                        int outputColIndex = 0;
                         for (int col = 0; col < sheetData.ColumnCount; col++)
                         {
+                            if (!columnIndicesToInclude.Contains(col))
+                                continue;
+
                             cancellationToken.ThrowIfCancellationRequested();
                             var originalName = sheetData.ColumnNames[col];
                             var headerName = options.SemanticNames?.TryGetValue(originalName, out var semantic) == true
                                 ? semantic
                                 : originalName;
-                            var cell = CreateTextCell(headerName, GetColumnReference(col), rowIndex);
+                            var cell = CreateTextCell(headerName, GetColumnReference(outputColIndex), rowIndex);
                             headerRow.Append(cell);
+                            outputColIndex++;
                         }
                         sheetData2.Append(headerRow);
                         rowIndex++;
@@ -103,11 +111,16 @@ namespace SheetAtlas.Infrastructure.External.Writers
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var dataRow = new Row { RowIndex = rowIndex };
+                        int outputColIndex = 0;
                         for (int col = 0; col < row.ColumnCount; col++)
                         {
+                            if (!columnIndicesToInclude.Contains(col))
+                                continue;
+
                             var cellData = row[col];
-                            var cell = CreateCellFromCellData(cellData, col, rowIndex, options.UseOriginalValues, ref normalizedCellCount);
+                            var cell = CreateCellFromCellData(cellData, outputColIndex, rowIndex, options.UseOriginalValues, ref normalizedCellCount);
                             dataRow.Append(cell);
+                            outputColIndex++;
                         }
                         sheetData2.Append(dataRow);
                         rowIndex++;
@@ -198,13 +211,18 @@ namespace SheetAtlas.Infrastructure.External.Writers
                         // So we need to write it manually if using new UTF8Encoding(false)
                     }
 
+                    // Build list of column indices to include
+                    var columnIndicesToInclude = BuildIncludedColumnIndices(sheetData, options.IncludedColumns);
+
                     // Write header row if requested
                     if (options.IncludeHeaders)
                     {
-                        var headerNames = sheetData.ColumnNames.Select(originalName =>
-                            options.SemanticNames?.TryGetValue(originalName, out var semantic) == true
-                                ? semantic
-                                : originalName);
+                        var headerNames = sheetData.ColumnNames
+                            .Where((name, index) => columnIndicesToInclude.Contains(index))
+                            .Select(originalName =>
+                                options.SemanticNames?.TryGetValue(originalName, out var semantic) == true
+                                    ? semantic
+                                    : originalName);
                         var headerLine = string.Join(options.Delimiter,
                             headerNames.Select(name => EscapeCsvField(name, options.Delimiter)));
                         writer.WriteLine(headerLine);
@@ -218,6 +236,9 @@ namespace SheetAtlas.Infrastructure.External.Writers
                         var fields = new List<string>();
                         for (int col = 0; col < row.ColumnCount; col++)
                         {
+                            if (!columnIndicesToInclude.Contains(col))
+                                continue;
+
                             var cellData = row[col];
                             var value = GetCellValueForCsv(cellData, options, ref normalizedCellCount);
                             fields.Add(EscapeCsvField(value, options.Delimiter));
@@ -257,6 +278,34 @@ namespace SheetAtlas.Infrastructure.External.Writers
                     File.Delete(outputPath);
                 return ExportResult.Failure(ex.Message, stopwatch.Elapsed);
             }
+        }
+
+        /// <summary>
+        /// Builds a set of column indices to include in export.
+        /// If includedColumns is null, all columns are included.
+        /// </summary>
+        private static HashSet<int> BuildIncludedColumnIndices(SASheetData sheetData, IReadOnlyCollection<string>? includedColumns)
+        {
+            var result = new HashSet<int>();
+
+            if (includedColumns == null)
+            {
+                // Include all columns
+                for (int i = 0; i < sheetData.ColumnCount; i++)
+                    result.Add(i);
+            }
+            else
+            {
+                // Only include columns whose names are in the set
+                var includedSet = new HashSet<string>(includedColumns, StringComparer.OrdinalIgnoreCase);
+                for (int i = 0; i < sheetData.ColumnCount; i++)
+                {
+                    if (includedSet.Contains(sheetData.ColumnNames[i]))
+                        result.Add(i);
+                }
+            }
+
+            return result;
         }
 
         /// <summary>

@@ -13,6 +13,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         private readonly ILogService _logger;
         private readonly IThemeManager? _themeManager;
         private readonly Func<string, string?>? _semanticNameResolver;
+        private Func<IEnumerable<string>>? _includedColumnsProvider;
         private RowComparison? _comparison;
 
         private bool _disposed = false;
@@ -84,6 +85,15 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             Comparison = comparison;
         }
 
+        /// <summary>
+        /// Sets a provider function that returns the included column names for filtering.
+        /// Call RefreshColumns after setting to apply the filter.
+        /// </summary>
+        public void SetIncludedColumnsProvider(Func<IEnumerable<string>>? provider)
+        {
+            _includedColumnsProvider = provider;
+        }
+
         private void OnThemeChanged(object? sender, Theme newTheme)
         {
             // Force re-evaluation of all cell background bindings
@@ -114,6 +124,17 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             var allHeaders = Comparison.GetAllColumnHeaders();
 
+            // Filter headers if provider is set
+            HashSet<string>? includedColumnsSet = null;
+            if (_includedColumnsProvider != null)
+            {
+                var includedColumns = _includedColumnsProvider();
+                if (includedColumns != null)
+                {
+                    includedColumnsSet = new HashSet<string>(includedColumns, StringComparer.OrdinalIgnoreCase);
+                }
+            }
+
             if (Comparison.Warnings.Any())
             {
                 _logger.LogWarning($"Row comparison detected {Comparison.Warnings.Count} structural inconsistencies in column headers", "RowComparisonViewModel");
@@ -128,6 +149,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             foreach (var rawHeader in allHeaders)
             {
+                // Skip headers not in the included set
+                if (includedColumnsSet != null && !includedColumnsSet.Contains(rawHeader))
+                    continue;
+
                 var displayHeader = rawHeader;
                 if (_semanticNameResolver != null)
                 {

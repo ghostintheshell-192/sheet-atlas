@@ -165,6 +165,96 @@ namespace SheetAtlas.Tests.Services
 
         #endregion
 
+        #region Column Filtering Tests
+
+        [Fact]
+        public void Search_WithIncludedColumns_OnlySearchesSpecifiedColumns()
+        {
+            // Arrange
+            var file = CreateMultiColumnTestFile("data.xlsx", "Sheet1",
+                new[] { "Name", "Email", "Phone" },
+                new[] { "John", "john@test.com", "555-1234" });
+            var includedColumns = new[] { "Name" };
+
+            // Act
+            var results = _searchService.Search(file, "John", null, includedColumns);
+
+            // Assert
+            var cellMatches = results.Where(r => r.Row >= 0).ToList();
+            cellMatches.Should().HaveCount(1);
+            cellMatches.First().Context["ColumnHeader"].Should().Be("Name");
+        }
+
+        [Fact]
+        public void Search_WithIncludedColumns_ExcludesNonMatchingColumns()
+        {
+            // Arrange
+            var file = CreateMultiColumnTestFile("data.xlsx", "Sheet1",
+                new[] { "Name", "Email", "Phone" },
+                new[] { "test", "test@test.com", "555-test" });
+            var includedColumns = new[] { "Name" };  // Only search in Name column
+
+            // Act
+            var results = _searchService.Search(file, "test", null, includedColumns);
+
+            // Assert
+            var cellMatches = results.Where(r => r.Row >= 0).ToList();
+            cellMatches.Should().HaveCount(1);  // Only one match in Name column
+            cellMatches.First().Context["ColumnHeader"].Should().Be("Name");
+        }
+
+        [Fact]
+        public void Search_WithoutIncludedColumns_SearchesAllColumns()
+        {
+            // Arrange
+            var file = CreateMultiColumnTestFile("data.xlsx", "Sheet1",
+                new[] { "Name", "Email", "Phone" },
+                new[] { "test", "test@test.com", "555-test" });
+
+            // Act
+            var results = _searchService.Search(file, "test", null, null);
+
+            // Assert
+            var cellMatches = results.Where(r => r.Row >= 0).ToList();
+            cellMatches.Should().HaveCount(3);  // Matches in all three columns
+        }
+
+        [Fact]
+        public void Search_WithIncludedColumns_IsCaseInsensitive()
+        {
+            // Arrange
+            var file = CreateMultiColumnTestFile("data.xlsx", "Sheet1",
+                new[] { "Name", "Email" },
+                new[] { "John", "john@test.com" });
+            var includedColumns = new[] { "NAME" };  // Different case
+
+            // Act
+            var results = _searchService.Search(file, "John", null, includedColumns);
+
+            // Assert
+            var cellMatches = results.Where(r => r.Row >= 0).ToList();
+            cellMatches.Should().HaveCount(1);
+        }
+
+        [Fact]
+        public void Search_WithEmptyIncludedColumns_ReturnsNoResults()
+        {
+            // Arrange
+            var file = CreateMultiColumnTestFile("data.xlsx", "Sheet1",
+                new[] { "Name", "Email" },
+                new[] { "John", "john@test.com" });
+            var includedColumns = Array.Empty<string>();
+
+            // Act
+            var results = _searchService.Search(file, "John", null, includedColumns);
+
+            // Assert
+            var cellMatches = results.Where(r => r.Row >= 0).ToList();
+            cellMatches.Should().BeEmpty();
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private static ExcelFile CreateTestFile(string fileName, string sheetName, string cellValue)
@@ -186,6 +276,28 @@ namespace SheetAtlas.Tests.Services
             sheet.AddRow(dataRow);
 
             // HeaderRowCount defaults to 1, which is correct for this structure
+
+            var sheets = new Dictionary<string, SASheetData> { { sheetName, sheet } };
+
+            return new ExcelFile(
+                filePath: fileName,
+                status: LoadStatus.Success,
+                sheets: sheets,
+                errors: new List<ExcelError>()
+            );
+        }
+
+        private static ExcelFile CreateMultiColumnTestFile(string fileName, string sheetName, string[] columnNames, string[] cellValues)
+        {
+            var sheet = new SASheetData(sheetName, columnNames);
+
+            // Row 0: Header row (column names)
+            var headerRow = columnNames.Select(name => new SACellData(SACellValue.FromText(name))).ToArray();
+            sheet.AddRow(headerRow);
+
+            // Row 1: Data row
+            var dataRow = cellValues.Select(value => new SACellData(SACellValue.FromText(value))).ToArray();
+            sheet.AddRow(dataRow);
 
             var sheets = new Dictionary<string, SASheetData> { { sheetName, sheet } };
 

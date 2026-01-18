@@ -30,6 +30,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private bool _isLoadingHistory;
     private bool _disposed;
     private Func<string, IReadOnlyDictionary<string, string>>? _getSemanticNamesForFile;
+    private Func<IEnumerable<string>>? _getIncludedColumns;
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -65,6 +66,15 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public void SetSemanticNameProvider(Func<string, IReadOnlyDictionary<string, string>> provider)
     {
         _getSemanticNamesForFile = provider ?? throw new ArgumentNullException(nameof(provider));
+    }
+
+    /// <summary>
+    /// Sets the provider for included columns used during export.
+    /// When set, export will only include columns returned by this function.
+    /// </summary>
+    public void SetIncludedColumnsProvider(Func<IEnumerable<string>> provider)
+    {
+        _getIncludedColumns = provider ?? throw new ArgumentNullException(nameof(provider));
     }
 
     // Commands
@@ -353,9 +363,12 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
             // Get semantic names for this file if available
             var semanticNames = _getSemanticNamesForFile?.Invoke(SelectedFile.FileName);
+            // Get included columns if available
+            var includedColumns = _getIncludedColumns?.Invoke()?.ToList();
             var options = new ExcelExportOptions
             {
-                SemanticNames = semanticNames
+                SemanticNames = semanticNames,
+                IncludedColumns = includedColumns
             };
 
             var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath, options);
@@ -412,9 +425,12 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
             // Get semantic names for this file if available
             var semanticNames = _getSemanticNamesForFile?.Invoke(SelectedFile.FileName);
+            // Get included columns if available
+            var includedColumns = _getIncludedColumns?.Invoke()?.ToList();
             var options = new CsvExportOptions
             {
-                SemanticNames = semanticNames
+                SemanticNames = semanticNames,
+                IncludedColumns = includedColumns
             };
 
             var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath, options);
