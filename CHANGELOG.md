@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-18
+
+### Added
+
+- **Settings tab** with user preferences:
+  - Theme selection (Light/Dark/System)
+  - Default header row count for file readers
+  - Default export format (Excel/CSV)
+  - Normalized file naming pattern
+  - Output folder configuration
+- Column filtering in sidebar with checkbox selection
+- Column grouping warning badges for case and type variations
+- System theme detection for Linux (GNOME) using PlatformSettings
+
+### Fixed
+
+- Theme persistence across application restarts
+- System theme detection on Linux now works correctly
+- Reset to Defaults now requires Save to persist changes (clearer UX)
+- Search results text invisible after theme switch
+- Settings properly loaded at startup and applied to export operations
+
+### Refactored
+
+- Column grouping now groups by name only (not by type), showing warnings for inconsistencies
+- Remove temporary theme toggle from menu (now in Settings tab)
+
+### Chore
+
+- Remove 5 unused IValueConverter implementations
+- Normalize line endings for cross-platform CI consistency
+
 ## [0.4.0] - 2025-12-16
 
 ### Added
