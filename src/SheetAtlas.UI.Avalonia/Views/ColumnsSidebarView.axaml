@@ -190,11 +190,21 @@
                                             </StackPanel>
                                         </StackPanel>
 
-                                        <!-- Actions: badge + menu button -->
+                                        <!-- Actions: warning badge + count badge + menu button -->
                                         <StackPanel Grid.Column="3"
                                                     Orientation="Horizontal"
                                                     Spacing="4"
                                                     VerticalAlignment="Center">
+                                            <!-- Warning badge for inconsistencies -->
+                                            <Border Background="#FFF3CD"
+                                                    CornerRadius="10"
+                                                    Padding="4,2"
+                                                    IsVisible="{Binding HasWarnings}"
+                                                    ToolTip.Tip="{Binding WarningMessage}">
+                                                <TextBlock Text="⚠"
+                                                           FontSize="10"
+                                                           Foreground="#856404"/>
+                                            </Border>
                                             <!-- Source count badge for groups -->
                                             <Border Background="{DynamicResource InfoBackground}"
                                                     CornerRadius="10"
@@ -234,19 +244,28 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
 
                                                     <CheckBox Grid.Column="0"
+                                                              Grid.RowSpan="2"
                                                               IsChecked="{Binding IsIncluded, Mode=TwoWay}"
                                                               VerticalAlignment="Center"
                                                               Margin="0,0,4,0"/>
 
                                                     <TextBlock Grid.Column="1"
+                                                               Grid.RowSpan="2"
                                                                Text="├─"
                                                                FontSize="11"
                                                                Foreground="{DynamicResource DisabledText}"
+                                                               VerticalAlignment="Center"
                                                                Margin="0,0,4,0"/>
 
+                                                    <!-- Row 1: Name + Source -->
                                                     <TextBlock Grid.Column="2"
+                                                               Grid.Row="0"
                                                                Text="{Binding Name}"
                                                                FontSize="12"
                                                                Foreground="{DynamicResource PrimaryText}"
@@ -254,10 +273,20 @@
                                                                ToolTip.Tip="{Binding Name}"/>
 
                                                     <TextBlock Grid.Column="3"
+                                                               Grid.Row="0"
                                                                Text="{Binding SourceDisplay}"
                                                                FontSize="10"
                                                                Foreground="{DynamicResource SecondaryText}"
+                                                               VerticalAlignment="Center"
                                                                ToolTip.Tip="{Binding SourceDisplay}"/>
+
+                                                    <!-- Row 2: Type -->
+                                                    <TextBlock Grid.Column="2"
+                                                               Grid.Row="1"
+                                                               Text="{Binding TypeDisplay}"
+                                                               FontSize="10"
+                                                               Foreground="{DynamicResource DisabledText}"
+                                                               Margin="0,-2,0,0"/>
                                                 </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

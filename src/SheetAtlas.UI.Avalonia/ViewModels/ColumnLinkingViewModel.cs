@@ -71,6 +71,16 @@ public class ColumnLinkViewModel : ViewModelBase
 
     public bool IsAutoGrouped => _link.IsAutoGrouped;
 
+    // === Warning Properties ===
+
+    public bool HasCaseVariations => _link.HasCaseVariations;
+
+    public bool HasTypeVariations => _link.HasTypeVariations;
+
+    public bool HasWarnings => _link.HasWarnings;
+
+    public string? WarningMessage => _link.WarningMessage;
+
     public bool IsExpanded
     {
         get => _isExpanded;
@@ -174,6 +184,8 @@ public class LinkedColumnViewModel : ViewModelBase
     public string SourceDisplay => _column.SourceDisplay;
 
     public DataType DetectedType => _column.DetectedType;
+
+    public string TypeDisplay => _column.DetectedType.ToString();
 
     /// <summary>
     /// Whether this column is included in search/comparison/export operations.

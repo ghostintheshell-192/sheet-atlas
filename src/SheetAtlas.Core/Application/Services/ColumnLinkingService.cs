@@ -18,9 +18,9 @@ public record ColumnInfo(
 public interface IColumnLinkingService
 {
     /// <summary>
-    /// Auto-group columns by name + type.
-    /// Columns with the same name AND same type are grouped together.
-    /// Columns with the same name but different types remain separate.
+    /// Auto-group columns by name (case-insensitive).
+    /// Columns with the same name are grouped together regardless of type.
+    /// Use HasCaseVariations/HasTypeVariations on ColumnLink to detect inconsistencies.
     /// </summary>
     IReadOnlyList<ColumnLink> CreateInitialGroups(IEnumerable<ColumnInfo> columns);
 
@@ -58,12 +58,9 @@ public class ColumnLinkingService : IColumnLinkingService
         if (columnList.Count == 0)
             return Array.Empty<ColumnLink>();
 
-        // Group by (name, type) - case insensitive name comparison
+        // Group by name only (case-insensitive) - type variations will show warnings
         var groups = columnList
-            .GroupBy(c => (
-                Name: c.Name.Trim().ToLowerInvariant(),
-                Type: c.DetectedType
-            ))
+            .GroupBy(c => c.Name.Trim().ToLowerInvariant())
             .ToList();
 
         var result = new List<ColumnLink>();
@@ -80,9 +77,16 @@ public class ColumnLinkingService : IColumnLinkingService
 
             // Use the first column's original name (preserving case) as semantic name
             var firstColumn = group.First();
+
+            // Determine dominant type (most frequent)
+            var dominantType = linkedColumns
+                .GroupBy(c => c.DetectedType)
+                .OrderByDescending(g => g.Count())
+                .First().Key;
+
             var link = ColumnLink.FromGroup(
                 firstColumn.Name,
-                firstColumn.DetectedType,
+                dominantType,
                 linkedColumns);
 
             result.Add(link);
