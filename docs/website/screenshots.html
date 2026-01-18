@@ -30,6 +30,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://ghostintheshell-192.github.io/sheet-atlas/"},
+            {"@type": "ListItem", "position": 2, "name": "Screenshots", "item": "https://ghostintheshell-192.github.io/sheet-atlas/screenshots.html"}
+        ]
+    }
+    </script>
 </head>
 <body>
     <!-- Navigation -->
@@ -82,126 +94,92 @@
             <div class="screenshot-category">
                 <h2 style="margin-bottom: 2rem; text-align: center;">Main Interface</h2>
                 <div class="screenshot-gallery">
-                    <!-- Screenshot 1: Main Interface -->
                     <div class="screenshot-item">
-                        <img src="images/main-dark.png" alt="SheetAtlas main interface showing clean modern design" loading="lazy" class="screenshot">
+                        <img src="images/main-dark.png" alt="SheetAtlas main interface with loaded files" loading="lazy" class="screenshot">
                         <div class="screenshot-caption">
-                            <strong>Main Interface</strong><br>
-                            Clean, intuitive interface with file management panel and workspace. Multiple Excel files loaded and ready for analysis.
+                            <strong>Main Interface</strong> — Files loaded and ready for analysis
                         </div>
                     </div>
-
-                    <!-- Screenshot 2: File Details -->
                     <div class="screenshot-item">
-                        <img src="images/file-details-dark.png" alt="File details view showing sheet information" loading="lazy" class="screenshot">
+                        <img src="images/file-details-dark.png" alt="File details panel" loading="lazy" class="screenshot">
                         <div class="screenshot-caption">
-                            <strong>File Details</strong><br>
-                            Detailed view of loaded Excel files with sheet information and metadata.
+                            <strong>File Details</strong> — Sheet info and export options
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Search Features -->
+            <!-- Search -->
             <div class="screenshot-category" style="margin-top: 4rem;">
-                <h2 style="margin-bottom: 2rem; text-align: center;">Advanced Search</h2>
+                <h2 style="margin-bottom: 2rem; text-align: center;">Search</h2>
                 <div class="screenshot-gallery">
-                    <!-- Screenshot 3: Tree View Results -->
                     <div class="screenshot-item">
-                        <img src="images/treeview-dark.png" alt="Search results organized in hierarchical tree view across multiple Excel files" loading="lazy" class="screenshot">
+                        <img src="images/treeview-dark.png" alt="Search results in tree view" loading="lazy" class="screenshot">
                         <div class="screenshot-caption">
-                            <strong>Tree-Organized Search Results</strong><br>
-                            Hierarchical view of search results: File → Sheet → Row → Column. Supports regex patterns, case-sensitive matching, and exact match options.
+                            <strong>Tree View Results</strong> — File → Sheet → Row hierarchy
                         </div>
                     </div>
-
-                    <!-- Screenshot 4: Search Data View -->
                     <div class="screenshot-item">
-                        <img src="images/search-data-dark.png" alt="Search result showing matched data in spreadsheet cells" loading="lazy" class="screenshot">
+                        <img src="images/search-data-dark.png" alt="Search data view" loading="lazy" class="screenshot">
                         <div class="screenshot-caption">
-                            <strong>Search Data View</strong><br>
-                            Detailed view of search matches with full context. Navigate through results and jump directly to matching cells.
+                            <strong>Data View</strong> — Match context with cell navigation
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Comparison View -->
+            <!-- Comparison -->
             <div class="screenshot-category" style="margin-top: 4rem;">
                 <h2 style="margin-bottom: 2rem; text-align: center;">Row Comparison</h2>
                 <div class="screenshot-gallery">
-                    <!-- Screenshot 5: Comparison View -->
                     <div class="screenshot-item">
-                        <img src="images/comparison-dark.png" alt="Side-by-side row comparison with intelligent column mapping and difference highlighting" loading="lazy" class="screenshot">
+                        <img src="images/comparison-dark.png" alt="Row comparison with diff highlighting" loading="lazy" class="screenshot">
                         <div class="screenshot-caption">
-                            <strong>Side-by-Side Row Comparison</strong><br>
-                            Compare rows from different files with automatic column header mapping. Differences clearly highlighted in red. Handles columns in different order intelligently.
+                            <strong>Side-by-Side Comparison</strong> — Differences highlighted in red
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Placeholder for future screenshots -->
-            <!--
+            <!-- Templates (NEW) -->
             <div class="screenshot-category" style="margin-top: 4rem;">
-                <h2 style="margin-bottom: 2rem; text-align: center;">Additional Features</h2>
+                <h2 style="margin-bottom: 2rem; text-align: center;">Templates & Column Linking</h2>
                 <div class="screenshot-gallery">
                     <div class="screenshot-item">
-                        <img src="images/placeholder-1.png" alt="Feature screenshot description" loading="lazy" class="screenshot">
+                        <img src="images/templates-dark.png" alt="Template validation and column linking" loading="lazy" class="screenshot">
                         <div class="screenshot-caption">
-                            <strong>Feature Title</strong><br>
-                            Feature description here. Update with new screenshots as needed.
+                            <strong>Templates Tab</strong> — Library, validation, column sidebar with filtering
                         </div>
                     </div>
                 </div>
             </div>
-            -->
 
-        </div>
-    </section>
-
-    <!-- Features Overview -->
-    <section class="features" style="background-color: var(--bg-secondary);">
-        <div class="container">
-            <div class="section-header">
-                <h2>What You Can Do with SheetAtlas</h2>
-                <p>Key features shown in these screenshots</p>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon icon-excel">XLS</div>
-                    <h3>Multi-File Loading</h3>
-                    <p>Load multiple .xlsx, .xls, and .csv files at once. All sheets accessible for search and comparison operations.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon icon-search">FIND</div>
-                    <h3>Advanced Search</h3>
-                    <p>Search with regex patterns, case sensitivity, and exact match. Tree-view results organized by file and sheet.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon icon-compare">DIFF</div>
-                    <h3>Intelligent Comparison</h3>
-                    <p>Compare rows with automatic column mapping. Visual highlighting shows differences even when column order changes.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon icon-ui">UI</div>
-                    <h3>Modern Interface</h3>
-                    <p>Clean design with light and dark themes. Responsive layout adapts to your workflow and preferences.</p>
+            <!-- Settings (NEW) -->
+            <div class="screenshot-category" style="margin-top: 4rem;">
+                <h2 style="margin-bottom: 2rem; text-align: center;">Settings</h2>
+                <div class="screenshot-gallery">
+                    <div class="screenshot-item">
+                        <img src="images/settings-dark.png" alt="Settings panel with preferences" loading="lazy" class="screenshot">
+                        <div class="screenshot-caption">
+                            <strong>Settings Tab</strong> — Theme, export format, output folder
+                        </div>
+                    </div>
                 </div>
             </div>
+
         </div>
     </section>
 
     <!-- CTA Section -->
     <section class="download-section">
         <div class="container" style="text-align: center;">
-            <h2 style="margin-bottom: 1rem;">Ready to Get Started?</h2>
+            <h2 style="margin-bottom: 1rem;">Like What You See?</h2>
             <p style="max-width: 600px; margin: 0 auto 2rem; color: var(--text-secondary);">
-                Download SheetAtlas for free and start using these features on your own Excel files. No registration required, 100% offline processing.
+                Download SheetAtlas for free. No registration, no cloud upload, 100% offline.
             </p>
             <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
                 <a href="download.html" class="btn btn-primary">Download Now</a>
-                <a href="features.html" class="btn btn-secondary">Learn More About Features</a>
+                <a href="features.html" class="btn btn-secondary">Explore All Features</a>
             </div>
         </div>
     </section>
@@ -246,7 +224,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 SheetAtlas. Released under the <a href="https://github.com/ghostintheshell-192/sheet-atlas/blob/main/LICENSE">MIT License</a>.</p>
+                <p>&copy; 2026 SheetAtlas. Released under the <a href="https://github.com/ghostintheshell-192/sheet-atlas/blob/main/LICENSE">MIT License</a>.</p>
                 <p>Developed with ❤️ and <a href="https://claude.ai/claude-code" target="_blank" rel="noopener">Claude Code</a></p>
             </div>
         </div>
