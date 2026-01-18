@@ -55,6 +55,8 @@ public class SettingsServiceTests : IDisposable
     public async Task LoadAsync_WhenFileExists_LoadsFromFile()
     {
         // Arrange - Save custom settings first
+        // Use a cross-platform path (temp directory + custom subfolder)
+        var customOutputFolder = Path.Combine(Path.GetTempPath(), "custom", "output");
         var customSettings = new UserSettings
         {
             Appearance = new AppearanceSettings { Theme = ThemePreference.Dark },
@@ -64,7 +66,7 @@ public class SettingsServiceTests : IDisposable
                 DefaultExportFormat = ExportFormat.CSV,
                 NormalizedFileNaming = NamingPattern.DateSuffix
             },
-            FileLocations = new FileLocationSettings { OutputFolder = "/custom/path" }
+            FileLocations = new FileLocationSettings { OutputFolder = customOutputFolder }
         };
         await _settingsService.SaveAsync(customSettings);
 
@@ -76,7 +78,8 @@ public class SettingsServiceTests : IDisposable
         loadedSettings.DataProcessing.DefaultHeaderRowCount.Should().Be(3);
         loadedSettings.DataProcessing.DefaultExportFormat.Should().Be(ExportFormat.CSV);
         loadedSettings.DataProcessing.NormalizedFileNaming.Should().Be(NamingPattern.DateSuffix);
-        loadedSettings.FileLocations.OutputFolder.Should().Be("/custom/path");
+        // Path is normalized by SettingsService, so compare normalized paths
+        loadedSettings.FileLocations.OutputFolder.Should().Be(Path.GetFullPath(customOutputFolder));
     }
 
     [Fact]
