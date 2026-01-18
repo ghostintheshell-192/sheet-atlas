@@ -167,7 +167,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 throw new ArgumentException("Template name cannot be empty", nameof(name));
 
             // Sanitize name for file system
-            var safeName = SanitizeFileName(name);
+            var safeName = SanitizeTemplateName(name);
             return Path.Combine(TemplatesDirectory, safeName + TemplateExtension);
         }
 
@@ -215,7 +215,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             }
         }
 
-        private static string SanitizeFileName(string name)
+        private static string SanitizeTemplateName(string name)
         {
             var invalid = Path.GetInvalidFileNameChars();
             var safeName = string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));

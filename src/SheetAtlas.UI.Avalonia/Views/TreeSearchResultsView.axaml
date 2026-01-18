@@ -32,16 +32,25 @@
                                              Margin="0,0,8,0"/>
 
                                     <!-- Search Info Text -->
-                                    <TextBlock Grid.Column="1"
-                                              Foreground="{DynamicResource SearchQueryText}"
-                                              FontWeight="SemiBold"
-                                              VerticalAlignment="Center">
-                                        <Run Text="Search: &quot;"/>
-                                        <Run Text="{Binding Query}" FontWeight="Bold"/>
-                                        <Run Text="&quot; ("/>
-                                        <Run Text="{Binding TotalResults}"/>
-                                        <Run Text=" hits)"/>
-                                    </TextBlock>
+                                    <StackPanel Grid.Column="1"
+                                                Orientation="Horizontal"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="Search: &quot;"
+                                                  Foreground="{DynamicResource SearchQueryText}"
+                                                  FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Query}"
+                                                  Foreground="{DynamicResource SearchQueryText}"
+                                                  FontWeight="Bold"/>
+                                        <TextBlock Text="&quot; ("
+                                                  Foreground="{DynamicResource SearchQueryText}"
+                                                  FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding TotalResults}"
+                                                  Foreground="{DynamicResource SearchQueryText}"
+                                                  FontWeight="SemiBold"/>
+                                        <TextBlock Text=" hits)"
+                                                  Foreground="{DynamicResource SearchQueryText}"
+                                                  FontWeight="SemiBold"/>
+                                    </StackPanel>
 
                                     <!-- Selection Counter -->
                                     <TextBlock Grid.Column="2"
@@ -74,14 +83,23 @@
                                                    Padding="8,6"
                                                    BorderThickness="0,0,0,1"
                                                    BorderBrush="{DynamicResource SubtleBorder}">
-                                                <TextBlock FontWeight="Medium"
-                                                          Foreground="{DynamicResource PrimaryText}">
-                                                    <Run Text="File - " Foreground="{DynamicResource SecondaryText}"/>
-                                                    <Run Text="{Binding FileName}"/>
-                                                    <Run Text=" (" Foreground="{DynamicResource SecondaryText}"/>
-                                                    <Run Text="{Binding TotalResults}" Foreground="{DynamicResource SecondaryText}"/>
-                                                    <Run Text=" hits)" Foreground="{DynamicResource SecondaryText}"/>
-                                                </TextBlock>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="File - "
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontWeight="Medium"/>
+                                                    <TextBlock Text="{Binding FileName}"
+                                                              Foreground="{DynamicResource PrimaryText}"
+                                                              FontWeight="Medium"/>
+                                                    <TextBlock Text=" ("
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontWeight="Medium"/>
+                                                    <TextBlock Text="{Binding TotalResults}"
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontWeight="Medium"/>
+                                                    <TextBlock Text=" hits)"
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontWeight="Medium"/>
+                                                </StackPanel>
                                             </Border>
                                         </TreeDataTemplate>
 
@@ -91,13 +109,23 @@
                                                    Padding="8,4"
                                                    BorderThickness="0,0,0,1"
                                                    BorderBrush="{DynamicResource SubtleBorder}">
-                                                <TextBlock Foreground="{DynamicResource SecondaryText}" FontSize="13">
-                                                    <Run Text="Foglio - "/>
-                                                    <Run Text="{Binding SheetName}"/>
-                                                    <Run Text=" ("/>
-                                                    <Run Text="{Binding TotalResults}"/>
-                                                    <Run Text=" hits)"/>
-                                                </TextBlock>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="Foglio - "
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontSize="13"/>
+                                                    <TextBlock Text="{Binding SheetName}"
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontSize="13"/>
+                                                    <TextBlock Text=" ("
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontSize="13"/>
+                                                    <TextBlock Text="{Binding TotalResults}"
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontSize="13"/>
+                                                    <TextBlock Text=" hits)"
+                                                              Foreground="{DynamicResource SecondaryText}"
+                                                              FontSize="13"/>
+                                                </StackPanel>
                                             </Border>
                                         </TreeDataTemplate>
 
@@ -148,10 +176,9 @@
                                                                       FontSize="12"
                                                                       TextTrimming="CharacterEllipsis"
                                                                       VerticalAlignment="Center"
-                                                                      FontFamily="Consolas, 'Courier New', monospace">
-                                                                <Run Text="{Binding DisplayText}"
-                                                                     Foreground="{DynamicResource PrimaryText}"/>
-                                                            </TextBlock>
+                                                                      FontFamily="Consolas, 'Courier New', monospace"
+                                                                      Foreground="{DynamicResource PrimaryText}"
+                                                                      Text="{Binding DisplayText}"/>
 
                                                             <!-- Cell Type Icon -->
                                                             <PathIcon Grid.Column="3"

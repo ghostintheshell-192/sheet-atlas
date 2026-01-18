@@ -1,15 +1,49 @@
+using System.ComponentModel;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using SheetAtlas.UI.Avalonia.Models;
 using SheetAtlas.UI.Avalonia.ViewModels;
 
 namespace SheetAtlas.UI.Avalonia.Views;
 
 public partial class MainWindow : Window
 {
+    private SidebarItem? _columnsSidebarItem;
+
     public MainWindow()
     {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.PropertyChanged += OnViewModelPropertyChanged;
+
+            // Find the Columns sidebar item by tooltip
+            _columnsSidebarItem = MainSidebar.Items.FirstOrDefault(i => i.Tooltip == "Columns");
+
+            // Initialize badge with current value
+            if (_columnsSidebarItem != null)
+            {
+                _columnsSidebarItem.BadgeCount = viewModel.ColumnCount;
+            }
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.ColumnCount) && sender is MainWindowViewModel vm)
+        {
+            if (_columnsSidebarItem != null)
+            {
+                _columnsSidebarItem.BadgeCount = vm.ColumnCount;
+            }
+        }
     }
 
     private void OnHeaderTapped(object? sender, TappedEventArgs e)

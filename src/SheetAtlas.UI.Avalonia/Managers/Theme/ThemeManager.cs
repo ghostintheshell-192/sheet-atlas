@@ -40,8 +40,9 @@ namespace SheetAtlas.UI.Avalonia.Managers
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // Initialize with system preference if available
-            InitializeTheme();
+            // Don't initialize theme here - App.axaml.cs will call SetTheme()
+            // after loading settings. This avoids the theme flickering from
+            // Light (default) to the user's saved preference.
         }
 
         public void SetTheme(Theme theme)
@@ -52,7 +53,7 @@ namespace SheetAtlas.UI.Avalonia.Managers
             {
                 ApplyTheme(theme);
                 CurrentTheme = theme;
-                SaveThemePreference(theme);
+                // Note: Theme is persisted by SettingsService, not here
             }
             catch (Exception ex)
             {
@@ -65,23 +66,6 @@ namespace SheetAtlas.UI.Avalonia.Managers
         {
             var newTheme = CurrentTheme == Theme.Light ? Theme.Dark : Theme.Light;
             SetTheme(newTheme);
-        }
-
-        private void InitializeTheme()
-        {
-            try
-            {
-                // Load saved preference or default to Light
-                var savedTheme = LoadThemePreference();
-                ApplyTheme(savedTheme);
-                CurrentTheme = savedTheme;
-            }
-            catch (Exception)
-            {
-                _logger.LogWarning("Failed to initialize theme, using Light theme as fallback", "ThemeManager");
-                ApplyTheme(Theme.Light);
-                CurrentTheme = Theme.Light;
-            }
         }
 
         private void ApplyTheme(Theme theme)
@@ -182,17 +166,8 @@ namespace SheetAtlas.UI.Avalonia.Managers
                    keyString.Contains("Alt");
         }
 
-        private static Theme LoadThemePreference()
-        {
-            // TODO: Load from user settings or config file
-            // For now, default to Light theme
-            return Theme.Light;
-        }
-
-        private void SaveThemePreference(Theme theme)
-        {
-            // TODO: Save to user settings or config file
-            _logger.LogInfo($"Theme preference saved: {theme}", "ThemeManager");
-        }
+        // Note: Theme persistence is handled by SettingsService, not ThemeManager.
+        // App.axaml.cs loads settings and calls SetTheme() on startup.
+        // SettingsViewModel saves settings and calls SetTheme() when user clicks Save.
     }
 }

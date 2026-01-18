@@ -7,7 +7,6 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
     {
         public ICommand LoadFileCommand { get; private set; } = null!;
         public ICommand UnloadAllFilesCommand { get; private set; } = null!;
-        public ICommand ToggleThemeCommand { get; private set; } = null!;
         public ICommand ToggleSidebarCommand { get; private set; } = null!;
         public ICommand ToggleStatusBarCommand { get; private set; } = null!;
         public ICommand ShowFileDetailsTabCommand { get; private set; } = null!;
@@ -18,6 +17,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand CloseComparisonTabCommand { get; private set; } = null!;
         public ICommand ShowTemplatesTabCommand { get; private set; } = null!;
         public ICommand CloseTemplatesTabCommand { get; private set; } = null!;
+        public ICommand ShowSettingsTabCommand { get; private set; } = null!;
+        public ICommand CloseSettingsTabCommand { get; private set; } = null!;
         public ICommand ShowSearchResultsCommand { get; private set; } = null!;
         public ICommand ShowAboutCommand { get; private set; } = null!;
         public ICommand ShowDocumentationCommand { get; private set; } = null!;
@@ -104,9 +105,17 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 return Task.CompletedTask;
             });
 
-            ToggleThemeCommand = new RelayCommand(() =>
+            ShowSettingsTabCommand = new RelayCommand(() =>
             {
-                ThemeManager.ToggleTheme();
+                IsSettingsTabVisible = true;
+                SelectedTabIndex = GetTabIndex("Settings");
+                return Task.CompletedTask;
+            });
+
+            CloseSettingsTabCommand = new RelayCommand(() =>
+            {
+                IsSettingsTabVisible = false;
+                SwitchToNextVisibleTab("Settings");
                 return Task.CompletedTask;
             });
 

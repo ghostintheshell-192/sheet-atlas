@@ -15,8 +15,9 @@ namespace SheetAtlas.Core.Application.Services
         /// <param name="file">The Excel file to search in</param>
         /// <param name="query">The search query string</param>
         /// <param name="options">Optional search configuration (case sensitivity, regex, exact match)</param>
+        /// <param name="includedColumns">Optional set of column names to include in search. If null, all columns are searched.</param>
         /// <returns>List of search results including file names, sheet names, and cell matches</returns>
-        List<SearchResult> Search(ExcelFile file, string query, SearchOptions? options = null);
+        List<SearchResult> Search(ExcelFile file, string query, SearchOptions? options = null, IEnumerable<string>? includedColumns = null);
 
         /// <summary>
         /// Searches for a query string within a specific sheet of an Excel file.
@@ -25,8 +26,9 @@ namespace SheetAtlas.Core.Application.Services
         /// <param name="sheetName">The name of the sheet to search</param>
         /// <param name="query">The search query string</param>
         /// <param name="options">Optional search configuration (case sensitivity, regex, exact match)</param>
+        /// <param name="includedColumns">Optional set of column names to include in search. If null, all columns are searched.</param>
         /// <returns>List of search results found in the specified sheet</returns>
-        List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null);
+        List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null, IEnumerable<string>? includedColumns = null);
     }
 
     /// <summary>
@@ -41,7 +43,7 @@ namespace SheetAtlas.Core.Application.Services
             _logger = logger;
         }
 
-        public List<SearchResult> Search(ExcelFile file, string query, SearchOptions? options = null)
+        public List<SearchResult> Search(ExcelFile file, string query, SearchOptions? options = null, IEnumerable<string>? includedColumns = null)
         {
             List<SearchResult> results = new();
 
@@ -66,18 +68,27 @@ namespace SheetAtlas.Core.Application.Services
                     });
                 }
 
-                results.AddRange(SearchInSheet(file, sheetName, query, options));
+                results.AddRange(SearchInSheet(file, sheetName, query, options, includedColumns));
             }
 
             return results;
         }
 
-        public List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null)
+        public List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null, IEnumerable<string>? includedColumns = null)
         {
             List<SearchResult> results = new();
             var sheet = file.GetSheet(sheetName);
 
             if (sheet == null) return results;
+
+            // Create a hashset for fast column lookup (case-insensitive)
+            HashSet<string>? includedColumnsSet = null;
+            if (includedColumns != null)
+            {
+                var columnsList = includedColumns.ToList();
+                includedColumnsSet = new HashSet<string>(columnsList, StringComparer.OrdinalIgnoreCase);
+                _logger.LogInfo($"SearchInSheet [{file.FileName}]: filtering by {includedColumnsSet.Count} columns (from {columnsList.Count} input)", "SearchService");
+            }
 
             // Start from HeaderRowCount to skip header rows (search only in data)
             // This supports multi-row headers (HeaderRowCount can be 1, 2, or more)
@@ -86,12 +97,18 @@ namespace SheetAtlas.Core.Application.Services
                 var row = sheet.GetRow(rowIndex);
                 for (int colIndex = 0; colIndex < sheet.ColumnCount; colIndex++)
                 {
+                    var columnName = sheet.ColumnNames[colIndex];
+
+                    // Skip columns not in the included set
+                    if (includedColumnsSet != null && !includedColumnsSet.Contains(columnName))
+                        continue;
+
                     var cellValue = row[colIndex].Value.ToString();
                     if (!string.IsNullOrEmpty(cellValue) && IsMatch(cellValue, query, options))
                     {
                         var result = new SearchResult(file, sheetName, rowIndex, colIndex, cellValue);
 
-                        result.Context["ColumnHeader"] = sheet.ColumnNames[colIndex];
+                        result.Context["ColumnHeader"] = columnName;
 
                         if (colIndex > 0)
                         {

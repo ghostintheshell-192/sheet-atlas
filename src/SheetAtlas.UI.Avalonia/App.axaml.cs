@@ -1,6 +1,9 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
+using Avalonia.Styling;
+using Avalonia.Threading;
 using SheetAtlas.UI.Avalonia.Views;
 using SheetAtlas.UI.Avalonia.ViewModels;
 using SheetAtlas.UI.Avalonia.Services;
@@ -42,7 +45,31 @@ public partial class App : Application
 
         _ = _host.Services.GetRequiredService<ILogService>();
 
+        // Load user settings synchronously at startup (use Task.Run to avoid deadlock)
+        var settingsService = _host.Services.GetRequiredService<ISettingsService>();
+        Task.Run(() => settingsService.LoadAsync()).GetAwaiter().GetResult();
+
+        // Apply theme from loaded settings
         var themeManager = _host.Services.GetRequiredService<IThemeManager>();
+        var themePreference = settingsService.Current.Appearance.Theme;
+
+        if (themePreference == Core.Application.DTOs.ThemePreference.System)
+        {
+            // For System theme, delay detection until platform is fully initialized
+            Dispatcher.UIThread.Post(() =>
+            {
+                var detectedTheme = DetectSystemTheme();
+                themeManager.SetTheme(detectedTheme);
+            }, DispatcherPriority.Loaded);
+        }
+        else
+        {
+            // For explicit Light/Dark, apply immediately
+            var theme = themePreference == Core.Application.DTOs.ThemePreference.Dark
+                ? Theme.Dark
+                : Theme.Light;
+            themeManager.SetTheme(theme);
+        }
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -53,12 +80,14 @@ public partial class App : Application
             var treeSearchResultsViewModel = _host.Services.GetRequiredService<TreeSearchResultsViewModel>();
             var templateManagementViewModel = _host.Services.GetRequiredService<TemplateManagementViewModel>();
             var columnLinkingViewModel = _host.Services.GetRequiredService<ColumnLinkingViewModel>();
+            var settingsViewModel = _host.Services.GetRequiredService<SettingsViewModel>();
 
             mainViewModel.SetSearchViewModel(searchViewModel);
             mainViewModel.SetFileDetailsViewModel(fileDetailsViewModel);
             mainViewModel.SetTreeSearchResultsViewModel(treeSearchResultsViewModel);
             mainViewModel.SetTemplateManagementViewModel(templateManagementViewModel);
             mainViewModel.SetColumnLinkingViewModel(columnLinkingViewModel);
+            mainViewModel.SetSettingsViewModel(settingsViewModel);
 
             mainWindow.DataContext = mainViewModel;
             desktop.MainWindow = mainWindow;
@@ -124,6 +153,7 @@ public partial class App : Application
                 services.AddSingleton<IColumnLinkingService, ColumnLinkingService>();
                 services.AddSingleton<IExceptionHandler, ExceptionHandler>();
                 services.AddSingleton<IFileLogService, FileLogService>();
+                services.AddSingleton<ISettingsService, SettingsService>();
 
                 // Register Avalonia-specific services
                 services.AddSingleton<IDialogService, AvaloniaDialogService>();
@@ -166,6 +196,7 @@ public partial class App : Application
                             .Select(f => f.File!),
                         filesManager);
                 });
+                services.AddSingleton<SettingsViewModel>();
 
                 // Register Views
                 services.AddSingleton<MainWindow>();
@@ -179,4 +210,32 @@ public partial class App : Application
             });
     }
 
+    /// <summary>
+    /// Detects the system theme preference using PlatformSettings.
+    /// Falls back to Light if detection fails.
+    /// </summary>
+    private static Theme DetectSystemTheme()
+    {
+        try
+        {
+            // Try PlatformSettings first (more reliable)
+            var platformSettings = Application.Current?.PlatformSettings;
+            if (platformSettings != null)
+            {
+                var colorValues = platformSettings.GetColorValues();
+                if (colorValues.ThemeVariant == PlatformThemeVariant.Dark)
+                    return Theme.Dark;
+            }
+
+            // Fallback to ActualThemeVariant
+            if (Application.Current?.ActualThemeVariant == ThemeVariant.Dark)
+                return Theme.Dark;
+        }
+        catch
+        {
+            // Ignore detection errors
+        }
+
+        return Theme.Light;
+    }
 }

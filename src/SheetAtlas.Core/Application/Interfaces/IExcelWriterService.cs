@@ -78,6 +78,19 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// Set to true to export raw data without normalization.
         /// </summary>
         public bool UseOriginalValues { get; init; } = false;
+
+        /// <summary>
+        /// Optional mapping of original column names to semantic names.
+        /// When provided, semantic names are used for header row instead of original names.
+        /// </summary>
+        public IReadOnlyDictionary<string, string>? SemanticNames { get; init; }
+
+        /// <summary>
+        /// Optional set of column names to include in export.
+        /// When provided, only these columns are exported (by original name).
+        /// When null, all columns are exported.
+        /// </summary>
+        public IReadOnlyCollection<string>? IncludedColumns { get; init; }
     }
 
     /// <summary>
@@ -115,5 +128,18 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// Use original value instead of cleaned value. Default: false.
         /// </summary>
         public bool UseOriginalValues { get; init; } = false;
+
+        /// <summary>
+        /// Optional mapping of original column names to semantic names.
+        /// When provided, semantic names are used for header row instead of original names.
+        /// </summary>
+        public IReadOnlyDictionary<string, string>? SemanticNames { get; init; }
+
+        /// <summary>
+        /// Optional set of column names to include in export.
+        /// When provided, only these columns are exported (by original name).
+        /// When null, all columns are exported.
+        /// </summary>
+        public IReadOnlyCollection<string>? IncludedColumns { get; init; }
     }
 }

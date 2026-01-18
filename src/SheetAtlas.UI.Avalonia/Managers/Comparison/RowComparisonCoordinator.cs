@@ -87,10 +87,18 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
         }
 
         var comparisonViewModel = new RowComparisonViewModel(
-            comparison,
             _comparisonViewModelLogger,
             _themeManager,
             semanticNameResolver);
+
+        // Connect column filter BEFORE setting Comparison (which triggers RefreshColumns)
+        if (_columnLinkingViewModel != null)
+        {
+            comparisonViewModel.SetIncludedColumnsProvider(() => _columnLinkingViewModel.GetIncludedColumnNames());
+        }
+
+        // Now set Comparison - this triggers RefreshColumns with the filter in place
+        comparisonViewModel.Comparison = comparison;
 
         comparisonViewModel.CloseRequested += OnComparisonCloseRequested;
 
@@ -179,7 +187,17 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
                     };
                 }
 
-                var newViewModel = new RowComparisonViewModel(updatedComparison, _comparisonViewModelLogger, _themeManager, resolver);
+                var newViewModel = new RowComparisonViewModel(_comparisonViewModelLogger, _themeManager, resolver);
+
+                // Connect column filter BEFORE setting Comparison
+                if (_columnLinkingViewModel != null)
+                {
+                    newViewModel.SetIncludedColumnsProvider(() => _columnLinkingViewModel.GetIncludedColumnNames());
+                }
+
+                // Now set Comparison - this triggers RefreshColumns with the filter in place
+                newViewModel.Comparison = updatedComparison;
+
                 newViewModel.CloseRequested += OnComparisonCloseRequested;
 
                 var index = _rowComparisons.IndexOf(comparisonViewModel);

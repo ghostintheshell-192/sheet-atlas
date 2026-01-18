@@ -48,6 +48,74 @@ public sealed record ColumnLink
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .Count();
 
+    // === Warning Properties ===
+
+    /// <summary>
+    /// True if linked columns have different casing for the same base name (e.g., "EBIT" vs "ebit").
+    /// Does not trigger for intentionally different names (e.g., "2016 VAR" vs "2017 VAR").
+    /// </summary>
+    [JsonIgnore]
+    public bool HasCaseVariations =>
+        LinkedColumns.Count > 1 &&
+        LinkedColumns
+            .GroupBy(c => c.Name.Trim().ToLowerInvariant())
+            .Any(g => g.Select(c => c.Name).Distinct(StringComparer.Ordinal).Count() > 1);
+
+    /// <summary>
+    /// True if linked columns have different detected types (e.g., Currency vs Number).
+    /// </summary>
+    [JsonIgnore]
+    public bool HasTypeVariations =>
+        LinkedColumns.Count > 1 &&
+        LinkedColumns
+            .Select(c => c.DetectedType)
+            .Distinct()
+            .Count() > 1;
+
+    /// <summary>
+    /// True if there are any warnings (case or type variations).
+    /// </summary>
+    [JsonIgnore]
+    public bool HasWarnings => HasCaseVariations || HasTypeVariations;
+
+    /// <summary>
+    /// Warning message for tooltip display.
+    /// Returns null if no warnings.
+    /// </summary>
+    [JsonIgnore]
+    public string? WarningMessage
+    {
+        get
+        {
+            if (!HasWarnings)
+                return null;
+
+            var messages = new List<string>();
+
+            if (HasCaseVariations)
+            {
+                // Find groups with case variations and show the variants
+                var caseVariants = LinkedColumns
+                    .GroupBy(c => c.Name.Trim().ToLowerInvariant())
+                    .Where(g => g.Select(c => c.Name).Distinct(StringComparer.Ordinal).Count() > 1)
+                    .SelectMany(g => g.Select(c => c.Name).Distinct(StringComparer.Ordinal))
+                    .Take(3);
+                messages.Add($"Case variations: {string.Join(", ", caseVariants)}");
+            }
+
+            if (HasTypeVariations)
+            {
+                var types = LinkedColumns
+                    .Select(c => c.DetectedType)
+                    .Distinct()
+                    .OrderBy(t => t.ToString());
+                messages.Add($"Type variations: {string.Join(", ", types)}");
+            }
+
+            return string.Join("\n", messages);
+        }
+    }
+
     /// <summary>
     /// Check if a column name matches this link.
     /// Matches against SemanticName or any LinkedColumn.Name (case-insensitive).

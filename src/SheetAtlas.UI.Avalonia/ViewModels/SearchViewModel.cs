@@ -153,6 +153,14 @@ public class SearchViewModel : ViewModelBase, IDisposable
         _searchResultsManager.SetSearchableFiles(loadedFiles);
     }
 
+    /// <summary>
+    /// Sets a provider function that returns the included column names for filtering search.
+    /// </summary>
+    public void SetIncludedColumnsProvider(Func<IEnumerable<string>>? provider)
+    {
+        _searchResultsManager.SetIncludedColumnsProvider(provider);
+    }
+
     public void RemoveResultsForFile(ExcelFile file)
     {
         _searchResultsManager.RemoveResultsForFile(file);

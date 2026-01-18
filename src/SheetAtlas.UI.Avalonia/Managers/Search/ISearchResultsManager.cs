@@ -18,6 +18,12 @@ public interface ISearchResultsManager
 
     void SetSearchableFiles(IReadOnlyCollection<IFileLoadResultViewModel> files);
 
+    /// <summary>
+    /// Sets a provider function that returns the included column names for filtering search.
+    /// When set, only columns returned by this function will be searched.
+    /// </summary>
+    void SetIncludedColumnsProvider(Func<IEnumerable<string>>? provider);
+
     void RemoveResultsForFile(ExcelFile file);
 
     event EventHandler<EventArgs> ResultsChanged;

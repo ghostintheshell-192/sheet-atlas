@@ -26,6 +26,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isSearchTabVisible;
     private bool _isComparisonTabVisible;
     private bool _isTemplatesTabVisible;
+    private bool _isSettingsTabVisible;
     private bool _isStatusBarVisible = true;
     private bool _disposed = false;
 
@@ -44,6 +45,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public TreeSearchResultsViewModel? TreeSearchResultsViewModel { get; private set; }
     public TemplateManagementViewModel? TemplateManagementViewModel { get; private set; }
     public ColumnLinkingViewModel? ColumnLinkingViewModel { get; private set; }
+    public SettingsViewModel? SettingsViewModel { get; private set; }
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -140,13 +142,41 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible;
+    public bool IsSettingsTabVisible
+    {
+        get => _isSettingsTabVisible;
+        set
+        {
+            if (SetField(ref _isSettingsTabVisible, value))
+            {
+                OnPropertyChanged(nameof(HasAnyTabVisible));
+            }
+        }
+    }
+
+    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible;
 
     public bool IsStatusBarVisible
     {
         get => _isStatusBarVisible;
         set => SetField(ref _isStatusBarVisible, value);
     }
+
+    /// <summary>
+    /// Number of column groups in Column Linking sidebar.
+    /// Used for badge display on Columns sidebar icon.
+    /// </summary>
+    public int ColumnCount => ColumnLinkingViewModel?.ColumnLinks.Count ?? 0;
+
+    /// <summary>
+    /// Status text shown in the status bar.
+    /// Shows file count and column count when columns are loaded.
+    /// </summary>
+    public string StatusText => ColumnCount > 0
+        ? $"{LoadedFiles.Count} files, {ColumnCount} columns"
+        : LoadedFiles.Count > 0
+            ? $"{LoadedFiles.Count} files loaded"
+            : "Ready";
 
     public IThemeManager ThemeManager { get; }
     // public ICommand ShowAllFilesCommand => SearchViewModel?.ShowAllFilesCommand ?? new RelayCommand(() => Task.CompletedTask);

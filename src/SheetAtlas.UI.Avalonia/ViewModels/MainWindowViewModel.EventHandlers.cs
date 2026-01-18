@@ -52,6 +52,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 TemplateManagementViewModel.SelectedTemplateChanged -= OnSelectedTemplateChanged;
             }
+
+            if (ColumnLinkingViewModel != null)
+            {
+                ColumnLinkingViewModel.ColumnLinks.CollectionChanged -= OnColumnLinksCollectionChanged;
+            }
         }
 
         private void OnFileLoaded(object? sender, FileLoadedEventArgs e)
@@ -59,6 +64,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             _logger.LogInfo($"File loaded: {e.File.FileName} (HasErrors: {e.HasErrors})", "MainWindowViewModel");
 
             OnPropertyChanged(nameof(HasLoadedFiles));
+            OnPropertyChanged(nameof(StatusText));
 
             if (LoadedFiles.Count == 1)
             {
@@ -81,6 +87,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             _logger.LogInfo($"File removed: {e.File.FileName} (isRetry: {e.IsRetry})", "MainWindowViewModel");
 
             OnPropertyChanged(nameof(HasLoadedFiles));
+            OnPropertyChanged(nameof(StatusText));
 
             if (!e.IsRetry && SelectedFile == e.File)
             {
@@ -144,6 +151,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             SearchViewModel.Initialize(LoadedFiles);
             OnPropertyChanged(nameof(ShowAllFilesCommand));
 
+            // Connect column filter to search (in case ColumnLinkingViewModel was set first)
+            ConnectColumnFilterToSearch();
+
             if (SearchViewModel != null)
             {
                 _searchViewModelPropertyChangedHandler = (s, e) =>
@@ -175,6 +185,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             FileDetailsViewModel.RemoveNotificationRequested += OnRemoveNotificationRequested;
             FileDetailsViewModel.TryAgainRequested += OnTryAgainRequested;
 
+            // Connect semantic name provider (in case ColumnLinkingViewModel was set first)
+            ConnectSemanticNameProvider();
+
             FileDetailsViewModel.SelectedFile = SelectedFile;
         }
 
@@ -199,10 +212,15 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         private void ConnectSemanticNameProvider()
         {
-            if (TemplateManagementViewModel != null && ColumnLinkingViewModel != null)
+            if (ColumnLinkingViewModel != null)
             {
-                TemplateManagementViewModel.SetSemanticNameProvider(
-                    fileName => ColumnLinkingViewModel.GetSemanticNamesForFile(fileName));
+                var provider = (string fileName) => ColumnLinkingViewModel.GetSemanticNamesForFile(fileName);
+
+                TemplateManagementViewModel?.SetSemanticNameProvider(provider);
+                FileDetailsViewModel?.SetSemanticNameProvider(provider);
+
+                // Also connect included columns provider for export filtering
+                FileDetailsViewModel?.SetIncludedColumnsProvider(() => ColumnLinkingViewModel.GetIncludedColumnNames());
             }
         }
 
@@ -215,8 +233,33 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             ColumnLinkingViewModel = columnLinkingViewModel ?? throw new ArgumentNullException(nameof(columnLinkingViewModel));
 
+            // Subscribe to ColumnLinks changes for badge and status bar updates
+            ColumnLinkingViewModel.ColumnLinks.CollectionChanged += OnColumnLinksCollectionChanged;
+
             // Connect semantic name provider (in case TemplateManagementViewModel was set first)
             ConnectSemanticNameProvider();
+
+            // Connect column filter to search
+            ConnectColumnFilterToSearch();
+        }
+
+        private void ConnectColumnFilterToSearch()
+        {
+            if (SearchViewModel != null && ColumnLinkingViewModel != null)
+            {
+                SearchViewModel.SetIncludedColumnsProvider(() => ColumnLinkingViewModel.GetIncludedColumnNames());
+            }
+        }
+
+        private void OnColumnLinksCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(ColumnCount));
+            OnPropertyChanged(nameof(StatusText));
+        }
+
+        public void SetSettingsViewModel(SettingsViewModel settingsViewModel)
+        {
+            SettingsViewModel = settingsViewModel ?? throw new ArgumentNullException(nameof(settingsViewModel));
         }
 
         /// <summary>
@@ -316,6 +359,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 "Search" => 1,       // Second TabItem in XAML
                 "Comparison" => 2,   // Third TabItem in XAML
                 "Templates" => 3,    // Fourth TabItem in XAML
+                "Settings" => 4,     // Fifth TabItem in XAML
                 _ => -1              // Invalid tab name
             };
         }
@@ -332,10 +376,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Each tab type has its preferred fallback sequence
             var tabPriorities = closedTabName switch
             {
-                "FileDetails" => new[] { "Search", "Comparison", "Templates" },
-                "Search" => new[] { "FileDetails", "Comparison", "Templates" },
-                "Comparison" => new[] { "Search", "FileDetails", "Templates" },
-                "Templates" => new[] { "Search", "FileDetails", "Comparison" },
+                "FileDetails" => new[] { "Search", "Comparison", "Templates", "Settings" },
+                "Search" => new[] { "FileDetails", "Comparison", "Templates", "Settings" },
+                "Comparison" => new[] { "Search", "FileDetails", "Templates", "Settings" },
+                "Templates" => new[] { "Search", "FileDetails", "Comparison", "Settings" },
+                "Settings" => new[] { "Search", "FileDetails", "Comparison", "Templates" },
                 _ => Array.Empty<string>()
             };
 
@@ -347,6 +392,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                     "Search" => IsSearchTabVisible,
                     "Comparison" => IsComparisonTabVisible,
                     "Templates" => IsTemplatesTabVisible,
+                    "Settings" => IsSettingsTabVisible,
                     _ => false
                 };
 

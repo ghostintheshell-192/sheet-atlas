@@ -24,10 +24,13 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private readonly IFilePickerService _filePickerService;
     private readonly IDataNormalizationService _dataNormalizationService;
     private readonly IExcelWriterService _excelWriterService;
+    private readonly ISettingsService _settingsService;
 
     private IFileLoadResultViewModel? _selectedFile;
     private bool _isLoadingHistory;
     private bool _disposed;
+    private Func<string, IReadOnlyDictionary<string, string>>? _getSemanticNamesForFile;
+    private Func<IEnumerable<string>>? _getIncludedColumns;
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -56,6 +59,24 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public bool HasErrorLogs => ErrorLogs.Count > 0;
     public bool HasSelectedFile => SelectedFile != null;
 
+    /// <summary>
+    /// Sets the provider for semantic names used during export.
+    /// When set, export will use semantic names for column headers instead of original names.
+    /// </summary>
+    public void SetSemanticNameProvider(Func<string, IReadOnlyDictionary<string, string>> provider)
+    {
+        _getSemanticNamesForFile = provider ?? throw new ArgumentNullException(nameof(provider));
+    }
+
+    /// <summary>
+    /// Sets the provider for included columns used during export.
+    /// When set, export will only include columns returned by this function.
+    /// </summary>
+    public void SetIncludedColumnsProvider(Func<IEnumerable<string>> provider)
+    {
+        _getIncludedColumns = provider ?? throw new ArgumentNullException(nameof(provider));
+    }
+
     // Commands
     public ICommand RemoveFromListCommand { get; }
     public ICommand CleanAllDataCommand { get; }
@@ -72,13 +93,15 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         IFileLogService fileLogService,
         IFilePickerService filePickerService,
         IDataNormalizationService dataNormalizationService,
-        IExcelWriterService excelWriterService)
+        IExcelWriterService excelWriterService,
+        ISettingsService settingsService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileLogService = fileLogService ?? throw new ArgumentNullException(nameof(fileLogService));
         _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
         _dataNormalizationService = dataNormalizationService ?? throw new ArgumentNullException(nameof(dataNormalizationService));
         _excelWriterService = excelWriterService ?? throw new ArgumentNullException(nameof(excelWriterService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
         RemoveFromListCommand = new RelayCommand(() => { ExecuteRemoveFromList(); return Task.CompletedTask; });
         CleanAllDataCommand = new RelayCommand(() => { ExecuteCleanAllData(); return Task.CompletedTask; });
@@ -324,9 +347,9 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             }
 
             var originalPath = SelectedFile.FilePath;
-            var directory = Path.GetDirectoryName(originalPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var outputFolder = _settingsService.Current.FileLocations.OutputFolder;
             var baseName = Path.GetFileNameWithoutExtension(originalPath);
-            var outputPath = Path.Combine(directory, $"{baseName}_normalized.xlsx");
+            var outputPath = Path.Combine(outputFolder, $"{baseName}_normalized.xlsx");
 
             var savedPath = await _filePickerService.SaveFileAsync(
                 "Export Normalized Excel",
@@ -338,7 +361,17 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
             _logger.LogInfo($"Exporting to Excel: {savedPath}", "FileDetailsViewModel");
 
-            var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath);
+            // Get semantic names for this file if available
+            var semanticNames = _getSemanticNamesForFile?.Invoke(SelectedFile.FileName);
+            // Get included columns if available
+            var includedColumns = _getIncludedColumns?.Invoke()?.ToList();
+            var options = new ExcelExportOptions
+            {
+                SemanticNames = semanticNames,
+                IncludedColumns = includedColumns
+            };
+
+            var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath, options);
 
             if (result.IsSuccess)
             {
@@ -376,9 +409,9 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             }
 
             var originalPath = SelectedFile.FilePath;
-            var directory = Path.GetDirectoryName(originalPath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var outputFolder = _settingsService.Current.FileLocations.OutputFolder;
             var baseName = Path.GetFileNameWithoutExtension(originalPath);
-            var outputPath = Path.Combine(directory, $"{baseName}_normalized.csv");
+            var outputPath = Path.Combine(outputFolder, $"{baseName}_normalized.csv");
 
             var savedPath = await _filePickerService.SaveFileAsync(
                 "Export Normalized CSV",
@@ -390,7 +423,17 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
             _logger.LogInfo($"Exporting to CSV: {savedPath}", "FileDetailsViewModel");
 
-            var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath);
+            // Get semantic names for this file if available
+            var semanticNames = _getSemanticNamesForFile?.Invoke(SelectedFile.FileName);
+            // Get included columns if available
+            var includedColumns = _getIncludedColumns?.Invoke()?.ToList();
+            var options = new CsvExportOptions
+            {
+                SemanticNames = semanticNames,
+                IncludedColumns = includedColumns
+            };
+
+            var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath, options);
 
             if (result.IsSuccess)
             {
