@@ -207,6 +207,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBox Grid.Column="0"
+                                         Classes="SearchBox"
                                          Text="{Binding SearchViewModel.SearchQuery}"
                                          Watermark="Enter search term..."
                                          Margin="0,0,8,0"
@@ -303,7 +304,7 @@
                             </StackPanel>
                         </TabItem.Header>
 
-                        <Grid>
+                        <Grid Margin="8">
                             <!-- Comparison Stack (when comparisons exist) -->
                             <ScrollViewer VerticalScrollBarVisibility="Auto"
                                          IsVisible="{Binding RowComparisons.Count}">
@@ -335,6 +336,20 @@
                                                                           Foreground="{DynamicResource SearchQueryText}"
                                                                           Opacity="0.8"/>
                                                             </StackPanel>
+                                                        </StackPanel>
+
+                                                        <!-- Export Buttons -->
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0">
+                                                            <Button Content="Export Excel"
+                                                                    Classes="CTAButton"
+                                                                    Command="{Binding ExportExcelCommand}"
+                                                                    IsEnabled="{Binding CanExport}"
+                                                                    ToolTip.Tip="Export to Excel with metadata"/>
+                                                            <Button Content="Export CSV"
+                                                                    Classes="ModernButton"
+                                                                    Command="{Binding ExportCsvCommand}"
+                                                                    IsEnabled="{Binding CanExport}"
+                                                                    ToolTip.Tip="Export to CSV (data only)"/>
                                                         </StackPanel>
 
                                                         <!-- Close Button -->

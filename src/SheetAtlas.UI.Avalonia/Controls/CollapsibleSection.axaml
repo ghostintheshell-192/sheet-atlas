@@ -37,6 +37,7 @@
     <Style Selector="controls|CollapsibleSection">
         <Setter Property="HeaderBackground" Value="{DynamicResource SearchQueryBackground}"/>
         <Setter Property="HeaderForeground" Value="{DynamicResource SearchQueryText}"/>
+        <Setter Property="HeaderBorderBrush" Value="{DynamicResource SearchQueryBorder}"/>
         <Setter Property="Template">
             <ControlTemplate>
                 <Border CornerRadius="0">
@@ -45,6 +46,9 @@
                         <Border Grid.Row="0"
                                 x:Name="PART_HeaderBorder"
                                 Background="{TemplateBinding HeaderBackground}"
+                                BorderBrush="{TemplateBinding HeaderBorderBrush}"
+                                BorderThickness="2"
+                                CornerRadius="4"
                                 Padding="8,12,8,12"
                                 Cursor="Hand">
                             <Grid ColumnDefinitions="Auto,*">

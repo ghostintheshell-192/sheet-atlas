@@ -81,8 +81,10 @@
                                         <TreeDataTemplate DataType="vm:FileResultGroup" ItemsSource="{Binding SheetGroups}">
                                             <Border Background="{DynamicResource FileGroupBackground}"
                                                    Padding="8,6"
-                                                   BorderThickness="0,0,0,1"
-                                                   BorderBrush="{DynamicResource SubtleBorder}">
+                                                   CornerRadius="4"
+                                                   BorderThickness="1"
+                                                   BorderBrush="{DynamicResource FileGroupBorder}"
+                                                   Margin="0,2">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="File - "
                                                               Foreground="{DynamicResource SecondaryText}"
@@ -107,8 +109,10 @@
                                         <TreeDataTemplate DataType="vm:SheetResultGroup" ItemsSource="{Binding Results}">
                                             <Border Background="{DynamicResource SheetGroupBackground}"
                                                    Padding="8,4"
-                                                   BorderThickness="0,0,0,1"
-                                                   BorderBrush="{DynamicResource SubtleBorder}">
+                                                   CornerRadius="4"
+                                                   BorderThickness="1"
+                                                   BorderBrush="{DynamicResource SheetGroupBorder}"
+                                                   Margin="0,2">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="Foglio - "
                                                               Foreground="{DynamicResource SecondaryText}"

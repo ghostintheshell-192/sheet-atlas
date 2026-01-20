@@ -39,6 +39,12 @@ public class CollapsibleSection : TemplatedControl
         AvaloniaProperty.Register<CollapsibleSection, IBrush?>(nameof(HeaderForeground));
 
     /// <summary>
+    /// Defines the HeaderBorderBrush property.
+    /// </summary>
+    public static readonly StyledProperty<IBrush?> HeaderBorderBrushProperty =
+        AvaloniaProperty.Register<CollapsibleSection, IBrush?>(nameof(HeaderBorderBrush));
+
+    /// <summary>
     /// Defines the Content property (content displayed when expanded).
     /// </summary>
     public static readonly StyledProperty<object?> ContentProperty =
@@ -94,6 +100,15 @@ public class CollapsibleSection : TemplatedControl
     {
         get => GetValue(HeaderForegroundProperty);
         set => SetValue(HeaderForegroundProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the header border brush.
+    /// </summary>
+    public IBrush? HeaderBorderBrush
+    {
+        get => GetValue(HeaderBorderBrushProperty);
+        set => SetValue(HeaderBorderBrushProperty, value);
     }
 
     /// <summary>

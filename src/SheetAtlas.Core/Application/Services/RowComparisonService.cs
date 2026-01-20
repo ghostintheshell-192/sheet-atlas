@@ -37,7 +37,7 @@ namespace SheetAtlas.Core.Application.Services
                 }
             }
 
-            return new RowComparison(excelRows.AsReadOnly(), request.Name);
+            return new RowComparison(excelRows.AsReadOnly(), request.SearchTerms, request.Name);
         }
 
         public ExcelRow ExtractRowFromSearchResult(SearchResult searchResult)

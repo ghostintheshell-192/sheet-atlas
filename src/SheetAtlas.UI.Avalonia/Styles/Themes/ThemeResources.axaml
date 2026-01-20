@@ -43,7 +43,7 @@
     <SolidColorBrush x:Key="InfoBackground" Color="#D1ECF1"/>
 
     <!-- Interactive States -->
-    <SolidColorBrush x:Key="HoverBackground" Color="#F1F3F5"/>
+    <SolidColorBrush x:Key="HoverBackground" Color="#FF6B35" Opacity="0.15"/>
     <SolidColorBrush x:Key="PressedBackground" Color="#DEE2E6"/>
     <SolidColorBrush x:Key="SelectedBackground" Color="#E3F2FD"/>
     <SolidColorBrush x:Key="ActiveBackground" Color="#1E3A5F" Opacity="0.1"/>
@@ -54,10 +54,13 @@
     <SolidColorBrush x:Key="SubtleBorder" Color="#E9ECEF"/>
 
     <!-- Search Specific -->
-    <SolidColorBrush x:Key="SearchQueryBackground" Color="#1E3A5F"/>
-    <SolidColorBrush x:Key="SearchQueryText" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="FileGroupBackground" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="SearchQueryBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SearchQueryText" Color="#1A202C"/>
+    <SolidColorBrush x:Key="SearchQueryBorder" Color="#1E3A5F"/>
+    <SolidColorBrush x:Key="FileGroupBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="FileGroupBorder" Color="#1E3A5F"/>
     <SolidColorBrush x:Key="SheetGroupBackground" Color="#F8F9FA"/>
+    <SolidColorBrush x:Key="SheetGroupBorder" Color="#1E3A5F"/>
     <SolidColorBrush x:Key="HighlightYellow" Color="#FFF3CD"/>
 
     <!-- Comparison Colors - Subtle tints for readability -->
@@ -65,7 +68,8 @@
     <SolidColorBrush x:Key="ComparisonDifferentBackground" Color="#FFF8F0"/>
     <SolidColorBrush x:Key="ComparisonNewBackground" Color="#F8FDF9"/>
     <SolidColorBrush x:Key="ComparisonMissingBackground" Color="#FEF8F8"/>
-    <SolidColorBrush x:Key="ComparisonHeaderBackground" Color="#1E3A5F"/>
+    <SolidColorBrush x:Key="ComparisonHeaderBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ComparisonHeaderBorder" Color="#1E3A5F"/>
     <SolidColorBrush x:Key="ComparisonAlternateRow" Color="#F8F9FA"/>
 
     <!-- MenuFlyout/Submenu Specific Resources for Light Theme -->
@@ -211,7 +215,7 @@
     <SolidColorBrush x:Key="InfoBackground" Color="#0D2640"/>
 
     <!-- Interactive States -->
-    <SolidColorBrush x:Key="HoverBackground" Color="#21262D"/>
+    <SolidColorBrush x:Key="HoverBackground" Color="#FF6B35" Opacity="0.2"/>
     <SolidColorBrush x:Key="PressedBackground" Color="#484F58"/>
     <SolidColorBrush x:Key="SelectedBackground" Color="#1E3A5F" Opacity="0.2"/>
     <SolidColorBrush x:Key="ActiveBackground" Color="#FF6B35" Opacity="0.15"/>
@@ -222,10 +226,13 @@
     <SolidColorBrush x:Key="SubtleBorder" Color="#21262D"/>
 
     <!-- Search Specific -->
-    <SolidColorBrush x:Key="SearchQueryBackground" Color="#2A4A75"/>
+    <SolidColorBrush x:Key="SearchQueryBackground" Color="#2D3748"/>
     <SolidColorBrush x:Key="SearchQueryText" Color="#F0F6FC"/>
+    <SolidColorBrush x:Key="SearchQueryBorder" Color="#4A5568"/>
     <SolidColorBrush x:Key="FileGroupBackground" Color="#1A2332"/>
+    <SolidColorBrush x:Key="FileGroupBorder" Color="#4A5568"/>
     <SolidColorBrush x:Key="SheetGroupBackground" Color="#1C2128"/>
+    <SolidColorBrush x:Key="SheetGroupBorder" Color="#4A5568"/>
     <SolidColorBrush x:Key="HighlightYellow" Color="#2E2111"/>
 
     <!-- Comparison Colors - Very subtle tints for dark theme -->
@@ -233,7 +240,8 @@
     <SolidColorBrush x:Key="ComparisonDifferentBackground" Color="#1A1613"/>
     <SolidColorBrush x:Key="ComparisonNewBackground" Color="#0F1A14"/>
     <SolidColorBrush x:Key="ComparisonMissingBackground" Color="#1A1214"/>
-    <SolidColorBrush x:Key="ComparisonHeaderBackground" Color="#2A4A75"/>
+    <SolidColorBrush x:Key="ComparisonHeaderBackground" Color="#2D3748"/>
+    <SolidColorBrush x:Key="ComparisonHeaderBorder" Color="#4A5568"/>
     <SolidColorBrush x:Key="ComparisonAlternateRow" Color="#161B22"/>
 
     <!-- MenuFlyout/Submenu Specific Resources for Dark Theme -->

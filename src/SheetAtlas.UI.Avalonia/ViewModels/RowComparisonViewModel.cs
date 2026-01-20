@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.UI.Avalonia.Commands;
 using SheetAtlas.UI.Avalonia.Models;
 using SheetAtlas.UI.Avalonia.Managers;
+using SheetAtlas.UI.Avalonia.Services;
 using SheetAtlas.Logging.Services;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels
@@ -15,6 +17,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         private readonly Func<string, string?>? _semanticNameResolver;
         private Func<IEnumerable<string>>? _includedColumnsProvider;
         private RowComparison? _comparison;
+
+        // Export services (injected via SetExportServices pattern)
+        private IComparisonExportService? _exportService;
+        private IFilePickerService? _filePickerService;
+        private ISettingsService? _settingsService;
+        private bool _isExporting;
 
         private bool _disposed = false;
         private bool _isExpanded = true;
@@ -51,6 +59,16 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         }
 
         public ICommand CloseCommand { get; }
+        public ICommand ExportExcelCommand { get; }
+        public ICommand ExportCsvCommand { get; }
+
+        public bool IsExporting
+        {
+            get => _isExporting;
+            private set => SetField(ref _isExporting, value);
+        }
+
+        public bool CanExport => HasRows && _exportService != null && !IsExporting;
 
         public event EventHandler? CloseRequested;
 
@@ -68,6 +86,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 CloseRequested?.Invoke(this, EventArgs.Empty);
                 return Task.CompletedTask;
             });
+
+            ExportExcelCommand = new RelayCommand(ExecuteExportExcelAsync, () => CanExport);
+            ExportCsvCommand = new RelayCommand(ExecuteExportCsvAsync, () => CanExport);
 
             if (_themeManager != null)
             {
@@ -92,6 +113,133 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public void SetIncludedColumnsProvider(Func<IEnumerable<string>>? provider)
         {
             _includedColumnsProvider = provider;
+        }
+
+        /// <summary>
+        /// Sets the export services for this ViewModel.
+        /// Must be called before export commands can be used.
+        /// </summary>
+        public void SetExportServices(
+            IComparisonExportService exportService,
+            IFilePickerService filePickerService,
+            ISettingsService settingsService)
+        {
+            _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
+            _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+
+            OnPropertyChanged(nameof(CanExport));
+            ((RelayCommand)ExportExcelCommand).RaiseCanExecuteChanged();
+            ((RelayCommand)ExportCsvCommand).RaiseCanExecuteChanged();
+        }
+
+        private async Task ExecuteExportExcelAsync()
+        {
+            if (Comparison == null || _exportService == null || _filePickerService == null || _settingsService == null)
+                return;
+
+            try
+            {
+                IsExporting = true;
+                RaiseExportCanExecuteChanged();
+
+                var suggestedFilename = _exportService.GenerateFilename(Comparison, "xlsx");
+                var defaultDir = _settingsService.Current.FileLocations.OutputFolder;
+
+                // Build suggested path (picker extracts directory and filename from full path)
+                var suggestedPath = string.IsNullOrEmpty(defaultDir)
+                    ? suggestedFilename
+                    : Path.Combine(defaultDir, suggestedFilename);
+
+                var outputPath = await _filePickerService.SaveFileAsync(
+                    "Export Comparison to Excel",
+                    suggestedPath,
+                    new[] { "*.xlsx" });
+
+                if (string.IsNullOrEmpty(outputPath))
+                {
+                    _logger.LogInfo("Excel export cancelled by user", "RowComparisonViewModel");
+                    return;
+                }
+
+                var result = await _exportService.ExportToExcelAsync(Comparison, outputPath);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInfo($"Excel export completed: {result.OutputPath}", "RowComparisonViewModel");
+                }
+                else
+                {
+                    _logger.LogError($"Excel export failed: {result.ErrorMessage}", null, "RowComparisonViewModel");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Excel export failed", ex, "RowComparisonViewModel");
+            }
+            finally
+            {
+                IsExporting = false;
+                RaiseExportCanExecuteChanged();
+            }
+        }
+
+        private async Task ExecuteExportCsvAsync()
+        {
+            if (Comparison == null || _exportService == null || _filePickerService == null || _settingsService == null)
+                return;
+
+            try
+            {
+                IsExporting = true;
+                RaiseExportCanExecuteChanged();
+
+                var suggestedFilename = _exportService.GenerateFilename(Comparison, "csv");
+                var defaultDir = _settingsService.Current.FileLocations.OutputFolder;
+
+                // Build suggested path (picker extracts directory and filename from full path)
+                var suggestedPath = string.IsNullOrEmpty(defaultDir)
+                    ? suggestedFilename
+                    : Path.Combine(defaultDir, suggestedFilename);
+
+                var outputPath = await _filePickerService.SaveFileAsync(
+                    "Export Comparison to CSV",
+                    suggestedPath,
+                    new[] { "*.csv" });
+
+                if (string.IsNullOrEmpty(outputPath))
+                {
+                    _logger.LogInfo("CSV export cancelled by user", "RowComparisonViewModel");
+                    return;
+                }
+
+                var result = await _exportService.ExportToCsvAsync(Comparison, outputPath);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInfo($"CSV export completed: {result.OutputPath}", "RowComparisonViewModel");
+                }
+                else
+                {
+                    _logger.LogError($"CSV export failed: {result.ErrorMessage}", null, "RowComparisonViewModel");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("CSV export failed", ex, "RowComparisonViewModel");
+            }
+            finally
+            {
+                IsExporting = false;
+                RaiseExportCanExecuteChanged();
+            }
+        }
+
+        private void RaiseExportCanExecuteChanged()
+        {
+            OnPropertyChanged(nameof(CanExport));
+            ((RelayCommand)ExportExcelCommand).RaiseCanExecuteChanged();
+            ((RelayCommand)ExportCsvCommand).RaiseCanExecuteChanged();
         }
 
         private void OnThemeChanged(object? sender, Theme newTheme)

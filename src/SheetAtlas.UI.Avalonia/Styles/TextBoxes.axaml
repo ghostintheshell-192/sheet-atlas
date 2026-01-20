@@ -1,0 +1,25 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Search TextBox style: navy border, orange focus -->
+    <Style Selector="TextBox.SearchBox">
+        <Setter Property="BorderBrush" Value="{DynamicResource SearchQueryBorder}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- Override Fluent focus styles -->
+    <Style Selector="TextBox.SearchBox:focus /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{DynamicResource FocusBorder}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <Style Selector="TextBox.SearchBox:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{DynamicResource FocusBorder}"/>
+    </Style>
+
+    <Style Selector="TextBox.SearchBox:focus">
+        <Setter Property="BorderBrush" Value="{DynamicResource FocusBorder}"/>
+    </Style>
+
+</Styles>

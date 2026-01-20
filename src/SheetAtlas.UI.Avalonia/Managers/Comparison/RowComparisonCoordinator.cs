@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
+using SheetAtlas.UI.Avalonia.Services;
 using SheetAtlas.UI.Avalonia.ViewModels;
 using SheetAtlas.Logging.Services;
 
@@ -17,6 +19,11 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
     private readonly ILogService _comparisonViewModelLogger;
     private readonly IThemeManager _themeManager;
     private readonly ColumnLinkingViewModel? _columnLinkingViewModel;
+
+    // Export services
+    private readonly IComparisonExportService _exportService;
+    private readonly IFilePickerService _filePickerService;
+    private readonly ISettingsService _settingsService;
 
     private readonly ObservableCollection<RowComparisonViewModel> _rowComparisons = new();
     private RowComparisonViewModel? _selectedComparison;
@@ -49,11 +56,17 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
         ILogService logger,
         ILogService comparisonViewModelLogger,
         IThemeManager themeManager,
+        IComparisonExportService exportService,
+        IFilePickerService filePickerService,
+        ISettingsService settingsService,
         ColumnLinkingViewModel? columnLinkingViewModel = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _comparisonViewModelLogger = comparisonViewModelLogger ?? throw new ArgumentNullException(nameof(comparisonViewModelLogger));
         _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
+        _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
+        _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _columnLinkingViewModel = columnLinkingViewModel;
 
         RowComparisons = new ReadOnlyObservableCollection<RowComparisonViewModel>(_rowComparisons);
@@ -96,6 +109,9 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
         {
             comparisonViewModel.SetIncludedColumnsProvider(() => _columnLinkingViewModel.GetIncludedColumnNames());
         }
+
+        // Connect export services
+        comparisonViewModel.SetExportServices(_exportService, _filePickerService, _settingsService);
 
         // Now set Comparison - this triggers RefreshColumns with the filter in place
         comparisonViewModel.Comparison = comparison;
@@ -165,6 +181,7 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
                 // Comparison still valid with remaining rows - update it
                 var updatedComparison = new RowComparison(
                     remainingRows.AsReadOnly(),
+                    comparisonViewModel.Comparison.SearchTerms,
                     comparisonViewModel.Comparison.Name
                 );
 
@@ -194,6 +211,9 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
                 {
                     newViewModel.SetIncludedColumnsProvider(() => _columnLinkingViewModel.GetIncludedColumnNames());
                 }
+
+                // Connect export services
+                newViewModel.SetExportServices(_exportService, _filePickerService, _settingsService);
 
                 // Now set Comparison - this triggers RefreshColumns with the filter in place
                 newViewModel.Comparison = updatedComparison;
