@@ -228,11 +228,11 @@
     <!-- Search Specific -->
     <SolidColorBrush x:Key="SearchQueryBackground" Color="#2D3748"/>
     <SolidColorBrush x:Key="SearchQueryText" Color="#F0F6FC"/>
-    <SolidColorBrush x:Key="SearchQueryBorder" Color="#2D3748"/>
+    <SolidColorBrush x:Key="SearchQueryBorder" Color="#4A5568"/>
     <SolidColorBrush x:Key="FileGroupBackground" Color="#1A2332"/>
-    <SolidColorBrush x:Key="FileGroupBorder" Color="#2D3748"/>
+    <SolidColorBrush x:Key="FileGroupBorder" Color="#4A5568"/>
     <SolidColorBrush x:Key="SheetGroupBackground" Color="#1C2128"/>
-    <SolidColorBrush x:Key="SheetGroupBorder" Color="#2D3748"/>
+    <SolidColorBrush x:Key="SheetGroupBorder" Color="#4A5568"/>
     <SolidColorBrush x:Key="HighlightYellow" Color="#2E2111"/>
 
     <!-- Comparison Colors - Very subtle tints for dark theme -->
@@ -241,7 +241,7 @@
     <SolidColorBrush x:Key="ComparisonNewBackground" Color="#0F1A14"/>
     <SolidColorBrush x:Key="ComparisonMissingBackground" Color="#1A1214"/>
     <SolidColorBrush x:Key="ComparisonHeaderBackground" Color="#2D3748"/>
-    <SolidColorBrush x:Key="ComparisonHeaderBorder" Color="#2D3748"/>
+    <SolidColorBrush x:Key="ComparisonHeaderBorder" Color="#4A5568"/>
     <SolidColorBrush x:Key="ComparisonAlternateRow" Color="#161B22"/>
 
     <!-- MenuFlyout/Submenu Specific Resources for Dark Theme -->
