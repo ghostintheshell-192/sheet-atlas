@@ -1,4 +1,5 @@
 using System.Data;
+using SheetAtlas.Core.Domain.ValueObjects;
 
 namespace SheetAtlas.Core.Domain.Entities
 {
@@ -35,6 +36,19 @@ namespace SheetAtlas.Core.Domain.Entities
         }
 
         /// <summary>
+        /// Get typed cell value with format metadata for export
+        /// </summary>
+        public ExportCellValue GetTypedCell(int columnIndex)
+        {
+            var cell = GetCell(columnIndex);
+            if (cell is ExportCellValue exportCell)
+                return exportCell;
+            if (cell is string s)
+                return new ExportCellValue(SACellValue.FromText(s));
+            return new ExportCellValue(SACellValue.Empty);
+        }
+
+        /// <summary>
         /// Get cell value as string
         /// </summary>
         public string GetCellAsString(int columnIndex)
@@ -68,6 +82,34 @@ namespace SheetAtlas.Core.Domain.Entities
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Get typed cell value by header name with intelligent mapping
+        /// </summary>
+        public ExportCellValue GetTypedCellByHeader(string headerName)
+        {
+            if (string.IsNullOrWhiteSpace(headerName))
+                return new ExportCellValue(SACellValue.Empty);
+
+            var headerIndex = ColumnHeaders.ToList().IndexOf(headerName);
+            if (headerIndex >= 0)
+            {
+                return GetTypedCell(headerIndex);
+            }
+
+            var normalizedTargetHeader = headerName.Trim().ToLowerInvariant();
+
+            for (int i = 0; i < ColumnHeaders.Count; i++)
+            {
+                var normalizedHeader = ColumnHeaders[i].Trim().ToLowerInvariant();
+                if (normalizedHeader == normalizedTargetHeader)
+                {
+                    return GetTypedCell(i);
+                }
+            }
+
+            return new ExportCellValue(SACellValue.Empty);
         }
     }
 
