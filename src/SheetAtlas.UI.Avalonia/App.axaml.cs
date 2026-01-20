@@ -148,6 +148,7 @@ public partial class App : Application
 
                 services.AddSingleton<IExcelReaderService, ExcelReaderService>();
                 services.AddSingleton<IExcelWriterService, ExcelWriterService>();
+                services.AddSingleton<IComparisonExportService, ComparisonExportService>();
                 services.AddSingleton<ISearchService, SearchService>();
                 services.AddSingleton<IRowComparisonService, RowComparisonService>();
                 services.AddSingleton<IColumnLinkingService, ColumnLinkingService>();
@@ -173,8 +174,14 @@ public partial class App : Application
                 {
                     var logger = sp.GetRequiredService<ILogService>();
                     var themeManager = sp.GetRequiredService<IThemeManager>();
+                    var exportService = sp.GetRequiredService<IComparisonExportService>();
+                    var filePickerService = sp.GetRequiredService<IFilePickerService>();
+                    var settingsService = sp.GetRequiredService<ISettingsService>();
                     var columnLinkingViewModel = sp.GetRequiredService<ColumnLinkingViewModel>();
-                    return new RowComparisonCoordinator(logger, logger, themeManager, columnLinkingViewModel);
+                    return new RowComparisonCoordinator(
+                        logger, logger, themeManager,
+                        exportService, filePickerService, settingsService,
+                        columnLinkingViewModel);
                 });
                 services.AddSingleton<ITabNavigationCoordinator, TabNavigationCoordinator>();
                 services.AddSingleton<IFileDetailsCoordinator, FileDetailsCoordinator>();

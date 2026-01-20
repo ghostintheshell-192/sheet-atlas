@@ -337,6 +337,20 @@
                                                             </StackPanel>
                                                         </StackPanel>
 
+                                                        <!-- Export Buttons -->
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0">
+                                                            <Button Content="Export Excel"
+                                                                    Classes="CTAButton"
+                                                                    Command="{Binding ExportExcelCommand}"
+                                                                    IsEnabled="{Binding CanExport}"
+                                                                    ToolTip.Tip="Export to Excel with metadata"/>
+                                                            <Button Content="Export CSV"
+                                                                    Classes="ModernButton"
+                                                                    Command="{Binding ExportCsvCommand}"
+                                                                    IsEnabled="{Binding CanExport}"
+                                                                    ToolTip.Tip="Export to CSV (data only)"/>
+                                                        </StackPanel>
+
                                                         <!-- Close Button -->
                                                         <Button Grid.Column="2"
                                                                 Content="✕"

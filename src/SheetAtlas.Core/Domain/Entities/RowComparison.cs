@@ -81,8 +81,9 @@ namespace SheetAtlas.Core.Domain.Entities
         public DateTime CreatedAt { get; }
         public string Name { get; set; }
         public IReadOnlyList<RowComparisonWarning> Warnings { get; private set; }
+        public IReadOnlyList<string> SearchTerms { get; }
 
-        public RowComparison(IReadOnlyList<ExcelRow> rows, string? name = null)
+        public RowComparison(IReadOnlyList<ExcelRow> rows, IReadOnlyList<string>? searchTerms = null, string? name = null)
         {
             if (rows == null || rows.Count < 2)
                 throw new ArgumentException("At least two rows are required for comparison", nameof(rows));
@@ -91,6 +92,7 @@ namespace SheetAtlas.Core.Domain.Entities
             Rows = rows;
             CreatedAt = DateTime.UtcNow;
             Name = name ?? $"Comparison {CreatedAt:HH:mm:ss}";
+            SearchTerms = searchTerms ?? Array.Empty<string>().AsReadOnly();
             Warnings = AnalyzeStructuralIssues();
         }
 
@@ -182,11 +184,16 @@ namespace SheetAtlas.Core.Domain.Entities
     public class RowComparisonRequest
     {
         public IReadOnlyList<SearchResult> SelectedMatches { get; }
+        public IReadOnlyList<string> SearchTerms { get; }
         public string? Name { get; set; }
 
-        public RowComparisonRequest(IReadOnlyList<SearchResult> selectedMatches, string? name = null)
+        public RowComparisonRequest(
+            IReadOnlyList<SearchResult> selectedMatches,
+            IReadOnlyList<string>? searchTerms = null,
+            string? name = null)
         {
             SelectedMatches = selectedMatches ?? throw new ArgumentNullException(nameof(selectedMatches));
+            SearchTerms = searchTerms ?? Array.Empty<string>().AsReadOnly();
             Name = name;
         }
     }
