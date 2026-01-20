@@ -8,6 +8,7 @@
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="Background" Duration="0:0:0.15"/>
@@ -26,6 +27,7 @@
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="Background" Duration="0:0:0.15"/>
@@ -44,6 +46,7 @@
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="Background" Duration="0:0:0.15"/>
@@ -62,6 +65,7 @@
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="Background" Duration="0:0:0.15"/>
