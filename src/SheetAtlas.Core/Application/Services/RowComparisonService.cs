@@ -1,5 +1,6 @@
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.Exceptions;
+using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Logging.Services;
 
@@ -37,7 +38,7 @@ namespace SheetAtlas.Core.Application.Services
                 }
             }
 
-            return new RowComparison(excelRows.AsReadOnly(), request.Name);
+            return new RowComparison(excelRows.AsReadOnly(), request.SearchTerms, request.Name);
         }
 
         public ExcelRow ExtractRowFromSearchResult(SearchResult searchResult)
@@ -67,8 +68,8 @@ namespace SheetAtlas.Core.Application.Services
 
             // Extract complete row data
             var rowCells = sheet.GetRow(absoluteRow);
-            // Convert SACellData[] to object[] for compatibility with ExcelRow
-            var cells = rowCells.Select(cell => (object?)cell.Value.ToString()).ToArray();
+            // Preserve type and format metadata using ExportCellValue
+            var cells = rowCells.Select(cell => (object?)new ExportCellValue(cell)).ToArray();
 
             // Get column headers
             var columnHeaders = GetColumnHeaders(searchResult.SourceFile, searchResult.SheetName);

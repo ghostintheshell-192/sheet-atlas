@@ -222,7 +222,19 @@ public class TreeSearchResultsViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            var request = new RowComparisonRequest(selectedResults.AsReadOnly(),
+            // Collect search terms from searches that have selected rows
+            var searchTerms = SearchHistory
+                .Where(sh => sh.FileGroups
+                    .SelectMany(fg => fg.SheetGroups)
+                    .SelectMany(sg => sg.Results)
+                    .Any(r => r.IsSelected && r.CanBeCompared))
+                .Select(sh => sh.Query)
+                .Distinct()
+                .ToList();
+
+            var request = new RowComparisonRequest(
+                selectedResults.AsReadOnly(),
+                searchTerms.AsReadOnly(),
                 $"Row Comparison {DateTime.Now:HH:mm:ss}");
 
             var comparison = _rowComparisonService.CreateRowComparison(request);

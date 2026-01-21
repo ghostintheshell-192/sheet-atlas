@@ -18,9 +18,13 @@
     </UserControl.Resources>
 
     <!-- Comparison Table Content (header is managed by CollapsibleSection in MainWindow) -->
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                 IsVisible="{Binding HasRows}">
-        <Grid Grid.IsSharedSizeScope="True">
+    <Border BorderBrush="{DynamicResource SearchQueryBorder}"
+            BorderThickness="2"
+            CornerRadius="4"
+            Margin="0,8,0,0"
+            IsVisible="{Binding HasRows}">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Grid Grid.IsSharedSizeScope="True" Margin="0,0,16,16">
             <Grid.ColumnDefinitions>
                 <!-- Row Info Column -->
                 <ColumnDefinition Width="250" MinWidth="200"/>
@@ -38,7 +42,7 @@
             <Border Grid.Column="0" Grid.Row="0" Background="{DynamicResource ComparisonHeaderBackground}"
                     BorderBrush="{DynamicResource BorderColor}"
                     BorderThickness="0,0,1,1" Padding="12">
-                <TextBlock Text="Source" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Text="Source" FontWeight="SemiBold" Foreground="{DynamicResource SearchQueryText}" VerticalAlignment="Center"/>
             </Border>
 
             <!-- Column Headers -->
@@ -61,7 +65,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="{Binding Header}"
                                           FontWeight="SemiBold"
-                                          Foreground="White"
+                                          Foreground="{DynamicResource SearchQueryText}"
                                           TextTrimming="CharacterEllipsis"
                                           VerticalAlignment="Center"
                                           MaxWidth="220"/>
@@ -128,6 +132,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
             </ItemsControl>
-        </Grid>
-    </ScrollViewer>
+            </Grid>
+        </ScrollViewer>
+    </Border>
 </UserControl>

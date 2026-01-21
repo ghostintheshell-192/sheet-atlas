@@ -127,7 +127,7 @@ namespace SheetAtlas.Tests.Services
 
             var request = new RowComparisonRequest(
                 new List<SearchResult> { searchResult },
-                "Comparison1"
+                name: "Comparison1"
             );
 
             // Act & Assert
@@ -226,7 +226,7 @@ namespace SheetAtlas.Tests.Services
 
             var request = new RowComparisonRequest(
                 new List<SearchResult> { searchResult1, searchResult2 },
-                "Alice vs Bob Comparison"
+                name: "Alice vs Bob Comparison"
             );
 
             // Act

@@ -16,6 +16,7 @@ namespace SheetAtlas.Infrastructure.External.Writers
     /// <summary>
     /// Service for exporting enriched sheet data to Excel and CSV formats.
     /// Uses CleanedValue from cell metadata for proper type preservation.
+    /// Preserves number formats (currency, percentage, dates) from source files.
     /// </summary>
     public class ExcelWriterService : IExcelWriterService
     {
@@ -23,8 +24,8 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
         private static readonly string[] _supportedExcelExtensions = new[] { ".xlsx" };
 
-        // Style indices for cell formatting (must match CreateStylesheet order)
-        private const uint DateStyleIndex = 1;
+        // Default style index for dates without custom format
+        private const uint DefaultDateStyleIndex = 1;
 
         public ExcelWriterService(ILogService logger)
         {
@@ -57,10 +58,12 @@ namespace SheetAtlas.Infrastructure.External.Writers
                     var workbookPart = document.AddWorkbookPart();
                     workbookPart.Workbook = new Workbook();
 
-                    // Add stylesheet for date formatting
+                    // Add stylesheet for number formatting (dates, currency, percentages)
                     var stylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
                     stylesPart.Stylesheet = CreateStylesheet();
-                    stylesPart.Stylesheet.Save();
+
+                    // Cache for dynamically created number formats
+                    var formatCache = new Dictionary<string, uint>();
 
                     var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
                     var sheetData2 = new SheetData();
@@ -118,13 +121,23 @@ namespace SheetAtlas.Infrastructure.External.Writers
                                 continue;
 
                             var cellData = row[col];
-                            var cell = CreateCellFromCellData(cellData, outputColIndex, rowIndex, options.UseOriginalValues, ref normalizedCellCount);
+                            var cell = CreateCellFromCellData(
+                                cellData,
+                                outputColIndex,
+                                rowIndex,
+                                options.UseOriginalValues,
+                                stylesPart.Stylesheet,
+                                formatCache,
+                                ref normalizedCellCount);
                             dataRow.Append(cell);
                             outputColIndex++;
                         }
                         sheetData2.Append(dataRow);
                         rowIndex++;
                     }
+
+                    // Save stylesheet after all formats have been added
+                    stylesPart.Stylesheet.Save();
 
                     // Freeze header row if requested
                     if (options.FreezeHeaderRow && options.IncludeHeaders)
@@ -310,16 +323,19 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
         /// <summary>
         /// Creates an Excel cell from SACellData, using CleanedValue if available.
+        /// Preserves number format from source file metadata.
         /// </summary>
         private Cell CreateCellFromCellData(
             SACellData cellData,
             int columnIndex,
             uint rowIndex,
             bool useOriginalValues,
+            Stylesheet stylesheet,
+            Dictionary<string, uint> formatCache,
             ref int normalizedCellCount)
         {
             var colRef = GetColumnReference(columnIndex);
-            var cellRef = $"{colRef}{rowIndex}";
+            var numberFormat = cellData.Metadata?.NumberFormat;
 
             // Determine which value to use
             SACellValue valueToWrite;
@@ -333,12 +349,15 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 normalizedCellCount++;
             }
 
-            // Create cell based on type
+            // Create cell based on type, applying number format where applicable
             return valueToWrite.Type switch
             {
-                SACellType.FloatingPoint => CreateNumberCell(valueToWrite.AsFloatingPoint(), colRef, rowIndex),
-                SACellType.Integer => CreateNumberCell(valueToWrite.AsInteger(), colRef, rowIndex),
-                SACellType.DateTime => CreateDateCell(valueToWrite.AsDateTime(), colRef, rowIndex),
+                SACellType.FloatingPoint => CreateNumberCell(
+                    valueToWrite.AsFloatingPoint(), colRef, rowIndex, numberFormat, stylesheet, formatCache),
+                SACellType.Integer => CreateNumberCell(
+                    valueToWrite.AsInteger(), colRef, rowIndex, numberFormat, stylesheet, formatCache),
+                SACellType.DateTime => CreateDateCell(
+                    valueToWrite.AsDateTime(), colRef, rowIndex, numberFormat, stylesheet, formatCache),
                 SACellType.Boolean => CreateBooleanCell(valueToWrite.AsBoolean(), colRef, rowIndex),
                 SACellType.Text => CreateTextCell(valueToWrite.AsText(), colRef, rowIndex),
                 SACellType.Empty => CreateTextCell(string.Empty, colRef, rowIndex),
@@ -346,27 +365,58 @@ namespace SheetAtlas.Infrastructure.External.Writers
             };
         }
 
-        private static Cell CreateNumberCell(double value, string columnRef, uint rowIndex)
+        private static Cell CreateNumberCell(
+            double value,
+            string columnRef,
+            uint rowIndex,
+            string? numberFormat,
+            Stylesheet stylesheet,
+            Dictionary<string, uint> formatCache)
         {
-            return new Cell
+            var cell = new Cell
             {
                 CellReference = $"{columnRef}{rowIndex}",
                 DataType = CellValues.Number,
                 CellValue = new CellValue(value.ToString(CultureInfo.InvariantCulture))
             };
+
+            // Apply number format if available (currency, percentage, etc.)
+            if (!string.IsNullOrEmpty(numberFormat))
+            {
+                cell.StyleIndex = GetOrCreateCellFormatIndex(numberFormat, stylesheet, formatCache);
+            }
+
+            return cell;
         }
 
-        private static Cell CreateDateCell(DateTime value, string columnRef, uint rowIndex)
+        private static Cell CreateDateCell(
+            DateTime value,
+            string columnRef,
+            uint rowIndex,
+            string? numberFormat,
+            Stylesheet stylesheet,
+            Dictionary<string, uint> formatCache)
         {
             // Excel stores dates as serial numbers (days since 1899-12-30)
             double serialDate = value.ToOADate();
-            return new Cell
+            var cell = new Cell
             {
                 CellReference = $"{columnRef}{rowIndex}",
                 DataType = CellValues.Number,
-                CellValue = new CellValue(serialDate.ToString(CultureInfo.InvariantCulture)),
-                StyleIndex = DateStyleIndex // Apply date format style
+                CellValue = new CellValue(serialDate.ToString(CultureInfo.InvariantCulture))
             };
+
+            // Apply original date format or default
+            if (!string.IsNullOrEmpty(numberFormat))
+            {
+                cell.StyleIndex = GetOrCreateCellFormatIndex(numberFormat, stylesheet, formatCache);
+            }
+            else
+            {
+                cell.StyleIndex = DefaultDateStyleIndex;
+            }
+
+            return cell;
         }
 
         private static Cell CreateBooleanCell(bool value, string columnRef, uint rowIndex)
@@ -377,6 +427,47 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 DataType = CellValues.Boolean,
                 CellValue = new CellValue(value)
             };
+        }
+
+        /// <summary>
+        /// Gets or creates a cell format index for the given number format.
+        /// Uses cache to avoid duplicate formats.
+        /// </summary>
+        private static uint GetOrCreateCellFormatIndex(
+            string numberFormat,
+            Stylesheet stylesheet,
+            Dictionary<string, uint> formatCache)
+        {
+            if (formatCache.TryGetValue(numberFormat, out var cached))
+                return cached;
+
+            var numberingFormats = stylesheet.NumberingFormats!;
+
+            // Custom format IDs start at 164; account for existing formats
+            uint formatId = 165 + (uint)numberingFormats.Count();
+
+            numberingFormats.Append(new NumberingFormat
+            {
+                NumberFormatId = formatId,
+                FormatCode = numberFormat
+            });
+            numberingFormats.Count = (uint)numberingFormats.Count();
+
+            var cellFormats = stylesheet.CellFormats!;
+            uint styleIndex = (uint)cellFormats.Count();
+
+            cellFormats.Append(new CellFormat
+            {
+                NumberFormatId = formatId,
+                ApplyNumberFormat = true,
+                FontId = 0,
+                FillId = 0,
+                BorderId = 0
+            });
+            cellFormats.Count = (uint)cellFormats.Count();
+
+            formatCache[numberFormat] = styleIndex;
+            return styleIndex;
         }
 
         private static Cell CreateTextCell(string value, string columnRef, uint rowIndex)
@@ -459,19 +550,21 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
         /// <summary>
         /// Creates the stylesheet for the workbook with date formatting.
+        /// NumberingFormats is initialized with default date format; additional formats
+        /// are added dynamically as cells are written.
         /// </summary>
         private static Stylesheet CreateStylesheet()
         {
             // Built-in format ID 14 = "mm-dd-yy" (or localized short date)
             // We use a custom format for better control: "yyyy-mm-dd"
-            const uint CustomDateFormatId = 164; // Custom formats start at 164
+            const uint DefaultDateFormatId = 164; // Custom formats start at 164
 
             return new Stylesheet(
-                // Number formats (custom date format)
+                // Number formats - starts with default date, others added dynamically
                 new NumberingFormats(
                     new NumberingFormat
                     {
-                        NumberFormatId = CustomDateFormatId,
+                        NumberFormatId = DefaultDateFormatId,
                         FormatCode = "yyyy-mm-dd"
                     }
                 )
@@ -496,17 +589,18 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 )
                 { Count = 1 },
 
-                // Cell formats
+                // Cell formats - Index 0 = default, Index 1 = default date
+                // Additional formats added dynamically via GetOrCreateCellFormatIndex
                 new CellFormats(
                     // Index 0: Default format (no specific formatting)
                     new CellFormat { FontId = 0, FillId = 0, BorderId = 0 },
-                    // Index 1: Date format (DateStyleIndex = 1)
+                    // Index 1: Default date format (DefaultDateStyleIndex = 1)
                     new CellFormat
                     {
                         FontId = 0,
                         FillId = 0,
                         BorderId = 0,
-                        NumberFormatId = CustomDateFormatId,
+                        NumberFormatId = DefaultDateFormatId,
                         ApplyNumberFormat = true
                     }
                 )

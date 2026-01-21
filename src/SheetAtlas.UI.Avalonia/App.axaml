@@ -20,6 +20,9 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Styles/Buttons.axaml"/>
+        <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Styles/TextBoxes.axaml"/>
+        <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Styles/Tabs.axaml"/>
+        <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Styles/TreeView.axaml"/>
         <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Styles/Menus.axaml"/>
         <StyleInclude Source="avares://SheetAtlas.UI.Avalonia/Controls/CollapsibleSection.axaml"/>
     </Application.Styles>

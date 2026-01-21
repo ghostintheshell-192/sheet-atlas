@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-01-21
+
+### Fixed
+
+- Preserve numeric types in comparison export (numbers written as Excel numbers, not text)
+- Preserve number formats (currency, percentage) in comparison and normalization export
+- Format dates correctly in comparison view (was showing OLE serial numbers)
+- Limit decimal precision in comparison view for readability
+
+### Added
+
+- `ExportCellValue` wrapper struct to carry both cell value and number format through export pipeline
+- `GetTypedCell()` and `GetTypedCellByHeader()` methods in `RowComparison` for typed cell access
+- Dynamic NumberingFormats support in `ExcelWriterService` for custom format preservation
+
 ## [0.5.0] - 2026-01-18
 
 ### Added
