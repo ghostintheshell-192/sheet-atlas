@@ -8,6 +8,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Logging.Services;
 
 namespace SheetAtlas.Infrastructure.External.Writers
@@ -249,7 +250,11 @@ namespace SheetAtlas.Infrastructure.External.Writers
             worksheetPart.Worksheet.InsertAt(sheetViews, 0);
         }
 
-        private void CreateComparisonSheet(WorkbookPart workbookPart, Sheets sheets, RowComparison comparison, uint sheetId)
+        private void CreateComparisonSheet(
+            WorkbookPart workbookPart,
+            Sheets sheets,
+            RowComparison comparison,
+            uint sheetId)
         {
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             var sheetData = new SheetData();
@@ -261,6 +266,11 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 SheetId = sheetId,
                 Name = "Comparison"
             });
+
+            // Get stylesheet for applying number formats
+            var stylesheet = workbookPart.WorkbookStylesPart?.Stylesheet
+                ?? throw new InvalidOperationException("Stylesheet not found in workbook");
+            var formatCache = new Dictionary<string, uint>();
 
             var allHeaders = comparison.GetAllColumnHeaders();
             uint rowIndex = 1;
@@ -289,13 +299,16 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
                 foreach (var header in allHeaders)
                 {
-                    var cellValue = row.GetCellAsStringByHeader(header);
-                    dataRow.Append(CreateTextCell(cellValue, GetColumnReference(colIndex++), rowIndex));
+                    var cellValue = row.GetTypedCellByHeader(header);
+                    dataRow.Append(CreateTypedCell(cellValue, GetColumnReference(colIndex++), rowIndex, stylesheet, formatCache));
                 }
 
                 sheetData.Append(dataRow);
                 rowIndex++;
             }
+
+            // Save stylesheet changes after adding formats
+            workbookPart.WorkbookStylesPart?.Stylesheet.Save();
 
             // Freeze header row
             var sheetViews = new SheetViews();
@@ -378,6 +391,7 @@ namespace SheetAtlas.Infrastructure.External.Writers
         private static Stylesheet CreateStylesheet()
         {
             return new Stylesheet(
+                new NumberingFormats() { Count = 0 },
                 new Fonts(new Font()) { Count = 1 },
                 new Fills(
                     new Fill(new PatternFill { PatternType = PatternValues.None }),
@@ -390,6 +404,118 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 )
                 { Count = 1 }
             );
+        }
+
+        private static uint GetOrCreateCellFormatIndex(
+            string? numberFormat,
+            Stylesheet stylesheet,
+            Dictionary<string, uint> formatCache)
+        {
+            if (string.IsNullOrEmpty(numberFormat))
+                return 0;  // Default format
+
+            if (formatCache.TryGetValue(numberFormat, out var cached))
+                return cached;
+
+            var numberingFormats = stylesheet.NumberingFormats!;
+            uint formatId = 164 + (uint)numberingFormats.Count();
+
+            numberingFormats.Append(new NumberingFormat
+            {
+                NumberFormatId = formatId,
+                FormatCode = numberFormat
+            });
+            numberingFormats.Count = (uint)numberingFormats.Count();
+
+            var cellFormats = stylesheet.CellFormats!;
+            uint styleIndex = (uint)cellFormats.Count();
+
+            cellFormats.Append(new CellFormat
+            {
+                NumberFormatId = formatId,
+                ApplyNumberFormat = true,
+                FontId = 0,
+                FillId = 0,
+                BorderId = 0
+            });
+            cellFormats.Count = (uint)cellFormats.Count();
+
+            formatCache[numberFormat] = styleIndex;
+            return styleIndex;
+        }
+
+        private static Cell CreateTypedCell(
+            ExportCellValue cellValue,
+            string columnRef,
+            uint rowIndex,
+            Stylesheet stylesheet,
+            Dictionary<string, uint> formatCache)
+        {
+            var value = cellValue.Value;
+
+            if (value.IsInteger)
+            {
+                var cell = new Cell
+                {
+                    CellReference = $"{columnRef}{rowIndex}",
+                    DataType = CellValues.Number,
+                    CellValue = new CellValue(value.AsInteger().ToString(CultureInfo.InvariantCulture))
+                };
+
+                if (!string.IsNullOrEmpty(cellValue.NumberFormat))
+                {
+                    cell.StyleIndex = GetOrCreateCellFormatIndex(cellValue.NumberFormat, stylesheet, formatCache);
+                }
+
+                return cell;
+            }
+
+            if (value.IsFloatingPoint)
+            {
+                var cell = new Cell
+                {
+                    CellReference = $"{columnRef}{rowIndex}",
+                    DataType = CellValues.Number,
+                    CellValue = new CellValue(value.AsFloatingPoint().ToString(CultureInfo.InvariantCulture))
+                };
+
+                if (!string.IsNullOrEmpty(cellValue.NumberFormat))
+                {
+                    cell.StyleIndex = GetOrCreateCellFormatIndex(cellValue.NumberFormat, stylesheet, formatCache);
+                }
+
+                return cell;
+            }
+
+            if (value.IsDateTime)
+            {
+                // Excel stores dates as OLE Automation date (double)
+                var cell = new Cell
+                {
+                    CellReference = $"{columnRef}{rowIndex}",
+                    DataType = CellValues.Number,
+                    CellValue = new CellValue(value.AsDateTime().ToOADate().ToString(CultureInfo.InvariantCulture))
+                };
+
+                // Apply date format (use source format or default)
+                var dateFormat = cellValue.NumberFormat ?? "yyyy-mm-dd";
+                cell.StyleIndex = GetOrCreateCellFormatIndex(dateFormat, stylesheet, formatCache);
+
+                return cell;
+            }
+
+            if (value.IsBoolean)
+            {
+                return new Cell
+                {
+                    CellReference = $"{columnRef}{rowIndex}",
+                    DataType = CellValues.Boolean,
+                    CellValue = new CellValue(value.AsBoolean())
+                };
+            }
+
+            // Default: text
+            return CreateTextCell(value.ToString(), columnRef, rowIndex);
         }
     }
 }
