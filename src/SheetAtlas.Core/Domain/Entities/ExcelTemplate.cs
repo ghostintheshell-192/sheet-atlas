@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SheetAtlas.Core.Application.Json;
 using SheetAtlas.Core.Domain.ValueObjects;
 
 namespace SheetAtlas.Core.Domain.Entities
@@ -11,13 +12,6 @@ namespace SheetAtlas.Core.Domain.Entities
     /// </summary>
     public sealed class ExcelTemplate
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new()
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-
         /// <summary>Template name (user-defined identifier).</summary>
         public string Name { get; set; } = string.Empty;
 
@@ -190,14 +184,14 @@ namespace SheetAtlas.Core.Domain.Entities
 
         /// <summary>Serialize template to JSON string.</summary>
         public string ToJson() =>
-            JsonSerializer.Serialize(this, _jsonOptions);
+            JsonSerializer.Serialize(this, AppJsonContext.Default.ExcelTemplate);
 
         /// <summary>Deserialize template from JSON string.</summary>
         public static ExcelTemplate? FromJson(string json)
         {
             try
             {
-                return JsonSerializer.Deserialize<ExcelTemplate>(json, _jsonOptions);
+                return JsonSerializer.Deserialize(json, AppJsonContext.Default.ExcelTemplate);
             }
             catch (JsonException)
             {
