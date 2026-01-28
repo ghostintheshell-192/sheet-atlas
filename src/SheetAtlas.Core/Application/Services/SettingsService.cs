@@ -1,7 +1,7 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Application.Json;
 using SheetAtlas.Logging.Services;
 
 namespace SheetAtlas.Core.Application.Services
@@ -15,7 +15,6 @@ namespace SheetAtlas.Core.Application.Services
         private readonly ILogService _logService;
         private readonly string _settingsDirectory;
         private readonly string _settingsFilePath;
-        private readonly JsonSerializerOptions _jsonOptions;
         private UserSettings _currentSettings;
 
         public SettingsService(ILogService logService)
@@ -26,18 +25,6 @@ namespace SheetAtlas.Core.Application.Services
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             _settingsDirectory = Path.Combine(appDataPath, "SheetAtlas");
             _settingsFilePath = Path.Combine(_settingsDirectory, "settings.json");
-
-            // JSON serialization options
-            _jsonOptions = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                Converters =
-                {
-                    new JsonStringEnumConverter()
-                }
-            };
 
             // Initialize with defaults
             _currentSettings = UserSettings.CreateDefault();
@@ -67,7 +54,7 @@ namespace SheetAtlas.Core.Application.Services
                 }
 
                 var json = await File.ReadAllTextAsync(_settingsFilePath, cancellationToken);
-                var settings = JsonSerializer.Deserialize<UserSettings>(json, _jsonOptions);
+                var settings = JsonSerializer.Deserialize(json, AppJsonContext.Default.UserSettings);
 
                 if (settings == null)
                 {
@@ -110,7 +97,7 @@ namespace SheetAtlas.Core.Application.Services
                 settings = ValidateAndFixSettings(settings);
 
                 // Serialize to JSON
-                var json = JsonSerializer.Serialize(settings, _jsonOptions);
+                var json = JsonSerializer.Serialize(settings, AppJsonContext.Default.UserSettings);
 
                 // Write to file
                 await File.WriteAllTextAsync(_settingsFilePath, json, cancellationToken);

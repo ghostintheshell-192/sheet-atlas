@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Application.Json;
 using SheetAtlas.Core.Shared.Helpers;
 
 namespace SheetAtlas.Core.Application.Services
@@ -34,14 +35,11 @@ namespace SheetAtlas.Core.Application.Services
             _logRootDirectory = Path.Combine(appDataPath, "SheetAtlas", "Logs", "Files");
 
             // JSON serialization options
-            _jsonOptions = new JsonSerializerOptions
+            // Use options from source-generated context and add custom converters
+            _jsonOptions = new JsonSerializerOptions(AppJsonContext.Default.Options)
             {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 Converters =
                 {
-                    new JsonStringEnumConverter(),
                     new ExcelErrorJsonConverter()
                 },
                 ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles,
