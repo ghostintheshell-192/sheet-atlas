@@ -10,10 +10,10 @@
     <!-- Project metadata -->
     <Company>SheetAtlas</Company>
     <Product>SheetAtlas</Product>
-    <Copyright>Copyright © 2025</Copyright>
-    <Version>0.4.0</Version>
-    <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <FileVersion>0.4.0.0</FileVersion>
+    <Copyright>Copyright © 2026</Copyright>
+    <Version>0.5.2</Version>
+    <AssemblyVersion>0.5.2.0</AssemblyVersion>
+    <FileVersion>0.5.2.0</FileVersion>
   </PropertyGroup>
 
   <!-- Common compiler settings -->
