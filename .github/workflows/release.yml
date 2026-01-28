@@ -307,13 +307,6 @@ jobs:
           path: build/SheetAtlas-macos-x64.dmg
           if-no-files-found: error
 
-      - name: Upload macOS .app bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-app
-          path: build/SheetAtlas.app
-          if-no-files-found: error
-
       - name: Upload macOS tarball (legacy)
         uses: actions/upload-artifact@v4
         with:
@@ -421,7 +414,6 @@ jobs:
           echo "- Linux Tarball (.tar.gz)" >> $GITHUB_STEP_SUMMARY
           echo "- Linux Debian Package (.deb)" >> $GITHUB_STEP_SUMMARY
           echo "- macOS DMG Installer (.dmg)" >> $GITHUB_STEP_SUMMARY
-          echo "- macOS App Bundle (.app)" >> $GITHUB_STEP_SUMMARY
           echo "- macOS Tarball - Legacy (.tar.gz)" >> $GITHUB_STEP_SUMMARY
 
   # ============================================
