@@ -40,7 +40,8 @@ dotnet publish "$PROJECT_ROOT/src/SheetAtlas.UI.Avalonia/SheetAtlas.UI.Avalonia.
   /p:PublishSingleFile=false \
   /p:PublishReadyToRun=true \
   /p:PublishTrimmed=true \
-  /p:TrimMode=partial
+  /p:TrimMode=partial \
+  /p:Version="$VERSION"
 
 echo "✓ Application published successfully"
 echo ""
