@@ -29,6 +29,8 @@ namespace SheetAtlas.Infrastructure.External.Writers
         public async Task<ExportResult> ExportToExcelAsync(
             RowComparison comparison,
             string outputPath,
+            IEnumerable<string>? includedColumns = null,
+            IReadOnlyDictionary<string, string>? semanticNames = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(comparison);
@@ -60,7 +62,7 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
                     // Create Comparison sheet
                     cancellationToken.ThrowIfCancellationRequested();
-                    CreateComparisonSheet(workbookPart, sheets, comparison, 2);
+                    CreateComparisonSheet(workbookPart, sheets, comparison, 2, includedColumns, semanticNames);
 
                     workbookPart.Workbook.Save();
                 }, cancellationToken);
@@ -101,6 +103,8 @@ namespace SheetAtlas.Infrastructure.External.Writers
         public async Task<ExportResult> ExportToCsvAsync(
             RowComparison comparison,
             string outputPath,
+            IEnumerable<string>? includedColumns = null,
+            IReadOnlyDictionary<string, string>? semanticNames = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(comparison);
@@ -118,11 +122,15 @@ namespace SheetAtlas.Infrastructure.External.Writers
                     // UTF-8 with BOM for Excel compatibility
                     using var writer = new StreamWriter(outputPath, false, new UTF8Encoding(true));
 
-                    var allHeaders = comparison.GetAllColumnHeaders();
+                    // Group headers by semantic name (merge columns that map to the same semantic name)
+                    var headerGroups = GroupHeadersBySemanticName(
+                        comparison.GetAllColumnHeaders(),
+                        includedColumns,
+                        semanticNames);
 
                     // Write header row: Source File, Sheet, Row, then data columns
                     var headerFields = new List<string> { "Source File", "Sheet", "Row" };
-                    headerFields.AddRange(allHeaders);
+                    headerFields.AddRange(headerGroups.Select(g => g.DisplayName));
                     writer.WriteLine(string.Join(",", headerFields.Select(h => EscapeCsvField(h))));
 
                     // Write data rows
@@ -137,9 +145,10 @@ namespace SheetAtlas.Infrastructure.External.Writers
                             EscapeCsvField($"R{row.RowIndex + 1}")
                         };
 
-                        foreach (var header in allHeaders)
+                        // For each header group, find value from any of the original headers
+                        foreach (var group in headerGroups)
                         {
-                            var cellValue = row.GetCellAsStringByHeader(header);
+                            var cellValue = GetCellValueFromGroup(row, group.OriginalHeaders);
                             fields.Add(EscapeCsvField(cellValue));
                         }
 
@@ -254,7 +263,9 @@ namespace SheetAtlas.Infrastructure.External.Writers
             WorkbookPart workbookPart,
             Sheets sheets,
             RowComparison comparison,
-            uint sheetId)
+            uint sheetId,
+            IEnumerable<string>? includedColumns = null,
+            IReadOnlyDictionary<string, string>? semanticNames = null)
         {
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             var sheetData = new SheetData();
@@ -272,7 +283,11 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 ?? throw new InvalidOperationException("Stylesheet not found in workbook");
             var formatCache = new Dictionary<string, uint>();
 
-            var allHeaders = comparison.GetAllColumnHeaders();
+            // Group headers by semantic name (merge columns that map to the same semantic name)
+            var headerGroups = GroupHeadersBySemanticName(
+                comparison.GetAllColumnHeaders(),
+                includedColumns,
+                semanticNames);
             uint rowIndex = 1;
 
             // Header row: Source File, Sheet, Row, then data columns
@@ -281,9 +296,9 @@ namespace SheetAtlas.Infrastructure.External.Writers
             headerRow.Append(CreateTextCell("Source File", GetColumnReference(colIndex++), rowIndex));
             headerRow.Append(CreateTextCell("Sheet", GetColumnReference(colIndex++), rowIndex));
             headerRow.Append(CreateTextCell("Row", GetColumnReference(colIndex++), rowIndex));
-            foreach (var header in allHeaders)
+            foreach (var group in headerGroups)
             {
-                headerRow.Append(CreateTextCell(header, GetColumnReference(colIndex++), rowIndex));
+                headerRow.Append(CreateTextCell(group.DisplayName, GetColumnReference(colIndex++), rowIndex));
             }
             sheetData.Append(headerRow);
             rowIndex++;
@@ -297,9 +312,10 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 dataRow.Append(CreateTextCell(row.SheetName, GetColumnReference(colIndex++), rowIndex));
                 dataRow.Append(CreateTextCell($"R{row.RowIndex + 1}", GetColumnReference(colIndex++), rowIndex));
 
-                foreach (var header in allHeaders)
+                // For each header group, find value from any of the original headers
+                foreach (var group in headerGroups)
                 {
-                    var cellValue = row.GetTypedCellByHeader(header);
+                    var cellValue = GetTypedCellValueFromGroup(row, group.OriginalHeaders);
                     dataRow.Append(CreateTypedCell(cellValue, GetColumnReference(colIndex++), rowIndex, stylesheet, formatCache));
                 }
 
@@ -353,6 +369,84 @@ namespace SheetAtlas.Infrastructure.External.Writers
             }
             return result.ToString();
         }
+
+        /// <summary>
+        /// Gets the display name for a column header, using semantic name if available.
+        /// </summary>
+        private static string GetDisplayName(string originalName, IReadOnlyDictionary<string, string>? semanticNames)
+        {
+            if (semanticNames != null && semanticNames.TryGetValue(originalName, out var semanticName))
+            {
+                return semanticName;
+            }
+            return originalName;
+        }
+
+        /// <summary>
+        /// Groups original headers by their semantic name, merging columns that map to the same name.
+        /// </summary>
+        private static List<HeaderGroup> GroupHeadersBySemanticName(
+            IReadOnlyList<string> allHeaders,
+            IEnumerable<string>? includedColumns,
+            IReadOnlyDictionary<string, string>? semanticNames)
+        {
+            var includedSet = includedColumns != null
+                ? new HashSet<string>(includedColumns, StringComparer.OrdinalIgnoreCase)
+                : null;
+
+            var groups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var originalHeader in allHeaders)
+            {
+                // Skip if not in included set
+                if (includedSet != null && !includedSet.Contains(originalHeader))
+                    continue;
+
+                var displayName = GetDisplayName(originalHeader, semanticNames);
+
+                if (!groups.TryGetValue(displayName, out var originalHeaders))
+                {
+                    originalHeaders = new List<string>();
+                    groups[displayName] = originalHeaders;
+                }
+                originalHeaders.Add(originalHeader);
+            }
+
+            return groups.Select(g => new HeaderGroup(g.Key, g.Value)).ToList();
+        }
+
+        /// <summary>
+        /// Gets cell value as string from any of the original headers in the group.
+        /// </summary>
+        private static string GetCellValueFromGroup(ExcelRow row, IReadOnlyList<string> originalHeaders)
+        {
+            foreach (var header in originalHeaders)
+            {
+                var value = row.GetCellAsStringByHeader(header);
+                if (!string.IsNullOrEmpty(value))
+                    return value;
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Gets typed cell value from any of the original headers in the group.
+        /// </summary>
+        private static ExportCellValue GetTypedCellValueFromGroup(ExcelRow row, IReadOnlyList<string> originalHeaders)
+        {
+            foreach (var header in originalHeaders)
+            {
+                var value = row.GetTypedCellByHeader(header);
+                if (!value.Value.IsEmpty)
+                    return value;
+            }
+            return default;
+        }
+
+        /// <summary>
+        /// Represents a group of original headers that map to the same semantic display name.
+        /// </summary>
+        private sealed record HeaderGroup(string DisplayName, IReadOnlyList<string> OriginalHeaders);
 
         private static string EscapeCsvField(string field)
         {

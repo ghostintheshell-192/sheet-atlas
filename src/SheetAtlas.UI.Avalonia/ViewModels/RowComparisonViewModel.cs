@@ -162,7 +162,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                     return;
                 }
 
-                var result = await _exportService.ExportToExcelAsync(Comparison, outputPath);
+                var includedColumns = _includedColumnsProvider?.Invoke();
+                var semanticNames = BuildSemanticNamesMap();
+                var result = await _exportService.ExportToExcelAsync(Comparison, outputPath, includedColumns, semanticNames);
 
                 if (result.IsSuccess)
                 {
@@ -213,7 +215,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                     return;
                 }
 
-                var result = await _exportService.ExportToCsvAsync(Comparison, outputPath);
+                var includedColumns = _includedColumnsProvider?.Invoke();
+                var semanticNames = BuildSemanticNamesMap();
+                var result = await _exportService.ExportToCsvAsync(Comparison, outputPath, includedColumns, semanticNames);
 
                 if (result.IsSuccess)
                 {
@@ -257,6 +261,27 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 cell.RefreshColors();
             }
+        }
+
+        /// <summary>
+        /// Builds a mapping from original column names to their semantic names for export.
+        /// </summary>
+        private IReadOnlyDictionary<string, string>? BuildSemanticNamesMap()
+        {
+            if (_semanticNameResolver == null || Comparison == null)
+                return null;
+
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var originalName in Comparison.GetAllColumnHeaders())
+            {
+                var semanticName = _semanticNameResolver(originalName);
+                if (!string.IsNullOrEmpty(semanticName) && !string.Equals(semanticName, originalName, StringComparison.OrdinalIgnoreCase))
+                {
+                    result[originalName] = semanticName;
+                }
+            }
+
+            return result.Count > 0 ? result : null;
         }
 
         private void RefreshColumns()
