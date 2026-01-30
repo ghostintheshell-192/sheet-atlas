@@ -120,6 +120,7 @@ public partial class App : Application
                 services.AddSingleton<IMergedCellResolver, SheetAtlas.Core.Application.Services.Foundation.MergedCellResolver>();
                 services.AddSingleton<ITemplateValidationService, SheetAtlas.Core.Application.Services.Foundation.TemplateValidationService>();
                 services.AddSingleton<ITemplateRepository, SheetAtlas.Core.Application.Services.Foundation.TemplateRepository>();
+                services.AddSingleton<IHeaderGroupingService, SheetAtlas.Core.Application.Services.HeaderGroupingService>();
 
                 services.AddSingleton<ISheetAnalysisOrchestrator>(sp =>
                 {
@@ -177,9 +178,10 @@ public partial class App : Application
                     var exportService = sp.GetRequiredService<IComparisonExportService>();
                     var filePickerService = sp.GetRequiredService<IFilePickerService>();
                     var settingsService = sp.GetRequiredService<ISettingsService>();
+                    var headerGroupingService = sp.GetRequiredService<IHeaderGroupingService>();
                     var columnLinkingViewModel = sp.GetRequiredService<ColumnLinkingViewModel>();
                     return new RowComparisonCoordinator(
-                        logger, logger, themeManager,
+                        logger, logger, headerGroupingService, themeManager,
                         exportService, filePickerService, settingsService,
                         columnLinkingViewModel);
                 });

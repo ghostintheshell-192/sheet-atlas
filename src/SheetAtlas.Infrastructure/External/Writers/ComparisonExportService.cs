@@ -7,6 +7,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Application.Services.HeaderResolvers;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Logging.Services;
@@ -20,10 +21,14 @@ namespace SheetAtlas.Infrastructure.External.Writers
     public class ComparisonExportService : IComparisonExportService
     {
         private readonly ILogService _logger;
+        private readonly IHeaderGroupingService _headerGroupingService;
 
-        public ComparisonExportService(ILogService logger)
+        public ComparisonExportService(
+            ILogService logger,
+            IHeaderGroupingService headerGroupingService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _headerGroupingService = headerGroupingService ?? throw new ArgumentNullException(nameof(headerGroupingService));
         }
 
         public async Task<ExportResult> ExportToExcelAsync(
@@ -123,10 +128,11 @@ namespace SheetAtlas.Infrastructure.External.Writers
                     using var writer = new StreamWriter(outputPath, false, new UTF8Encoding(true));
 
                     // Group headers by semantic name (merge columns that map to the same semantic name)
-                    var headerGroups = GroupHeadersBySemanticName(
+                    var resolver = new DictionaryHeaderResolver(semanticNames);
+                    var headerGroups = _headerGroupingService.GroupHeaders(
                         comparison.GetAllColumnHeaders(),
-                        includedColumns,
-                        semanticNames);
+                        resolver,
+                        includedColumns);
 
                     // Write header row: Source File, Sheet, Row, then data columns
                     var headerFields = new List<string> { "Source File", "Sheet", "Row" };
@@ -284,10 +290,11 @@ namespace SheetAtlas.Infrastructure.External.Writers
             var formatCache = new Dictionary<string, uint>();
 
             // Group headers by semantic name (merge columns that map to the same semantic name)
-            var headerGroups = GroupHeadersBySemanticName(
+            var resolver = new DictionaryHeaderResolver(semanticNames);
+            var headerGroups = _headerGroupingService.GroupHeaders(
                 comparison.GetAllColumnHeaders(),
-                includedColumns,
-                semanticNames);
+                resolver,
+                includedColumns);
             uint rowIndex = 1;
 
             // Header row: Source File, Sheet, Row, then data columns
@@ -370,50 +377,6 @@ namespace SheetAtlas.Infrastructure.External.Writers
             return result.ToString();
         }
 
-        /// <summary>
-        /// Gets the display name for a column header, using semantic name if available.
-        /// </summary>
-        private static string GetDisplayName(string originalName, IReadOnlyDictionary<string, string>? semanticNames)
-        {
-            if (semanticNames != null && semanticNames.TryGetValue(originalName, out var semanticName))
-            {
-                return semanticName;
-            }
-            return originalName;
-        }
-
-        /// <summary>
-        /// Groups original headers by their semantic name, merging columns that map to the same name.
-        /// </summary>
-        private static List<HeaderGroup> GroupHeadersBySemanticName(
-            IReadOnlyList<string> allHeaders,
-            IEnumerable<string>? includedColumns,
-            IReadOnlyDictionary<string, string>? semanticNames)
-        {
-            var includedSet = includedColumns != null
-                ? new HashSet<string>(includedColumns, StringComparer.OrdinalIgnoreCase)
-                : null;
-
-            var groups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var originalHeader in allHeaders)
-            {
-                // Skip if not in included set
-                if (includedSet != null && !includedSet.Contains(originalHeader))
-                    continue;
-
-                var displayName = GetDisplayName(originalHeader, semanticNames);
-
-                if (!groups.TryGetValue(displayName, out var originalHeaders))
-                {
-                    originalHeaders = new List<string>();
-                    groups[displayName] = originalHeaders;
-                }
-                originalHeaders.Add(originalHeader);
-            }
-
-            return groups.Select(g => new HeaderGroup(g.Key, g.Value)).ToList();
-        }
 
         /// <summary>
         /// Gets cell value as string from any of the original headers in the group.
@@ -442,11 +405,6 @@ namespace SheetAtlas.Infrastructure.External.Writers
             }
             return default;
         }
-
-        /// <summary>
-        /// Represents a group of original headers that map to the same semantic display name.
-        /// </summary>
-        private sealed record HeaderGroup(string DisplayName, IReadOnlyList<string> OriginalHeaders);
 
         private static string EscapeCsvField(string field)
         {

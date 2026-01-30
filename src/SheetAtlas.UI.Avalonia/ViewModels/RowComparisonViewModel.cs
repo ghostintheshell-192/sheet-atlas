@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Application.Services.HeaderResolvers;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.UI.Avalonia.Commands;
 using SheetAtlas.UI.Avalonia.Models;
@@ -13,6 +14,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
     public class RowComparisonViewModel : ViewModelBase, IDisposable
     {
         private readonly ILogService _logger;
+        private readonly IHeaderGroupingService _headerGroupingService;
         private readonly IThemeManager? _themeManager;
         private readonly Func<string, string?>? _semanticNameResolver;
         private Func<IEnumerable<string>>? _includedColumnsProvider;
@@ -74,10 +76,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         public RowComparisonViewModel(
             ILogService logger,
+            IHeaderGroupingService headerGroupingService,
             IThemeManager? themeManager = null,
             Func<string, string?>? semanticNameResolver = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _headerGroupingService = headerGroupingService ?? throw new ArgumentNullException(nameof(headerGroupingService));
             _themeManager = themeManager;
             _semanticNameResolver = semanticNameResolver;
 
@@ -99,9 +103,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public RowComparisonViewModel(
             RowComparison comparison,
             ILogService logger,
+            IHeaderGroupingService headerGroupingService,
             IThemeManager? themeManager = null,
             Func<string, string?>? semanticNameResolver = null)
-            : this(logger, themeManager, semanticNameResolver)
+            : this(logger, headerGroupingService, themeManager, semanticNameResolver)
         {
             Comparison = comparison;
         }
@@ -318,45 +323,26 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             }
 
             // Group raw headers by their semantic name (or by themselves if no semantic name)
-            var headerGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var rawHeader in allHeaders)
-            {
-                // Skip headers not in the included set
-                if (includedColumnsSet != null && !includedColumnsSet.Contains(rawHeader))
-                    continue;
-
-                var displayHeader = rawHeader;
-                if (_semanticNameResolver != null)
-                {
-                    var semanticName = _semanticNameResolver(rawHeader);
-                    if (!string.IsNullOrEmpty(semanticName))
-                    {
-                        displayHeader = semanticName;
-                    }
-                }
-
-                if (!headerGroups.TryGetValue(displayHeader, out var rawHeaders))
-                {
-                    rawHeaders = new List<string>();
-                    headerGroups[displayHeader] = rawHeaders;
-                }
-                rawHeaders.Add(rawHeader);
-            }
+            var resolver = new FunctionHeaderResolver(_semanticNameResolver);
+            var headerGroups = _headerGroupingService.GroupHeaders(
+                allHeaders,
+                resolver,
+                includedColumnsSet);
 
             int columnIndex = 0;
             int mergedColumns = 0;
             foreach (var group in headerGroups)
             {
-                var displayHeader = group.Key;
-                var rawHeaders = group.Value;
-
-                if (rawHeaders.Count > 1)
+                if (group.OriginalHeaders.Count > 1)
                 {
                     mergedColumns++;
                 }
 
-                var columnViewModel = new RowComparisonColumnViewModel(displayHeader, rawHeaders, columnIndex++, Comparison.Rows);
+                var columnViewModel = new RowComparisonColumnViewModel(
+                    group.DisplayName,
+                    group.OriginalHeaders,
+                    columnIndex++,
+                    Comparison.Rows);
                 Columns.Add(columnViewModel);
             }
 
