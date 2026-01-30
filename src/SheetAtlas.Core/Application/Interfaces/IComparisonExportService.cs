@@ -14,11 +14,15 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// </summary>
         /// <param name="comparison">Row comparison to export</param>
         /// <param name="outputPath">Output file path (.xlsx)</param>
+        /// <param name="includedColumns">Optional original column names to include. If null, all columns are exported.</param>
+        /// <param name="semanticNames">Optional mapping from original column names to semantic names for display.</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Export result with success/failure status</returns>
         Task<ExportResult> ExportToExcelAsync(
             RowComparison comparison,
             string outputPath,
+            IEnumerable<string>? includedColumns = null,
+            IReadOnlyDictionary<string, string>? semanticNames = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -26,11 +30,15 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// </summary>
         /// <param name="comparison">Row comparison to export</param>
         /// <param name="outputPath">Output file path (.csv)</param>
+        /// <param name="includedColumns">Optional original column names to include. If null, all columns are exported.</param>
+        /// <param name="semanticNames">Optional mapping from original column names to semantic names for display.</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Export result with success/failure status</returns>
         Task<ExportResult> ExportToCsvAsync(
             RowComparison comparison,
             string outputPath,
+            IEnumerable<string>? includedColumns = null,
+            IReadOnlyDictionary<string, string>? semanticNames = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
