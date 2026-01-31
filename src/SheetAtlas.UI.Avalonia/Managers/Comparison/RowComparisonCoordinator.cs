@@ -17,6 +17,7 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
 {
     private readonly ILogService _logger;
     private readonly ILogService _comparisonViewModelLogger;
+    private readonly IHeaderGroupingService _headerGroupingService;
     private readonly IThemeManager _themeManager;
     private readonly ColumnLinkingViewModel? _columnLinkingViewModel;
 
@@ -55,6 +56,7 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
     public RowComparisonCoordinator(
         ILogService logger,
         ILogService comparisonViewModelLogger,
+        IHeaderGroupingService headerGroupingService,
         IThemeManager themeManager,
         IComparisonExportService exportService,
         IFilePickerService filePickerService,
@@ -63,6 +65,7 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _comparisonViewModelLogger = comparisonViewModelLogger ?? throw new ArgumentNullException(nameof(comparisonViewModelLogger));
+        _headerGroupingService = headerGroupingService ?? throw new ArgumentNullException(nameof(headerGroupingService));
         _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
         _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
         _filePickerService = filePickerService ?? throw new ArgumentNullException(nameof(filePickerService));
@@ -101,6 +104,7 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
 
         var comparisonViewModel = new RowComparisonViewModel(
             _comparisonViewModelLogger,
+            _headerGroupingService,
             _themeManager,
             semanticNameResolver);
 
@@ -204,7 +208,7 @@ public class RowComparisonCoordinator : IRowComparisonCoordinator, IDisposable
                     };
                 }
 
-                var newViewModel = new RowComparisonViewModel(_comparisonViewModelLogger, _themeManager, resolver);
+                var newViewModel = new RowComparisonViewModel(_comparisonViewModelLogger, _headerGroupingService, _themeManager, resolver);
 
                 // Connect column filter BEFORE setting Comparison
                 if (_columnLinkingViewModel != null)

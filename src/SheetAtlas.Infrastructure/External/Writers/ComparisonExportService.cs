@@ -7,6 +7,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Application.Services.HeaderResolvers;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Logging.Services;
@@ -20,15 +21,21 @@ namespace SheetAtlas.Infrastructure.External.Writers
     public class ComparisonExportService : IComparisonExportService
     {
         private readonly ILogService _logger;
+        private readonly IHeaderGroupingService _headerGroupingService;
 
-        public ComparisonExportService(ILogService logger)
+        public ComparisonExportService(
+            ILogService logger,
+            IHeaderGroupingService headerGroupingService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _headerGroupingService = headerGroupingService ?? throw new ArgumentNullException(nameof(headerGroupingService));
         }
 
         public async Task<ExportResult> ExportToExcelAsync(
             RowComparison comparison,
             string outputPath,
+            IEnumerable<string>? includedColumns = null,
+            IReadOnlyDictionary<string, string>? semanticNames = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(comparison);
@@ -60,7 +67,7 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
                     // Create Comparison sheet
                     cancellationToken.ThrowIfCancellationRequested();
-                    CreateComparisonSheet(workbookPart, sheets, comparison, 2);
+                    CreateComparisonSheet(workbookPart, sheets, comparison, 2, includedColumns, semanticNames);
 
                     workbookPart.Workbook.Save();
                 }, cancellationToken);
@@ -101,6 +108,8 @@ namespace SheetAtlas.Infrastructure.External.Writers
         public async Task<ExportResult> ExportToCsvAsync(
             RowComparison comparison,
             string outputPath,
+            IEnumerable<string>? includedColumns = null,
+            IReadOnlyDictionary<string, string>? semanticNames = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(comparison);
@@ -118,11 +127,16 @@ namespace SheetAtlas.Infrastructure.External.Writers
                     // UTF-8 with BOM for Excel compatibility
                     using var writer = new StreamWriter(outputPath, false, new UTF8Encoding(true));
 
-                    var allHeaders = comparison.GetAllColumnHeaders();
+                    // Group headers by semantic name (merge columns that map to the same semantic name)
+                    var resolver = new DictionaryHeaderResolver(semanticNames);
+                    var headerGroups = _headerGroupingService.GroupHeaders(
+                        comparison.GetAllColumnHeaders(),
+                        resolver,
+                        includedColumns);
 
                     // Write header row: Source File, Sheet, Row, then data columns
                     var headerFields = new List<string> { "Source File", "Sheet", "Row" };
-                    headerFields.AddRange(allHeaders);
+                    headerFields.AddRange(headerGroups.Select(g => g.DisplayName));
                     writer.WriteLine(string.Join(",", headerFields.Select(h => EscapeCsvField(h))));
 
                     // Write data rows
@@ -137,9 +151,10 @@ namespace SheetAtlas.Infrastructure.External.Writers
                             EscapeCsvField($"R{row.RowIndex + 1}")
                         };
 
-                        foreach (var header in allHeaders)
+                        // For each header group, find value from any of the original headers
+                        foreach (var group in headerGroups)
                         {
-                            var cellValue = row.GetCellAsStringByHeader(header);
+                            var cellValue = GetCellValueFromGroup(row, group.OriginalHeaders);
                             fields.Add(EscapeCsvField(cellValue));
                         }
 
@@ -254,7 +269,9 @@ namespace SheetAtlas.Infrastructure.External.Writers
             WorkbookPart workbookPart,
             Sheets sheets,
             RowComparison comparison,
-            uint sheetId)
+            uint sheetId,
+            IEnumerable<string>? includedColumns = null,
+            IReadOnlyDictionary<string, string>? semanticNames = null)
         {
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             var sheetData = new SheetData();
@@ -272,7 +289,12 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 ?? throw new InvalidOperationException("Stylesheet not found in workbook");
             var formatCache = new Dictionary<string, uint>();
 
-            var allHeaders = comparison.GetAllColumnHeaders();
+            // Group headers by semantic name (merge columns that map to the same semantic name)
+            var resolver = new DictionaryHeaderResolver(semanticNames);
+            var headerGroups = _headerGroupingService.GroupHeaders(
+                comparison.GetAllColumnHeaders(),
+                resolver,
+                includedColumns);
             uint rowIndex = 1;
 
             // Header row: Source File, Sheet, Row, then data columns
@@ -281,9 +303,9 @@ namespace SheetAtlas.Infrastructure.External.Writers
             headerRow.Append(CreateTextCell("Source File", GetColumnReference(colIndex++), rowIndex));
             headerRow.Append(CreateTextCell("Sheet", GetColumnReference(colIndex++), rowIndex));
             headerRow.Append(CreateTextCell("Row", GetColumnReference(colIndex++), rowIndex));
-            foreach (var header in allHeaders)
+            foreach (var group in headerGroups)
             {
-                headerRow.Append(CreateTextCell(header, GetColumnReference(colIndex++), rowIndex));
+                headerRow.Append(CreateTextCell(group.DisplayName, GetColumnReference(colIndex++), rowIndex));
             }
             sheetData.Append(headerRow);
             rowIndex++;
@@ -297,9 +319,10 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 dataRow.Append(CreateTextCell(row.SheetName, GetColumnReference(colIndex++), rowIndex));
                 dataRow.Append(CreateTextCell($"R{row.RowIndex + 1}", GetColumnReference(colIndex++), rowIndex));
 
-                foreach (var header in allHeaders)
+                // For each header group, find value from any of the original headers
+                foreach (var group in headerGroups)
                 {
-                    var cellValue = row.GetTypedCellByHeader(header);
+                    var cellValue = GetTypedCellValueFromGroup(row, group.OriginalHeaders);
                     dataRow.Append(CreateTypedCell(cellValue, GetColumnReference(colIndex++), rowIndex, stylesheet, formatCache));
                 }
 
@@ -352,6 +375,35 @@ namespace SheetAtlas.Infrastructure.External.Writers
                 columnIndex = (columnIndex / 26) - 1;
             }
             return result.ToString();
+        }
+
+
+        /// <summary>
+        /// Gets cell value as string from any of the original headers in the group.
+        /// </summary>
+        private static string GetCellValueFromGroup(ExcelRow row, IReadOnlyList<string> originalHeaders)
+        {
+            foreach (var header in originalHeaders)
+            {
+                var value = row.GetCellAsStringByHeader(header);
+                if (!string.IsNullOrEmpty(value))
+                    return value;
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Gets typed cell value from any of the original headers in the group.
+        /// </summary>
+        private static ExportCellValue GetTypedCellValueFromGroup(ExcelRow row, IReadOnlyList<string> originalHeaders)
+        {
+            foreach (var header in originalHeaders)
+            {
+                var value = row.GetTypedCellByHeader(header);
+                if (!value.Value.IsEmpty)
+                    return value;
+            }
+            return default;
         }
 
         private static string EscapeCsvField(string field)

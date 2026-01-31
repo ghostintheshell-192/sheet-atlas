@@ -198,31 +198,12 @@
                                         </DataTemplate>
                                     </TreeView.DataTemplates>
 
-                                    <!-- TreeView Styling for nested levels -->
+                                    <!-- TreeView Styling -->
                                     <TreeView.Styles>
                                         <Style Selector="TreeViewItem">
                                             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                                             <Setter Property="Padding" Value="0"/>
-                                            <Setter Property="Margin" Value="-20,0,0,0"/>
-                                        </Style>
-
-                                        <!-- Level 1: Sheet Groups (children of File Groups) -->
-                                        <Style Selector="TreeViewItem TreeViewItem">
-                                            <Setter Property="Margin" Value="-16,0,0,0"/>
-                                        </Style>
-
-                                        <!-- Level 2: Results (children of Sheet Groups) -->
-                                        <Style Selector="TreeViewItem TreeViewItem TreeViewItem">
-                                            <Setter Property="Margin" Value="0,0,0,0"/>
-                                        </Style>
-
-                                        <!-- Remove expander toggle button -->
-                                        <Style Selector="TreeViewItem /template/ ToggleButton#PART_Expander">
-                                            <Setter Property="IsVisible" Value="False"/>
-                                        </Style>
-
-                                        <Style Selector="TreeViewItem /template/ ToggleButton">
-                                            <Setter Property="IsVisible" Value="False"/>
+                                            <Setter Property="Margin" Value="0"/>
                                         </Style>
                                     </TreeView.Styles>
                                 </TreeView>
