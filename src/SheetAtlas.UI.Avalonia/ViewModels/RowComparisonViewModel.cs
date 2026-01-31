@@ -280,7 +280,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             foreach (var originalName in Comparison.GetAllColumnHeaders())
             {
                 var semanticName = _semanticNameResolver(originalName);
-                if (!string.IsNullOrEmpty(semanticName) && !string.Equals(semanticName, originalName, StringComparison.OrdinalIgnoreCase))
+                // Include ALL semantic mappings, even if semantic == original
+                // This is required for correct header grouping during export
+                if (!string.IsNullOrEmpty(semanticName))
                 {
                     result[originalName] = semanticName;
                 }
