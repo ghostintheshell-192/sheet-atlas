@@ -98,7 +98,7 @@ namespace SheetAtlas.Tests.Json
             // Assert
             deserialized.Should().NotBeNull();
             deserialized!.Should().HaveCount(1);
-            var deserializedColumn = deserialized[0];
+            var deserializedColumn = deserialized![0];
             deserializedColumn.Name.Should().Be("Price");
             deserializedColumn.ExpectedType.Should().Be(DataType.Currency);
             deserializedColumn.Position.Should().Be(5);
@@ -136,7 +136,7 @@ namespace SheetAtlas.Tests.Json
             // Assert
             deserialized.Should().NotBeNull();
             deserialized!.Should().HaveCount(11);
-            deserialized[0].Type.Should().Be(RuleType.NotEmpty);
+            deserialized![0].Type.Should().Be(RuleType.NotEmpty);
             deserialized[1].Type.Should().Be(RuleType.Required);
             deserialized[2].Type.Should().Be(RuleType.Unique);
             deserialized[2].Severity.Should().Be(ValidationSeverity.Warning);
