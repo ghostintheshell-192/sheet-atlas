@@ -1,14 +1,12 @@
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Core.Application.Interfaces;
-using SheetAtlas.Core.Configuration;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.Core.Application.DTOs;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using SheetAtlas.Logging.Models;
-using Microsoft.Extensions.Options;
 using System.IO.Compression;
 using System.Xml;
 
@@ -19,30 +17,21 @@ namespace SheetAtlas.Infrastructure.External.Readers
     /// </summary>
     public class OpenXmlFileReader : IFileFormatReader
     {
-        private readonly ILogService _logger;
+        private readonly FileReaderContext _context;
         private readonly ICellReferenceParser _cellParser;
         private readonly IMergedRangeExtractor<WorksheetPart> _mergedRangeExtractor;
         private readonly ICellValueReader _cellValueReader;
-        private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
-        private readonly ISettingsService _settingsService;
-        private readonly SecuritySettings _securitySettings;
 
         public OpenXmlFileReader(
-            ILogService logger,
+            FileReaderContext context,
             ICellReferenceParser cellParser,
             IMergedRangeExtractor<WorksheetPart> mergedRangeExtractor,
-            ICellValueReader cellValueReader,
-            ISheetAnalysisOrchestrator analysisOrchestrator,
-            ISettingsService settingsService,
-            IOptions<AppSettings> settings)
+            ICellValueReader cellValueReader)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
             _cellParser = cellParser ?? throw new ArgumentNullException(nameof(cellParser));
             _mergedRangeExtractor = mergedRangeExtractor ?? throw new ArgumentNullException(nameof(mergedRangeExtractor));
             _cellValueReader = cellValueReader ?? throw new ArgumentNullException(nameof(cellValueReader));
-            _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
-            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-            _securitySettings = settings?.Value?.Security ?? new SecuritySettings();
         }
 
         private static readonly string[] _supportedExtensions = new[] { ".xlsx", ".xlsm", ".xltx", ".xltm" };
@@ -80,10 +69,10 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     }
 
                     var dateSystem = DetectDateSystem(workbookPart);
-                    _logger.LogInfo($"Detected date system: {dateSystem}", "OpenXmlFileReader");
+                    _context.Logger.LogInfo($"Detected date system: {dateSystem}", "OpenXmlFileReader");
 
                     var sheetElements = GetSheets(workbookPart);
-                    _logger.LogInfo($"Reading Excel file with {sheetElements.Count()} sheets", "OpenXmlFileReader");
+                    _context.Logger.LogInfo($"Reading Excel file with {sheetElements.Count()} sheets", "OpenXmlFileReader");
 
                     foreach (var sheet in sheetElements)
                     {
@@ -118,21 +107,21 @@ namespace SheetAtlas.Infrastructure.External.Readers
                             if (sheetData == null)
                             {
                                 errors.Add(ExcelError.Info("File", $"Sheet '{sheetName}' is empty and was skipped"));
-                                _logger.LogInfo($"Sheet {sheetName} is empty, skipping", "OpenXmlFileReader");
+                                _context.Logger.LogInfo($"Sheet {sheetName} is empty, skipping", "OpenXmlFileReader");
                                 continue;
                             }
 
                             sheets[sheetName] = sheetData;
-                            _logger.LogInfo($"Sheet {sheetName} read successfully", "OpenXmlFileReader");
+                            _context.Logger.LogInfo($"Sheet {sheetName} read successfully", "OpenXmlFileReader");
                         }
                         catch (InvalidCastException ex)
                         {
-                            _logger.LogError($"Invalid sheet part type for {sheetName}", ex, "OpenXmlFileReader");
+                            _context.Logger.LogError($"Invalid sheet part type for {sheetName}", ex, "OpenXmlFileReader");
                             errors.Add(ExcelError.SheetError(sheetName, $"Invalid sheet structure", ex));
                         }
                         catch (XmlException ex)
                         {
-                            _logger.LogError($"Malformed XML in sheet {sheetName}", ex, "OpenXmlFileReader");
+                            _context.Logger.LogError($"Malformed XML in sheet {sheetName}", ex, "OpenXmlFileReader");
                             errors.Add(ExcelError.SheetError(sheetName, $"Sheet contains invalid XML: {ex.Message}", ex));
                         }
                     }
@@ -143,12 +132,12 @@ namespace SheetAtlas.Infrastructure.External.Readers
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInfo($"File read cancelled: {filePath}", "OpenXmlFileReader");
+                _context.Logger.LogInfo($"File read cancelled: {filePath}", "OpenXmlFileReader");
                 throw; // Propagate cancellation
             }
             catch (FileFormatException ex)
             {
-                _logger.LogError($"Corrupted file format: {filePath}", ex, "OpenXmlFileReader");
+                _context.Logger.LogError($"Corrupted file format: {filePath}", ex, "OpenXmlFileReader");
                 errors.Add(ExcelError.Critical("File",
                     $"Corrupted or invalid .xlsx file: {ex.Message}",
                     ex));
@@ -157,19 +146,19 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             catch (IOException ex)
             {
-                _logger.LogError($"I/O error reading Excel file: {filePath}", ex, "OpenXmlFileReader");
+                _context.Logger.LogError($"I/O error reading Excel file: {filePath}", ex, "OpenXmlFileReader");
                 errors.Add(ExcelError.Critical("File", $"Cannot access file: {ex.Message}", ex));
                 return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError($"Invalid Excel file format: {filePath}", ex, "OpenXmlFileReader");
+                _context.Logger.LogError($"Invalid Excel file format: {filePath}", ex, "OpenXmlFileReader");
                 errors.Add(ExcelError.Critical("File", $"Invalid Excel file: {ex.Message}", ex));
                 return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
             }
             catch (OpenXmlPackageException ex)
             {
-                _logger.LogError($"Excel file is corrupted or invalid: {filePath}", ex, "OpenXmlFileReader");
+                _context.Logger.LogError($"Excel file is corrupted or invalid: {filePath}", ex, "OpenXmlFileReader");
                 errors.Add(ExcelError.Critical("File", $"Corrupted Excel file: {ex.Message}", ex));
                 return new ExcelFile(filePath, LoadStatus.Failed, sheets, errors);
             }
@@ -191,9 +180,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var fileInfo = new FileInfo(filePath);
 
             // Check compressed file size
-            if (fileInfo.Length > _securitySettings.MaxFileSizeBytes)
+            if (fileInfo.Length > _context.SecuritySettings.MaxFileSizeBytes)
             {
-                var maxMb = _securitySettings.MaxFileSizeBytes / (1024 * 1024);
+                var maxMb = _context.SecuritySettings.MaxFileSizeBytes / (1024 * 1024);
                 var fileMb = fileInfo.Length / (1024 * 1024);
                 errors.Add(ExcelError.Critical("Security",
                     $"File size ({fileMb} MB) exceeds maximum allowed ({maxMb} MB)"));
@@ -211,9 +200,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     totalDecompressedSize += entry.Length;
 
                     // Check total decompressed size
-                    if (totalDecompressedSize > _securitySettings.MaxDecompressedSizeBytes)
+                    if (totalDecompressedSize > _context.SecuritySettings.MaxDecompressedSizeBytes)
                     {
-                        var maxGb = _securitySettings.MaxDecompressedSizeBytes / (1024 * 1024 * 1024);
+                        var maxGb = _context.SecuritySettings.MaxDecompressedSizeBytes / (1024 * 1024 * 1024);
                         errors.Add(ExcelError.Critical("Security",
                             $"Decompressed content exceeds maximum allowed size ({maxGb} GB). Possible ZIP bomb detected."));
                         return errors;
@@ -223,7 +212,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     if (entry.CompressedLength > 0 && entry.Length > 0)
                     {
                         double ratio = (double)entry.Length / entry.CompressedLength;
-                        if (ratio > _securitySettings.MaxCompressionRatio)
+                        if (ratio > _context.SecuritySettings.MaxCompressionRatio)
                         {
                             errors.Add(ExcelError.Critical("Security",
                                 $"Suspicious compression ratio ({ratio:F1}:1) detected. Possible ZIP bomb."));
@@ -242,7 +231,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
                     return errors;
                 }
 
-                _logger.LogInfo($"Security validation passed: " +
+                _context.Logger.LogInfo($"Security validation passed: " +
                     $"{fileInfo.Length / 1024} KB compressed, {totalDecompressedSize / 1024} KB decompressed",
                     "OpenXmlFileReader");
             }
@@ -280,7 +269,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var headerColumns = ProcessHeaderRow(worksheetPart, sharedStringTable, mergedRanges);
             if (headerColumns.Count == 0)
             {
-                _logger.LogWarning($"Sheet {sheetName} has no header row", "OpenXmlFileReader");
+                _context.Logger.LogWarning($"Sheet {sheetName} has no header row", "OpenXmlFileReader");
                 return null;
             }
 
@@ -291,11 +280,11 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns);
 
-            var headerRowCount = _settingsService.Current.DataProcessing.DefaultHeaderRowCount;
+            var headerRowCount = _context.Settings.Current.DataProcessing.DefaultHeaderRowCount;
             sheetData.SetHeaderRowCount(headerRowCount);
 
             sheetData.TrimExcess();
-            var enrichedData = await _analysisOrchestrator.EnrichAsync(sheetData, errors);
+            var enrichedData = await _context.AnalysisOrchestrator.EnrichAsync(sheetData, errors);
 
             return enrichedData;
         }

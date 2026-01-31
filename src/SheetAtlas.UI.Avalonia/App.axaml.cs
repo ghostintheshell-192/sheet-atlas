@@ -143,6 +143,9 @@ public partial class App : Application
                         warnThreshold);
                 });
 
+                // Register FileReaderContext (facade for common reader dependencies)
+                services.AddSingleton<SheetAtlas.Infrastructure.External.Readers.FileReaderContext>();
+
                 // Register file format readers (must be before ExcelReaderService)
                 services.AddSingleton<IFileFormatReader, OpenXmlFileReader>();
                 services.AddSingleton<IFileFormatReader, XlsFileReader>();

@@ -281,15 +281,19 @@ namespace SheetAtlas.Tests.Services
             var userSettingsMock = new Mock<ISettingsService>();
             userSettingsMock.Setup(s => s.Current).Returns(UserSettings.CreateDefault());
 
-            // Create OpenXmlFileReader with orchestrator
-            var openXmlReader = new OpenXmlFileReader(
+            // Create FileReaderContext (facade for common dependencies)
+            var readerContext = new SheetAtlas.Infrastructure.External.Readers.FileReaderContext(
                 readerLogger.Object,
-                cellParser,
-                mergedRangeExtractor,
-                cellValueReader,
                 orchestrator,
                 userSettingsMock.Object,
                 settingsMock.Object);
+
+            // Create OpenXmlFileReader with context and specific dependencies
+            var openXmlReader = new OpenXmlFileReader(
+                readerContext,
+                cellParser,
+                mergedRangeExtractor,
+                cellValueReader);
             var readers = new List<IFileFormatReader> { openXmlReader };
 
             return new ExcelReaderService(readers, serviceLogger.Object, settingsMock.Object);
