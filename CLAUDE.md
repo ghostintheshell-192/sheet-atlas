@@ -89,24 +89,19 @@
 ### Solution Organization
 
 ```text
-SheetAtlas/
-├── src/
-│   ├── SheetAtlas.Core/           # Business logic (platform agnostic)
-│   ├── SheetAtlas.UI.Avalonia/   # Avalonia UI layer
-│   └── SheetAtlas.Tests/         # Test projects
-├── docs/                          # Project documentation
-├── assets/                        # Images, icons, resources
-└── build/                         # Build scripts and configurations
+ SheetAtlas/
+ ├──src/
+ │   ├── SheetAtlas.Core/           # Business logic, domain, services
+ │   ├── SheetAtlas.Infrastructure/ # File readers (XLSX, XLS, CSV) and writers
+ │   ├── SheetAtlas.Logging/        # Cross-cutting logging
+ │   └── SheetAtlas.UI.Avalonia/    # Avalonia UI (MVVM)
+ ├── docs/                          # Project documentation
+ ├── assets/                        # Images, icons, resources
+ └── build/                         # Build scripts and configurations
+
 ```
 
-### Namespace Conventions
-
-- **SheetAtlas.Core**: Business entities, services, interfaces
-- **SheetAtlas.Core.Models**: Domain models and DTOs
-- **SheetAtlas.Core.Services**: Business logic and file processing
-- **SheetAtlas.UI.Avalonia**: UI layer components
-- **SheetAtlas.UI.Avalonia.ViewModels**: MVVM view models
-- **SheetAtlas.UI.Avalonia.Views**: XAML views and code-behind
+For detailed architecture with diagrams, see [docs/project/ARCHITECTURE.md](docs/project/ARCHITECTURE.md).
 
 ## Coding Standards
 
@@ -260,11 +255,11 @@ SheetAtlas/
 
 ### Branch Strategy
 
-- **main**: Production-ready code only (releases commerciali)
-- **develop**: Integration branch (branch principale per lo sviluppo)
+- **main**: Production-ready code only (official releases)
+- **develop**: Integration branch
 - **feature/***: Individual feature development
-- **experiment/***: Testing e prove
-- **fix/***: Bug fixes specifici
+- **experiment/***: Trials and Testing
+- **fix/***: Specific bug fixes
 
 ### Workflow Commands
 
@@ -361,6 +356,7 @@ For complete details, see `docs/RELEASE_PROCESS.md`.
 **Never skip reading RELEASE_PROCESS.md when creating a release.**
 
 **Common mistakes to avoid:**
+
 - ❌ Forgetting to update CHANGELOG.md
 - ❌ Forgetting to update GitHub release notes
 - ❌ Skipping manual website deployment step
@@ -390,6 +386,6 @@ dotnet format --verify-no-changes
 
 *This document defines the development standards and guidelines for the SheetAtlas project. All team members should follow these conventions to ensure consistent, maintainable, and professional code quality.*
 
-**Last Updated**: November 2025
-**Version**: 1.1
-**Next Review**: December 2025
+**Last Updated**: January 2026
+**Version**: 1.2
+**Next Review**: March 2026

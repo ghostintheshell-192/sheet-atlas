@@ -32,7 +32,8 @@ This directory contains all documentation for the SheetAtlas project, organized 
 
 **Files:**
 - `README.md` - Developer hub (setup, build, test)
-- `technical-specs.md` - Architecture and implementation details
+- `ARCHITECTURE.md` - Architecture overview with Mermaid diagrams
+- `technical-specs.md` - Performance, security, config specifications
 
 ---
 
@@ -118,4 +119,4 @@ Located in repository root:
 
 ---
 
-*Last Updated: November 2025*
+*Last Updated: January 2026*
