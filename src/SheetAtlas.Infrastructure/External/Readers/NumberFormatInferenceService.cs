@@ -32,10 +32,10 @@ namespace SheetAtlas.Infrastructure.External.Readers
     public class NumberFormatInferenceService : INumberFormatInferenceService
     {
         // Pattern: 15% or 15.5%
-        private static readonly Regex PercentagePattern = new(@"^(\d+\.?\d*)%$", RegexOptions.Compiled);
+        private static readonly Regex _percentagePattern = new(@"^(\d+\.?\d*)%$", RegexOptions.Compiled);
 
         // Pattern: 2.15639E+11 or 1.5e-3
-        private static readonly Regex ScientificPattern = new(@"^(\d+\.?\d*)[eE]([+-]?\d+)$", RegexOptions.Compiled);
+        private static readonly Regex _scientificPattern = new(@"^(\d+\.?\d*)[eE]([+-]?\d+)$", RegexOptions.Compiled);
 
         public NumberFormatInference? InferFormat(string cellText)
         {
@@ -65,7 +65,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
         private NumberFormatInference? TryInferPercentage(string text)
         {
-            var match = PercentagePattern.Match(text);
+            var match = _percentagePattern.Match(text);
             if (!match.Success)
                 return null;
 
@@ -89,7 +89,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
         private NumberFormatInference? TryInferScientific(string text)
         {
-            var match = ScientificPattern.Match(text);
+            var match = _scientificPattern.Match(text);
             if (!match.Success)
                 return null;
 
