@@ -87,7 +87,7 @@ SheetAtlas/
 - **MVVM Pattern**: Clear separation between UI and business logic
 - **Fail Fast**: Exceptions for bugs, Result objects for business errors
 
-For complete architecture details, see [technical-specs.md](technical-specs.md).
+For architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md). For detailed specs, see [technical-specs.md](technical-specs.md).
 
 ---
 
@@ -198,7 +198,8 @@ sudo apt install libx11-dev libice-dev libsm-dev libfontconfig1-dev
 - **[RELEASE_PROCESS.md](../RELEASE_PROCESS.md)** - Release workflow
 
 ### This Directory
-- **[technical-specs.md](technical-specs.md)** - Architecture deep dive
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Architecture overview with diagrams
+- **[technical-specs.md](technical-specs.md)** - Performance, security, config specs
 
 ### External Resources
 - [Avalonia UI Docs](https://docs.avaloniaui.net/)
@@ -232,4 +233,4 @@ See [RELEASE_PROCESS.md](../RELEASE_PROCESS.md) for complete details.
 
 *This developer hub provides everything needed to contribute to SheetAtlas. For development standards and conventions, see [CLAUDE.md](../../CLAUDE.md).*
 
-**Last Updated**: November 2025 | **Project Status**: Alpha (v0.3.x)
+**Last Updated**: January 2026 | **Project Status**: Alpha (v0.5.x)

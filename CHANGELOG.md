@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-01-31
+
+### Added
+
+- Column filtering in export with semantic names and grouping support
+- CSV format inference service for automatic number format detection:
+  - Percentages (15% → stored as 0.15 with "0%" format)
+  - Scientific notation (1.5e-3 → proper Excel scientific format)
+  - Decimal precision preservation (0.15000 → "0.00000" format)
+- IHeaderResolver interface for unified semantic name resolution
+
+### Changed
+
+- Consolidated header grouping logic into IHeaderGroupingService
+- Introduced Facade pattern (FileReaderContext) for cleaner file reader architecture
+- Improved TreeView styling in search results
+
+### Fixed
+
+- Semantic mappings correctly included in CSV export
+- Windows CI build nullable reference warnings
+
 ## [0.5.2] - 2026-01-28
 
 ### Fixed

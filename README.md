@@ -121,18 +121,22 @@ dotnet run --project src/SheetAtlas.UI.Avalonia
 
 ## Architecture
 
-SheetAtlas follows Clean Architecture principles:
+SheetAtlas follows Clean Architecture with four layers:
 
-- **Core Layer**: Business logic, domain entities, and interfaces
-- **Infrastructure Layer**: Excel file processing using OpenXML
-- **UI Layer**: Avalonia-based MVVM interface
+- **UI Layer**: Avalonia MVVM (ViewModels, Views, Managers)
+- **Core Layer**: Business logic, domain entities, services
+- **Infrastructure Layer**: File readers/writers (XLSX, XLS, CSV)
+- **Logging Layer**: Cross-cutting logging abstraction
+
+For detailed architecture with diagrams, see [docs/project/ARCHITECTURE.md](docs/project/ARCHITECTURE.md).
 
 ### Key Technologies
 
 - **.NET 8**: Modern framework with LTS support
 - **Avalonia UI**: Cross-platform native UI framework
-- **DocumentFormat.OpenXml**: Robust Excel file processing
-- **Microsoft.Extensions**: Dependency injection and logging
+- **DocumentFormat.OpenXml**: XLSX file processing
+- **ExcelDataReader**: XLS file support
+- **CsvHelper**: CSV parsing
 
 ## Development
 
@@ -157,13 +161,14 @@ dotnet publish --configuration Release --self-contained
 ```text
 SheetAtlas/
 ├── src/
-│   ├── SheetAtlas.Core/           # Business logic
-│   ├── SheetAtlas.Infrastructure/ # File processing
-│   └── SheetAtlas.UI.Avalonia/   # User interface
-├── tests/
-│   └── SheetAtlas.Tests/         # Unit and integration tests
+│   ├── SheetAtlas.Core/           # Business logic, domain, services
+│   ├── SheetAtlas.Infrastructure/ # File readers and writers
+│   ├── SheetAtlas.Logging/        # Cross-cutting logging
+│   └── SheetAtlas.UI.Avalonia/    # Avalonia UI (MVVM)
+├── tests/SheetAtlas.Tests/        # Unit and integration tests
 ├── docs/                          # Documentation
-└── build/                         # Build scripts
+│   └── project/                   # Architecture and specs
+└── build/                         # Build scripts and installers
 ```
 
 ### Contributing
@@ -195,31 +200,31 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-### Current Release (Alpha)
+### Current Release (v0.5.x Alpha)
 
 - ✅ Support for .xlsx, .xls, .csv files
 - ✅ Multi-file loading and cross-file search
 - ✅ Advanced search with regex support
 - ✅ Row comparison with visual highlighting
-- ✅ Windows installer available (.exe)
-- ✅ Linux packages available (.tar.gz, .deb)
-- ✅ macOS installer available (.dmg)
+- ✅ Export to Excel (.xlsx) and CSV with typed cells
+- ✅ Comparison results export
+- ✅ Column filtering in export (select columns, semantic names)
+- ✅ Template validation and column linking
+- ✅ Settings panel (theme, defaults, output folder)
+- ✅ Data normalization (dates, currency, percentages)
+- ✅ Windows, Linux, macOS installers
 
 ### Upcoming Features
 
-- [ ] Export search results to Excel
-- [ ] Export comparison results
-- [ ] Advanced filtering and sorting
 - [ ] Chart and graph visualization
 - [ ] Batch processing operations
 - [ ] Plugin system for extensions
+- [ ] Formula support in comparisons
 
 ### Long-term Goals
 
-- [ ] Web-based companion app
-- [ ] Real-time collaboration features
-- [ ] Integration with cloud storage
 - [ ] Advanced analytics and reporting
+- [ ] Custom transformation rules
 
 ---
 
