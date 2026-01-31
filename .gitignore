@@ -46,10 +46,10 @@ backups/
 # Ignore sample files and test data
 samples/
 
-# Ignore personal files
+# Ignore private folders (not committed)
 .personal/
 
-# Legacy private directory (deprecated - use .personal/ instead)
+# Legacy private directory (deprecated)
 .secrets/
 
 # Claude Code folder and todos (do NOT commit)
