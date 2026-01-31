@@ -1,0 +1,21 @@
+SheetAtlas is a free, cross-platform tool for searching and comparing multiple Excel files as a unified database. 100% offline — your data never leaves your computer.
+
+KEY FEATURES
+
+Unified Search
+Load unlimited files (.xlsx, .xls, .csv) and search across all sheets with regex support.
+
+Row Comparison
+Compare rows from different files with intelligent column mapping and visual diff highlighting.
+
+Data Export
+Export to Excel or CSV with column filtering, semantic names, and preserved formatting.
+
+Template Validation
+Create templates, batch validate files, detect type inconsistencies.
+
+Customization
+Light/Dark/System theme, configurable defaults, custom output folder.
+
+PLATFORMS
+Windows, Linux, macOS — native installers available.
