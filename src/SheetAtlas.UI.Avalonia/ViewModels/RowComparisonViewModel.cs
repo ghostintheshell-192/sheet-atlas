@@ -172,7 +172,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 }
                 else
                 {
-                    _logger.LogError($"Excel export failed: {result.ErrorMessage}", null, "RowComparisonViewModel");
+                    _logger.LogError($"Excel export failed: {result.ErrorMessage}", "RowComparisonViewModel");
                 }
             }
             catch (Exception ex)
@@ -225,7 +225,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 }
                 else
                 {
-                    _logger.LogError($"CSV export failed: {result.ErrorMessage}", null, "RowComparisonViewModel");
+                    _logger.LogError($"CSV export failed: {result.ErrorMessage}", "RowComparisonViewModel");
                 }
             }
             catch (Exception ex)
