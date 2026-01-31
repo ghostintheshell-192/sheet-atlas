@@ -24,6 +24,7 @@ namespace SheetAtlas.Infrastructure.External.Readers
         private readonly ILogService _logger;
         private readonly ISheetAnalysisOrchestrator _analysisOrchestrator;
         private readonly ISettingsService _settingsService;
+        private readonly INumberFormatInferenceService _formatInferenceService;
         private readonly SecuritySettings _securitySettings;
         private CsvReaderOptions _options;
 
@@ -31,11 +32,13 @@ namespace SheetAtlas.Infrastructure.External.Readers
             ILogService logger,
             ISheetAnalysisOrchestrator analysisOrchestrator,
             ISettingsService settingsService,
+            INumberFormatInferenceService formatInferenceService,
             IOptions<AppSettings> settings)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _analysisOrchestrator = analysisOrchestrator ?? throw new ArgumentNullException(nameof(analysisOrchestrator));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            _formatInferenceService = formatInferenceService ?? throw new ArgumentNullException(nameof(formatInferenceService));
             _securitySettings = settings?.Value?.Security ?? new SecuritySettings();
             _options = CsvReaderOptions.Default;
         }
@@ -234,14 +237,34 @@ namespace SheetAtlas.Infrastructure.External.Readers
                         cellText = SanitizeCellValue(cellText);
 
                         // FIX: Treat empty/whitespace strings as Empty cells, not Text
-                        SACellValue cellValue = string.IsNullOrWhiteSpace(cellText)
-                            ? SACellValue.Empty
-                            : SACellValue.FromString(cellText, stringPool);
+                        if (string.IsNullOrWhiteSpace(cellText))
+                        {
+                            rowData[columnIndex] = new SACellData(SACellValue.Empty);
+                        }
+                        else
+                        {
+                            // Try to infer number format from CSV text (percentages, scientific notation, decimals)
+                            var inference = _formatInferenceService.InferFormat(cellText);
 
-                        if (!string.IsNullOrWhiteSpace(cellText))
+                            if (inference != null)
+                            {
+                                // Format was inferred - create cell with metadata
+                                var metadata = new CellMetadata
+                                {
+                                    NumberFormat = inference.InferredFormat
+                                };
+                                rowData[columnIndex] = new SACellData(inference.ParsedValue, metadata);
+                            }
+                            else
+                            {
+                                // No format inferred - use standard parsing
+                                SACellValue cellValue = SACellValue.FromString(cellText, stringPool);
+                                rowData[columnIndex] = new SACellData(cellValue);
+                            }
+
                             totalStrings++;
+                        }
 
-                        rowData[columnIndex] = new SACellData(cellValue);
                         columnIndex++;
                     }
                 }

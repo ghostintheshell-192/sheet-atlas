@@ -121,6 +121,7 @@ public partial class App : Application
                 services.AddSingleton<ITemplateValidationService, SheetAtlas.Core.Application.Services.Foundation.TemplateValidationService>();
                 services.AddSingleton<ITemplateRepository, SheetAtlas.Core.Application.Services.Foundation.TemplateRepository>();
                 services.AddSingleton<IHeaderGroupingService, SheetAtlas.Core.Application.Services.HeaderGroupingService>();
+                services.AddSingleton<SheetAtlas.Infrastructure.External.Readers.INumberFormatInferenceService, SheetAtlas.Infrastructure.External.Readers.NumberFormatInferenceService>();
 
                 services.AddSingleton<ISheetAnalysisOrchestrator>(sp =>
                 {
