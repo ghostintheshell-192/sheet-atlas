@@ -101,13 +101,18 @@
 
 ```
 
-For detailed architecture with diagrams, see [docs/project/ARCHITECTURE.md](docs/project/ARCHITECTURE.md).
+For navigating the codebase, see [.development/ARCHITECTURE.md](.development/ARCHITECTURE.md) (auto-generated from source comments).
+For diagrams and high-level explanations, see [docs/project/ARCHITECTURE.md](docs/project/ARCHITECTURE.md).
 
 ## Documentation
 
-- **[docs/](docs/)** - Public documentation (website, architecture, developer guides)
-- **[.development/](.development/)** - Development documentation (specs, tech-debt, ADRs, reference)
-  - 📍 Start sessions by reading [CURRENT-STATUS.md](.development/CURRENT-STATUS.md)
+- **[.development/](.development/)** - Operational documentation for Claude and development
+  - 📍 **[ARCHITECTURE.md](.development/ARCHITECTURE.md)** - Project tree with class descriptions (auto-generated)
+  - 📍 **[CURRENT-STATUS.md](.development/CURRENT-STATUS.md)** - Current project state
+  - `specs/` - Feature specifications
+  - `tech-debt/` - Known issues and improvements
+  - `reference/decisions/` - Architecture Decision Records (ADRs)
+- **[docs/](docs/)** - Public documentation (website, diagrams, release process)
 - **[.personal/](.personal/)** - Personal notes (not tracked)
 
 ## Coding Standards
@@ -393,6 +398,6 @@ dotnet format --verify-no-changes
 
 *This document defines the development standards and guidelines for the SheetAtlas project. All team members should follow these conventions to ensure consistent, maintainable, and professional code quality.*
 
-**Last Updated**: January 2026
-**Version**: 1.2
-**Next Review**: March 2026
+**Last Updated**: February 2026
+**Version**: 1.3
+**Next Review**: April 2026
