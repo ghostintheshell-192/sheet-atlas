@@ -2,6 +2,8 @@
 
 **Date**: November 2025
 **Status**: Active
+**Impact**: important
+**Summary**: Build unified Foundation Layer (data normalization, column analysis, currency detection, merged cells) before feature implementations. Reduces code duplication, creates solid base for filtering, comparison, data quality features.
 
 ## Context
 

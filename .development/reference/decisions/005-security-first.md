@@ -2,6 +2,8 @@
 
 **Date**: October 2025
 **Status**: Active
+**Impact**: important
+**Summary**: 100% local processing, no cloud dependencies. No network during file processing, no telemetry, no cloud storage. Files processed entirely in-memory with secure cleanup. Differentiator for security-conscious industries.
 
 ## Context
 
