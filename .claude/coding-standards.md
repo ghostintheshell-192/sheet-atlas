@@ -1,7 +1,5 @@
 # Coding Standards
 
-Extracted from `.rules/coding-standards/csharp-dotnet.md`.
-
 ## Naming Conventions
 
 - **Classes/Methods/Properties**: `PascalCase`
@@ -37,6 +35,7 @@ Extracted from `.rules/coding-standards/csharp-dotnet.md`.
 - **Language**: English only
 - **Focus**: Explain "why", not "what"
 - **Example**:
+
   ```csharp
   /// <summary>
   /// Normalizes cell value for comparison by removing formatting artifacts.
@@ -50,6 +49,7 @@ Extracted from `.rules/coding-standards/csharp-dotnet.md`.
 - **Use interfaces**: Depend on abstractions, not implementations
 - **Validate early**: Check for null in constructor, fail fast
 - **Example**:
+
   ```csharp
   public class FileReader
   {
@@ -61,7 +61,3 @@ Extracted from `.rules/coding-standards/csharp-dotnet.md`.
       }
   }
   ```
-
----
-
-*For complete coding standards, see `.rules/coding-standards/csharp-dotnet.md`.*

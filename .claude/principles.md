@@ -74,7 +74,3 @@ This cycle ensures:
 - Scale for different needs by identifying potential bottlenecks
 - Plan optimization strategies based on measurable requirements, not hypothetical ones
 
----
-
-*For language-specific standards, see `coding-standards/[language].md`*
-*For security rules, see `core/security-boundaries.md`*

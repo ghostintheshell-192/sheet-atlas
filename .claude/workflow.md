@@ -2,7 +2,7 @@
 
 ## Git Workflow
 
-See `.rules/workflows/git.md` and ADR-006 for complete details.
+See ADR-006 for complete details.
 
 **Quick reference:**
 
