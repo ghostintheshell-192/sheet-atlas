@@ -70,6 +70,9 @@ You can also [build from source](#build-from-source) if preferred.
 git clone https://github.com/ghostintheshell-192/sheet-atlas.git
 cd sheet-atlas
 
+# Configure git hooks (required for contributors)
+git config core.hooksPath .githooks
+
 # Build the application
 dotnet build --configuration Release
 
