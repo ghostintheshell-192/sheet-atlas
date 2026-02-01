@@ -105,18 +105,10 @@ For detailed architecture with diagrams, see [docs/project/ARCHITECTURE.md](docs
 
 ## Documentation
 
-### Public Documentation
-
-- **[docs/](docs/)** - User-facing and developer documentation (tracked in git)
-  - `docs/project/` - Architecture, technical specs, developer guides
-  - `docs/website/` - GitHub Pages website
-
-### Private Documentation
-
-- **[.development/](.development/)** - Tracked development documentation for project status and features tracking
-  - Read [.development/CURRENT-STATUS.md](.development/CURRENT-STATUS.md) at session start for project snapshot
-  - Contains: specs, tech-debt, ADRs, technical reference, archived analyses
-- **[.personal/](.personal/)** - Personal notes (not tracked in git)
+- **[docs/](docs/)** - Public documentation (website, architecture, developer guides)
+- **[.development/](.development/)** - Development documentation (specs, tech-debt, ADRs, reference)
+  - 📍 Start sessions by reading [CURRENT-STATUS.md](.development/CURRENT-STATUS.md)
+- **[.personal/](.personal/)** - Personal notes (not tracked)
 
 ## Coding Standards
 
