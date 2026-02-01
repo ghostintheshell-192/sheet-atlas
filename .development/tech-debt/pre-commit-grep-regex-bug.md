@@ -1,8 +1,9 @@
 ---
 type: bug
 priority: low
-status: open
+status: resolved
 discovered: 2025-12-10
+resolved: 2026-02-02
 related: []
 related_decision: null
 report: null
@@ -76,7 +77,15 @@ grep -qE -- "$pattern"
 - The bug doesn't block commits, but means private keys aren't being scanned
 - Other patterns in the file also use `\s` and should be reviewed
 
+## Resolution
+
+Hooks moved to project-level `.githooks/` directory and fixed:
+
+1. Converted `\s` to `[[:space:]]` in all SECRET_PATTERNS (ERE-compatible)
+2. Added `--` to grep calls to prevent pattern interpretation as options
+3. Configured git to use local hooks: `git config core.hooksPath .githooks`
+
 ## Related Documentation
 
-- **Code Location**: `/data/repos/.git-hooks/pre-commit.d/01-security:94`
-- **Patterns to fix**: Lines 82-94 (SECRET_PATTERNS array)
+- **Original Location**: `/data/repos/.git-hooks/pre-commit.d/01-security`
+- **New Location**: `.githooks/pre-commit.d/01-security`

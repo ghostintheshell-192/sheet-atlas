@@ -1,0 +1,169 @@
+#!/bin/bash
+# Git Pre-Commit Hook - Security Scanner
+# Blocks commit of secrets and sensitive files
+# Created: 2025-10-10
+# Copied from: /data/repos/.git-hooks/pre-commit.d/01-security
+#
+# Location: .githooks/pre-commit.d/01-security
+# Configured via: git config core.hooksPath .githooks
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+echo -e "${GREEN}[Pre-Commit Security Check]${NC} Scanning for secrets..."
+
+BLOCKED=0
+
+# ============================================
+# 1. Check for forbidden file patterns
+# ============================================
+
+FORBIDDEN_PATTERNS=(
+    '\.env$'
+    '\.env\.local$'
+    '\.env\.production$'
+    '.*secret.*'
+    '.*credential.*'
+    '.*password.*'
+    '\.key$'
+    '\.pem$'
+    '\.p12$'
+    '\.pfx$'
+    'id_rsa$'
+    'id_ed25519$'
+    'id_ecdsa$'
+    'api_keys\.ya?ml$'
+    'secrets\.ya?ml$'
+    'secrets\.json$'
+    'auth\.json$'
+    'tokens\.json$'
+)
+
+# Allowed exceptions
+ALLOWED_PATTERNS=(
+    '\.env\.example$'
+    '\.env\.template$'
+    'secrets\.example\.ya?ml$'
+    'config\.example\.json$'
+)
+
+for file in $(git diff --cached --name-only); do
+    # Check if file matches forbidden pattern
+    for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
+        if echo "$file" | grep -qE "$pattern"; then
+            # Check if it's in allowed exceptions
+            ALLOWED=false
+            for allowed in "${ALLOWED_PATTERNS[@]}"; do
+                if echo "$file" | grep -qE "$allowed"; then
+                    ALLOWED=true
+                    break
+                fi
+            done
+
+            if [ "$ALLOWED" = false ]; then
+                echo -e "${RED}✗ BLOCKED:${NC} $file (matches forbidden pattern: $pattern)"
+                BLOCKED=1
+            fi
+        fi
+    done
+done
+
+# ============================================
+# 2. Scan file contents for secret patterns
+# ============================================
+
+SECRET_PATTERNS=(
+    'password[[:space:]]*=[[:space:]]*["\047][^"\047]{3,}'
+    'api[_-]?key[[:space:]]*=[[:space:]]*["\047][^"\047]{10,}'
+    'secret[[:space:]]*=[[:space:]]*["\047][^"\047]{10,}'
+    'token[[:space:]]*=[[:space:]]*["\047][^"\047]{20,}'
+    'bearer[[:space:]]+[A-Za-z0-9\-_=]{20,}'
+    'Authorization:[[:space:]]*Bearer[[:space:]]+[A-Za-z0-9\-_=]{20,}'
+    'ghp_[A-Za-z0-9]{36}'                    # GitHub Personal Access Token
+    'github_pat_[A-Za-z0-9_]{82}'            # GitHub Fine-grained PAT
+    'sk-[A-Za-z0-9]{48}'                     # OpenAI API Key
+    'AIza[0-9A-Za-z\-_]{35}'                 # Google API Key
+    'AKIA[0-9A-Z]{16}'                       # AWS Access Key
+    'ssh-rsa[[:space:]]+AAAA[0-9A-Za-z+/]{100,}'      # SSH Private Key
+    '-----BEGIN[[:space:]]+(RSA[[:space:]]+)?PRIVATE[[:space:]]+KEY-----'
+)
+
+for file in $(git diff --cached --name-only --diff-filter=ACM); do
+    # Skip binary files
+    if file "$file" | grep -q "text"; then
+        for pattern in "${SECRET_PATTERNS[@]}"; do
+            if git diff --cached "$file" | grep -qE -- "$pattern"; then
+                echo -e "${RED}✗ BLOCKED:${NC} $file contains potential secret (pattern: ${pattern:0:30}...)"
+                echo -e "${YELLOW}  Matched line:${NC}"
+                git diff --cached "$file" | grep -E -- "$pattern" | head -3 | sed 's/^/    /'
+                BLOCKED=1
+            fi
+        done
+    fi
+done
+
+# ============================================
+# 3. Check for large files (potential data leaks)
+# ============================================
+
+MAX_FILE_SIZE=5242880  # 5MB
+
+for file in $(git diff --cached --name-only --diff-filter=ACM); do
+    if [ -f "$file" ]; then
+        SIZE=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null)
+        if [ "$SIZE" -gt "$MAX_FILE_SIZE" ]; then
+            echo -e "${YELLOW}⚠ WARNING:${NC} $file is large ($(($SIZE / 1024 / 1024))MB) - are you sure you want to commit this?"
+            # Don't block, just warn for large files
+        fi
+    fi
+done
+
+# ============================================
+# 4. Check for .secrets or credentials directories
+# ============================================
+
+FORBIDDEN_DIRS=(
+    '\.secrets/'
+    'secrets/'
+    'credentials/'
+    'private/'
+)
+
+for file in $(git diff --cached --name-only); do
+    for dir in "${FORBIDDEN_DIRS[@]}"; do
+        if echo "$file" | grep -qE "^$dir"; then
+            echo -e "${RED}✗ BLOCKED:${NC} $file is in forbidden directory: $dir"
+            BLOCKED=1
+        fi
+    done
+done
+
+# ============================================
+# Final decision
+# ============================================
+
+if [ $BLOCKED -eq 1 ]; then
+    echo ""
+    echo -e "${RED}═══════════════════════════════════════════════${NC}"
+    echo -e "${RED}  COMMIT BLOCKED - Secrets detected!${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${YELLOW}To fix:${NC}"
+    echo "  1. Remove sensitive data from files"
+    echo "  2. Add file patterns to .gitignore"
+    echo "  3. Use /data/secrets/ for storing credentials"
+    echo "  4. Reference secrets via environment variables"
+    echo ""
+    echo -e "${YELLOW}To bypass (NOT RECOMMENDED):${NC}"
+    echo "  git commit --no-verify"
+    echo ""
+    exit 1
+else
+    echo -e "${GREEN}✓ Security check passed${NC} - No secrets detected"
+    exit 0
+fi

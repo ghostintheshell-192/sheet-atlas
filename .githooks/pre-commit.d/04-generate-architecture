@@ -1,0 +1,44 @@
+#!/bin/bash
+# Pre-commit hook: Generate ARCHITECTURE.md
+# Runs on any project that has .development/scripts/generate-architecture.sh
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Get project root
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+
+SCRIPT_PATH="$PROJECT_ROOT/.development/scripts/generate-architecture.sh"
+ARCH_FILE="$PROJECT_ROOT/.development/ARCHITECTURE.md"
+
+# Check if this project uses auto-generated architecture
+if [[ ! -f "$SCRIPT_PATH" ]]; then
+    # Project doesn't have the script, skip silently
+    exit 0
+fi
+
+echo -e "${BLUE}[04] Architecture Reference${NC}"
+
+# Check if any source files are staged (C#, or extend as needed)
+if ! git diff --cached --name-only | grep -qE '\.(cs|py|ts|rs)$'; then
+    echo -e "  ${GREEN}✓${NC} No source files changed, skipping"
+    exit 0
+fi
+
+# Generate the architecture file
+echo -e "  Regenerating from source comments..."
+bash "$SCRIPT_PATH" > /dev/null 2>&1
+
+# Check if ARCHITECTURE.md changed
+if git diff --quiet "$ARCH_FILE" 2>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} No changes to architecture reference"
+else
+    # Stage the updated file
+    git add "$ARCH_FILE"
+    echo -e "  ${GREEN}✓${NC} Updated and staged ARCHITECTURE.md"
+fi
+
+exit 0
