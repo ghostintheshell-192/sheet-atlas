@@ -2,13 +2,17 @@
 
 ## Quick Navigation
 
-See @.claude/overview.md for project overview, development methodology, and tech stack.
+See @overview.md for project overview, development methodology, and tech stack.
 
-See @.claude/critical-rules.md for critical architecture rules (auto-generated from ADRs).
+See @critical-rules.md for critical architecture rules (auto-generated from ADRs).
 
-See @.claude/coding-standards.md for coding standards (auto-generated from .rules/).
+See @coding-standards.md for coding standards (auto-generated from .rules/).
 
-See @.claude/workflow.md for git workflow and release process.
+See @principles.md for general development principles.
+
+See @preflight-checks.md for pre-flight checks before coding.
+
+See @workflow.md for git workflow and release process.
 
 ## Documentation Structure
 
