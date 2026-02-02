@@ -2,6 +2,9 @@ using SheetAtlas.Core.Domain.Entities;
 
 namespace SheetAtlas.Core.Application.Interfaces
 {
+    /// <summary>
+    /// Service for comparing rows from search results. Extracts row data and column headers.
+    /// </summary>
     public interface IRowComparisonService
     {
         /// <summary>

@@ -6,9 +6,7 @@ using SheetAtlas.Core.Domain.ValueObjects;
 namespace SheetAtlas.Core.Domain.Entities
 {
     /// <summary>
-    /// Represents an Excel file template that defines expected structure and validation rules.
-    /// Used to validate incoming files against a known-good template.
-    /// Supports JSON serialization for persistence and sharing.
+    /// Excel template defining expected structure and validation rules. Supports JSON serialization for persistence.
     /// </summary>
     public sealed class ExcelTemplate
     {

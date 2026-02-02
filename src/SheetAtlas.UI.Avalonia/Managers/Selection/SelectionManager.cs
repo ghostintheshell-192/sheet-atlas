@@ -5,6 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace SheetAtlas.UI.Avalonia.Managers.Selection;
 
+/// <summary>
+/// Manages selection of cells and sheets in search results. Tracks selected items and notifies listeners of changes.
+/// </summary>
 public class SelectionManager : ISelectionManager
 {
     private readonly ILogger<SelectionManager> _logger;

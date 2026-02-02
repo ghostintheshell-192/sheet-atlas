@@ -3,6 +3,9 @@ using System.Runtime.CompilerServices;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels;
 
+/// <summary>
+/// Base class for ViewModels. Implements INotifyPropertyChanged with helper methods for property change notifications.
+/// </summary>
 public class ViewModelBase : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;

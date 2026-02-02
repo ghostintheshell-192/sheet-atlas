@@ -27,7 +27,7 @@ All three readers follow the same pattern:
 ### Sheet Level (INCONSISTENT)
 
 | Reader | Sheet-level catch |
-|--------|-------------------|
+| ------ | ----------------- |
 | `OpenXmlFileReader` | `InvalidCastException`, `XmlException` (specific) |
 | `XlsFileReader` | `Exception` (generic catch-all) |
 | `CsvFileReader` | `Exception` (generic catch-all) |

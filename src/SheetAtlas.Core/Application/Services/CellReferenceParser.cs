@@ -3,6 +3,9 @@ using SheetAtlas.Core.Application.Interfaces;
 
 namespace SheetAtlas.Core.Application.Services
 {
+    /// <summary>
+    /// Implementation of ICellReferenceParser. Parses Excel cell references using regex.
+    /// </summary>
     public partial class CellReferenceParser : ICellReferenceParser
     {
         private static readonly Regex _columnRegex = MyRegex();

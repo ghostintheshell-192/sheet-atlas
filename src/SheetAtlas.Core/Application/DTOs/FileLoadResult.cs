@@ -4,6 +4,9 @@ using SheetAtlas.Logging.Models;
 
 namespace SheetAtlas.Core.Application.DTOs
 {
+    /// <summary>
+    /// Result of loading an Excel file. Contains status, loaded file, and any errors or warnings.
+    /// </summary>
     public class FileLoadResult
     {
         public string FilePath { get; }

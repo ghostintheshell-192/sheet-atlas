@@ -20,7 +20,7 @@ Current implementation keeps all data in memory, tied to loaded files. When file
 
 **Proposed: Save to local JSON files**
 
-```
+```text
 ~/.local/share/SheetAtlas/
 ├── searches/
 │   ├── search_<hash>.json    # Query, results, timestamp

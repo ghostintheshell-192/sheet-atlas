@@ -15,7 +15,7 @@ report: null
 
 The global pre-commit security scanner (`/data/repos/.git-hooks/pre-commit.d/01-security`) uses Perl-style regex patterns with `grep -E`, causing warnings during commit:
 
-```
+```bash
 grep: unrecognized option '-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----'
 ```
 

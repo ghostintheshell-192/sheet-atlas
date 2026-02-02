@@ -8,6 +8,9 @@ using SheetAtlas.Logging.Services;
 
 namespace SheetAtlas.UI.Avalonia.Managers.Search;
 
+/// <summary>
+/// Manages search operations and results. Executes searches, groups results by file/sheet, provides search suggestions.
+/// </summary>
 public class SearchResultsManager : ISearchResultsManager
 {
     private readonly ISearchService _searchService;

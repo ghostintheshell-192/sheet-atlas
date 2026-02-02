@@ -1,5 +1,8 @@
 namespace SheetAtlas.Core.Application.Interfaces
 {
+    /// <summary>
+    /// Parses Excel cell references (e.g., A1) to/from column/row indices.
+    /// </summary>
     public interface ICellReferenceParser
     {
         string GetColumnName(string cellReference);

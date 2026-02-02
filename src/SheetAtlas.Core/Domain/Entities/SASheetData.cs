@@ -3,16 +3,7 @@ using SheetAtlas.Core.Domain.ValueObjects;
 namespace SheetAtlas.Core.Domain.Entities
 {
     /// <summary>
-    /// Efficient sheet storage with flat array architecture.
-    /// Uses single contiguous SACellData[] instead of List of arrays.
-    /// Benefits: zero fragmentation, cache-friendly, GC can release memory properly.
-    /// Memory: ~2-3x overhead instead of 10-14x like DataTable.
-    ///
-    /// ROW INDEXING:
-    /// - All row indices are 0-based ABSOLUTE (row 0 = first row in sheet)
-    /// - Header rows are INCLUDED in the data array (rows 0 to HeaderRowCount-1)
-    /// - Data rows start at row HeaderRowCount
-    /// - Excel Row N corresponds to SASheetData row (N-1)
+    /// Efficient sheet storage using flat contiguous array. 0-based absolute indexing, includes header rows. ~2-3x memory overhead vs 10-14x for DataTable.
     /// </summary>
     public class SASheetData : IDisposable
     {

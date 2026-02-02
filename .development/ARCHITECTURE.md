@@ -50,7 +50,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ### SheetAtlas.Core/Application/Interfaces
 - `ICellReferenceParser.cs` — Parses Excel cell references (e.g., A1) to/from column/row indices.
-- `ICellValueReader.cs` — Service responsible for reading and parsing cell values from Excel worksheets. Handles different cell data types (shared strings, booleans, numbers, dates). Preserves type information by returning SAC... ⚠️
+- `ICellValueReader.cs` — Service for reading Excel cell values with type preservation. Returns SACellValue instead of string.
 - `IColumnAnalysisService.cs` — Analyzes column characteristics: data type, confidence, generates ColumnMetadata. Enhances existing ColumnMetadata record with detected type and quality metrics.
 - `IComparisonExportService.cs` — Service for exporting row comparison results to various formats. Includes metadata (search terms, files, timestamps) for context.
 - `ICurrencyDetector.cs` — Extracts currency information from Excel number format strings. Used during file load to enhance ColumnMetadata with currency awareness.
@@ -74,7 +74,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ### SheetAtlas.Core/Application/Services
 - `CellReferenceParser.cs` — Implementation of ICellReferenceParser. Parses Excel cell references using regex.
-- `CellValueReader.cs` — Reads and parses cell values from Excel worksheets with type preservation. Handles different cell data types: shared strings, booleans, numbers, dates. Returns CellValue struct with native types (doub... ⚠️
+- `CellValueReader.cs` — Reads and parses cell values from Excel with type preservation. Handles shared strings, numbers, dates, booleans. Uses string interning for memory efficiency.
 - `ColumnLinkingService.cs` — Input for column linking: column info from a loaded file.
 - `ExcelErrorJsonConverter.cs` — Custom JSON converter for ExcelError Handles serialization of Exception property by extracting only serializable info
 - `ExceptionHandler.cs` — Centralized exception handling implementation. Converts technical exceptions to user-friendly messages and logs details.
@@ -106,10 +106,10 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ### SheetAtlas.Core/Domain/Entities
 - `ExcelFile.cs` — Represents a loaded Excel file with its sheets, load status, and any errors encountered. Implements IDisposable to properly release memory used by sheet data.
-- `ExcelTemplate.cs` — Represents an Excel file template that defines expected structure and validation rules. Used to validate incoming files against a known-good template. Supports JSON serialization for persistence and s... ⚠️
+- `ExcelTemplate.cs` — Excel template defining expected structure and validation rules. Supports JSON serialization for persistence.
 - `RowComparison.cs` — Represents a complete row from an Excel sheet for comparison purposes
 - `RowComparisonWarning.cs` — Represents a warning about column structure inconsistencies during row comparison
-- `SASheetData.cs` — Efficient sheet storage with flat array architecture. Uses single contiguous SACellData[] instead of List of arrays. Benefits: zero fragmentation, cache-friendly, GC can release memory properly. Memor... ⚠️
+- `SASheetData.cs` — Efficient sheet storage using flat contiguous array. 0-based absolute indexing, includes header rows. ~2-3x memory overhead vs 10-14x for DataTable.
 - `SearchResult.cs` — Configuration options for search operations.
 
 ### SheetAtlas.Core/Domain/Exceptions
@@ -131,12 +131,12 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `RuleType.cs` — Types of validation rules that can be applied to template columns. Used by ExpectedColumn and ValidationRule for template validation.
 - `SACellData.cs` — Optional cell metadata for validation, data cleaning, formulas, and styles. Created on-demand (~5-10% of cells), not allocated for clean simple cells.
 - `SACellValue.cs` — Cell data type discriminator. Used by CellValue to determine the actual type stored.
-- `StringPool.cs` — String interning pool for deduplicating repeated string values. Reduces memory footprint when many cells contain identical strings (categories, enums, etc.). Thread-safe for concurrent reads, requires... ⚠️
+- `StringPool.cs` — String interning pool for deduplicating repeated values. Reduces memory for repeated strings (categories, enums). Thread-safe reads.
 - `ValidationRule.cs` — A validation rule that can be applied to a column in an Excel template. Immutable value object with factory methods for common rules.
 
 ### SheetAtlas.Core/Shared/Helpers
 - `FilePathHelper.cs`
-- `RowIndexConverter.cs` — Row indexing converter for SheetAtlas.  TWO INDEXING SYSTEMS: - Excel: 1-based (Row 1 = first row visible in Excel, typically header) - Absolute: 0-based (Row 0 = first row in sheet, SASheetData uses ... ⚠️
+- `RowIndexConverter.cs` — Converts between Excel 1-based and absolute 0-based row indexing. Excel Row 1 = Absolute Row 0. See ADR-002 for details.
 
 ### SheetAtlas.Infrastructure/External
 - `ExcelReaderService.cs` — Service for loading Excel files using format-specific readers
@@ -151,7 +151,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ### SheetAtlas.Infrastructure/External/Writers
 - `ComparisonExportService.cs` — Service for exporting row comparison results to Excel and CSV formats. Excel exports include metadata sheet with search terms, files, and timestamp.
-- `ExcelWriterService.cs` — Service for exporting enriched sheet data to Excel and CSV formats. Uses CleanedValue from cell metadata for proper type preservation. Preserves number formats (currency, percentage, dates) from sourc... ⚠️
+- `ExcelWriterService.cs` — Service for exporting sheet data to Excel and CSV. Preserves types and number formats from source files.
 
 ### SheetAtlas.Logging/Models
 - `LogAction.cs` — Represents an action that can be performed on a notification
@@ -188,7 +188,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ### SheetAtlas.UI.Avalonia/Managers/FileDetails
 - `FileDetailsCoordinator.cs` — Coordinates file detail operations such as file removal, retry, and cleanup. Orchestrates interactions between FilesManager, SearchViewModels, and ComparisonCoordinator.
-- `IFileDetailsCoordinator.cs` — Coordinates file detail operations such as file removal, retry, and cleanup. Handles the orchestration between FilesManager, SearchViewModels, and ComparisonCoordinator when file-related actions are r... ⚠️
+- `IFileDetailsCoordinator.cs` — Coordinates file detail operations: removal, retry, cleanup. Orchestrates FilesManager, SearchViewModels, and ComparisonCoordinator.
 
 ### SheetAtlas.UI.Avalonia/Managers/Files
 - `ILoadedFilesManager.cs` — Manages the collection of loaded Excel files and their lifecycle. Handles loading, removal, and retry operations for failed loads.
@@ -200,15 +200,15 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ### SheetAtlas.UI.Avalonia/Managers/Search
 - `ISearchResultsManager.cs` — Manager for search operations and results
-- `SearchResultsManager.cs`
+- `SearchResultsManager.cs` — Manages search operations and results. Executes searches, groups results by file/sheet, provides search suggestions.
 
 ### SheetAtlas.UI.Avalonia/Managers/Selection
 - `ISelectionManager.cs` — Manager for selection and visibility operations
-- `SelectionManager.cs`
+- `SelectionManager.cs` — Manages selection of cells and sheets in search results. Tracks selected items and notifies listeners of changes.
 
 ### SheetAtlas.UI.Avalonia/Managers/Theme
-- `IThemeManager.cs`
-- `ThemeManager.cs`
+- `IThemeManager.cs` — Manages application theme (Light/Dark/System). Applies theme changes and persists user preferences.
+- `ThemeManager.cs` — Implementation of IThemeManager. Detects system theme and applies user preferences.
 
 ### SheetAtlas.UI.Avalonia/Models
 - `CellComparisonResult.cs` — Represents the result of comparing a cell value with other values in the same column
@@ -260,7 +260,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `TemplateManagementViewModel.cs` — ViewModel for the Templates tab. Manages the template library and template operations. Supports single file (create/validate) and multi-file (batch validate/apply) operations.
 - `TreeSearchResultsViewModel.cs`
 - `ValidationIssueViewModel.cs` — ViewModel for displaying validation issues in the UI.
-- `ViewModelBase.cs`
+- `ViewModelBase.cs` — Base class for ViewModels. Implements INotifyPropertyChanged with helper methods for property change notifications.
 
 ### SheetAtlas.UI.Avalonia/Views
 - `ColumnsSidebarView.axaml.cs`

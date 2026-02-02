@@ -6,6 +6,9 @@ using SheetAtlas.Logging.Services;
 
 namespace SheetAtlas.Core.Application.Services
 {
+    /// <summary>
+    /// Implementation of IRowComparisonService. Creates row comparisons from search results.
+    /// </summary>
     public class RowComparisonService : IRowComparisonService
     {
         private readonly ILogService _logger;

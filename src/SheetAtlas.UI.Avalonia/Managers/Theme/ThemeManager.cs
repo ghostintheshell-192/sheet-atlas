@@ -6,6 +6,9 @@ using SheetAtlas.Logging.Services;
 
 namespace SheetAtlas.UI.Avalonia.Managers
 {
+    /// <summary>
+    /// Implementation of IThemeManager. Detects system theme and applies user preferences.
+    /// </summary>
     public class ThemeManager : INotifyPropertyChanged, IThemeManager
     {
         private readonly ILogService _logger;

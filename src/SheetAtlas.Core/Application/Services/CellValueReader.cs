@@ -8,10 +8,7 @@ using SACellValue = SheetAtlas.Core.Domain.ValueObjects.SACellValue;
 namespace SheetAtlas.Core.Application.Services
 {
     /// <summary>
-    /// Reads and parses cell values from Excel worksheets with type preservation.
-    /// Handles different cell data types: shared strings, booleans, numbers, dates.
-    /// Returns CellValue struct with native types (double, long, bool) instead of all-string.
-    /// Uses string interning for text values to reduce memory footprint.
+    /// Reads and parses cell values from Excel with type preservation. Handles shared strings, numbers, dates, booleans. Uses string interning for memory efficiency.
     /// </summary>
     public class CellValueReader : ICellValueReader
     {

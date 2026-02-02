@@ -14,9 +14,7 @@ using SheetAtlas.Logging.Services;
 namespace SheetAtlas.Infrastructure.External.Writers
 {
     /// <summary>
-    /// Service for exporting enriched sheet data to Excel and CSV formats.
-    /// Uses CleanedValue from cell metadata for proper type preservation.
-    /// Preserves number formats (currency, percentage, dates) from source files.
+    /// Service for exporting sheet data to Excel and CSV. Preserves types and number formats from source files.
     /// </summary>
     public class ExcelWriterService : IExcelWriterService
     {
