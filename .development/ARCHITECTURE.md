@@ -38,7 +38,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `ErrorSummary.cs` — Pre-calculated aggregations for UI performance
 - `ExportResult.cs` — Result of an export operation. Follows Result pattern - check IsSuccess before using output path.
 - `FileInfoDto.cs` — Information about the Excel file being logged
-- `FileLoadResult.cs`
+- `FileLoadResult.cs` — Result of loading an Excel file. Contains status, loaded file, and any errors or warnings.
 - `FileLogEntry.cs` — Root object for structured file log JSON Represents a single load attempt for an Excel file
 - `LoadAttemptInfo.cs` — Information about the file load attempt
 - `MergeComplexityAnalysis.cs` — Analysis of merged cell complexity in sheet. Used to recommend strategy and warn user.
@@ -49,7 +49,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `ValidationReport.cs` — Complete validation report for an Excel file against a template. Contains all validation results, issues, and summary statistics.
 
 ### SheetAtlas.Core/Application/Interfaces
-- `ICellReferenceParser.cs`
+- `ICellReferenceParser.cs` — Parses Excel cell references (e.g., A1) to/from column/row indices.
 - `ICellValueReader.cs` — Service responsible for reading and parsing cell values from Excel worksheets. Handles different cell data types (shared strings, booleans, numbers, dates). Preserves type information by returning SAC... ⚠️
 - `IColumnAnalysisService.cs` — Analyzes column characteristics: data type, confidence, generates ColumnMetadata. Enhances existing ColumnMetadata record with detected type and quality metrics.
 - `IComparisonExportService.cs` — Service for exporting row comparison results to various formats. Includes metadata (search terms, files, timestamps) for context.
@@ -63,7 +63,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `IHeaderResolver.cs` — Resolves semantic names for column headers. Provides unified interface for different resolution sources (ColumnLink, Template, Dictionary).
 - `IMergedCellResolver.cs` — Resolves merged cells using configurable strategies. Handles horizontal/vertical merges, warns on complex patterns.
 - `IMergedRangeExtractor.cs` — Generic interface for extracting merged cell range information from various file formats. Each format (OpenXML, ODF, etc.) provides its own context type.
-- `IRowComparisonService.cs`
+- `IRowComparisonService.cs` — Service for comparing rows from search results. Extracts row data and column headers.
 - `ISettingsService.cs` — Service for managing user preferences with persistent storage. Settings are stored as JSON in the user's application data folder.
 - `ISheetAnalysisOrchestrator.cs` — Orchestrates the analysis and enrichment pipeline for sheet data. Coordinates foundation services to analyze columns, resolve merged cells, and populate metadata.
 - `ITemplateRepository.cs` — Repository for managing Excel templates (CRUD operations). Templates are stored as JSON files in a user-configurable location.
@@ -73,14 +73,14 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `AppJsonContext.cs` — JSON serialization context for source-generated serializers. Required for PublishTrimmed=true support (AOT and trimming). All types used with JsonSerializer must be registered here.
 
 ### SheetAtlas.Core/Application/Services
-- `CellReferenceParser.cs`
+- `CellReferenceParser.cs` — Implementation of ICellReferenceParser. Parses Excel cell references using regex.
 - `CellValueReader.cs` — Reads and parses cell values from Excel worksheets with type preservation. Handles different cell data types: shared strings, booleans, numbers, dates. Returns CellValue struct with native types (doub... ⚠️
 - `ColumnLinkingService.cs` — Input for column linking: column info from a loaded file.
 - `ExcelErrorJsonConverter.cs` — Custom JSON converter for ExcelError Handles serialization of Exception property by extracting only serializable info
 - `ExceptionHandler.cs` — Centralized exception handling implementation. Converts technical exceptions to user-friendly messages and logs details.
 - `FileLogService.cs` — Manages structured logging of Excel file load attempts to JSON files Each Excel file gets its own folder with chronological JSON logs
 - `HeaderGroupingService.cs` — Groups headers by semantic name, merging columns that map to the same name. Consolidates header grouping logic previously duplicated across ComparisonExportService and RowComparisonViewModel.
-- `RowComparisonService.cs`
+- `RowComparisonService.cs` — Implementation of IRowComparisonService. Creates row comparisons from search results.
 - `SearchService.cs` — Service for searching within Excel files across sheets and cells.
 - `SettingsService.cs` — Manages user preferences with persistent JSON storage. Settings are stored in %AppData%/SheetAtlas/settings.json.
 - `SheetAnalysisOrchestrator.cs` — Orchestrates the analysis and enrichment pipeline for sheet data. Coordinates foundation services: merged cell resolution, column analysis, currency detection, data normalization.
@@ -121,16 +121,16 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `ColumnLink.cs` — Links multiple column names to a single semantic concept. Used for grouping semantically equivalent columns across files.
 - `CurrencyInfo.cs` — Immutable currency information extracted from Excel number format. Used for currency-aware comparison and normalization.
 - `DataRegion.cs` — Defines a data region within an Excel sheet. Supports both auto-detection and manual user selection (future UI).
-- `DataType.cs`
-- `DateSystem.cs`
-- `ExcelError.cs` — Represents an error, warning, or informational message encountered during Excel file processing. Immutable value object with factory methods for different error types.
+- `DataType.cs` — Detected data type for cell or column. Used by normalization and column analysis services.
+- `DateSystem.cs` — Indicates which date serial number system the Excel workbook uses. Affects how date serial numbers are converted to DateTime values.
+- `ExcelError.cs` — Indicates the overall outcome of a file load operation.
 - `ExpectedColumn.cs` — Defines an expected column in an Excel template. Captures column requirements: name, position, type, and validation rules. Immutable value object with factory methods for common patterns.
 - `ExportCellValue.cs`
 - `LinkedColumn.cs` — Represents a column from a specific source file/sheet. Used to track the origin of columns in a ColumnLink.
-- `MergeStrategy.cs`
-- `RuleType.cs`
+- `MergeStrategy.cs` — Strategy for resolving merged cells. Configurable via appsettings.json FoundationLayer.MergedCells.DefaultStrategy.
+- `RuleType.cs` — Types of validation rules that can be applied to template columns. Used by ExpectedColumn and ValidationRule for template validation.
 - `SACellData.cs` — Optional cell metadata for validation, data cleaning, formulas, and styles. Created on-demand (~5-10% of cells), not allocated for clean simple cells.
-- `SACellValue.cs`
+- `SACellValue.cs` — Cell data type discriminator. Used by CellValue to determine the actual type stored.
 - `StringPool.cs` — String interning pool for deduplicating repeated string values. Reduces memory footprint when many cells contain identical strings (categories, enums, etc.). Thread-safe for concurrent reads, requires... ⚠️
 - `ValidationRule.cs` — A validation rule that can be applied to a column in an Excel template. Immutable value object with factory methods for common rules.
 
@@ -156,7 +156,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 ### SheetAtlas.Logging/Models
 - `LogAction.cs` — Represents an action that can be performed on a notification
 - `LogMessage.cs` — Represents a user notification (error, warning, info)
-- `LogSeverity.cs`
+- `LogSeverity.cs` — Severity level of a notification
 
 ### SheetAtlas.Logging/Services
 - `ILogService.cs` — Service for managing application log messages
@@ -212,7 +212,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ### SheetAtlas.UI.Avalonia/Models
 - `CellComparisonResult.cs` — Represents the result of comparing a cell value with other values in the same column
-- `ComparisonType.cs`
+- `ComparisonType.cs` — Represents the type of difference found when comparing cells across rows
 - `FileDetailAction.cs`
 - `FileDetailProperty.cs`
 - `IToggleable.cs` — Interface for items that can be toggled (expanded/collapsed or selected/deselected)

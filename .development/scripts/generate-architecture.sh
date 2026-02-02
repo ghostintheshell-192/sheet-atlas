@@ -47,7 +47,7 @@ extract_summary() {
             if (summary != "") summary = summary " "
             summary = summary line
         }
-        /^[[:space:]]*(public|internal|private|protected)?[[:space:]]*(sealed|abstract|static|partial)?[[:space:]]*(class|interface|record|struct)[[:space:]]/ {
+        /^[[:space:]]*(public|internal|private|protected)?[[:space:]]*(sealed|abstract|static|partial)?[[:space:]]*(class|interface|record|struct|enum)[[:space:]]/ {
             if (summary != "") {
                 print summary
                 exit
