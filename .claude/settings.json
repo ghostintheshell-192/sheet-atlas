@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(done)",
+      "Bash(dotnet test:*)",
+      "Bash(grep:*)",
+      "WebSearch",
+      "Bash(dotnet build:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh issue view:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$PWD/.personal/scripts/generate-index.py\" 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$PWD/.personal/scripts/update-tech-debt-index.py\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'cat | python3 \"$PWD/.development/scripts/session-archive.py\"'"
+          }
+        ]
+      }
+    ]
+  }
+}

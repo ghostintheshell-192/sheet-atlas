@@ -46,3 +46,7 @@ sw.Stop();
 
 - **Code Location**: `src/SheetAtlas.Core/Application/DTOs/LoadAttemptInfo.cs`
 - **Code Location**: `src/SheetAtlas.UI.Avalonia/Managers/Files/LoadedFilesManager.cs`
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

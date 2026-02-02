@@ -73,3 +73,7 @@ Related to event-driven architecture refactoring. May be resolved by theme-aware
 - Search tab: Theme changes don't work until tab switch ❌
 
 **Recommendation**: KEEP OPEN. Fix requires SearchViewModel (and other affected ViewModels) to subscribe to `IThemeManager.ThemeChanged` and trigger property refresh, similar to RowComparisonViewModel pattern.
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

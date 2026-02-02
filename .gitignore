@@ -55,7 +55,7 @@ samples/
 # Claude Code folder and todos (do NOT commit)
 **/claude-todos*.md
 **/temp-todos*.md
-# Claude Code configuration (track shared config, ignore local settings)
-.claude/settings.json
+# Claude Code configuration (track shared config, ignore local overrides only)
+.claude/settings.local.json
 .claude/*.local.md
 

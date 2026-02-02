@@ -24,16 +24,19 @@ The check still passes, but the private key pattern is not actually being scanne
 ## Analysis
 
 Line 94 in `01-security`:
+
 ```bash
 '-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----'
 ```
 
 Problems:
+
 1. `\s+` is PCRE (Perl regex) syntax, not supported by `grep -E` (ERE)
 2. The `-----` at the start is interpreted as a command-line option
 3. `grep -qE "$pattern"` fails silently for this pattern
 
 The security scanner uses `grep -E` (Extended Regular Expressions) which doesn't support:
+
 - `\s` (whitespace shorthand) - should be `[[:space:]]`
 - `\d` (digit shorthand) - should be `[0-9]`
 
@@ -89,3 +92,7 @@ Hooks moved to project-level `.githooks/` directory and fixed:
 
 - **Original Location**: `/data/repos/.git-hooks/pre-commit.d/01-security`
 - **New Location**: `.githooks/pre-commit.d/01-security`
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

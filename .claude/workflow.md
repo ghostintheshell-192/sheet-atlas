@@ -48,6 +48,20 @@ When user requests a release (e.g., "create release v0.4.0"):
 
 **NEVER skip reading RELEASE_PROCESS.md** - it contains critical steps and automation details.
 
+## Investigation & Analysis Workflow
+
+When analyzing tech-debt, bugs, or investigating issues:
+
+1. **Read the tech-debt/issue description** - Understand the problem
+2. **Read `.development/ARCHITECTURE.md`** - Find relevant files using:
+   - Project Tree (file index with descriptions)
+   - Layer Overview (understand dependencies)
+   - Related ADRs (architectural context)
+3. **Read files in logical order** - Follow layer structure (UI → Core ← Infrastructure)
+4. **Report findings** - Summary of what you found and where
+
+**Always read ARCHITECTURE.md before exploring code** - it's your navigation map.
+
 ## Quick Commands
 
 ```bash
