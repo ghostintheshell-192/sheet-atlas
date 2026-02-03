@@ -264,6 +264,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ### SheetAtlas.UI.Avalonia/Views
 - `ColumnsSidebarView.axaml.cs`
+- `EmptyStateView.axaml.cs`
 - `FileDetailsView.axaml.cs`
 - `FileLoadResultView.axaml.cs`
 - `FilesSidebarView.axaml.cs`
