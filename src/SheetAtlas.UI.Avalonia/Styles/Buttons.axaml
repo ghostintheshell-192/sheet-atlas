@@ -77,4 +77,22 @@
             <Setter Property="Background" Value="{DynamicResource Gray700}"/>
         </Style>
 
+        <Style Selector="Button.CloseButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryText}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.CloseButton:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource ErrorColor}"/>
+        </Style>
+
 </Styles>

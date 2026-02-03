@@ -131,21 +131,9 @@
             <!-- Main Content Area -->
             <Grid Grid.Column="1" Margin="12,0,0,0">
                 <!-- Welcome Message (when no tabs visible) -->
-                <Border IsVisible="{Binding HasAnyTabVisible, Converter={x:Static BoolConverters.Not}}"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                    <StackPanel Spacing="16" HorizontalAlignment="Center">
-                        <TextBlock Text="SheetAtlas"
-                                  FontSize="24"
-                                  FontWeight="SemiBold"
-                                  Foreground="{DynamicResource PrimaryText}"
-                                  HorizontalAlignment="Center"/>
-                        <TextBlock Text="Start here: File → Load Files"
-                                  FontSize="14"
-                                  Foreground="{DynamicResource SecondaryText}"
-                                  HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
+                <views:EmptyStateView IsVisible="{Binding HasAnyTabVisible, Converter={x:Static BoolConverters.Not}}"
+                                     Title="SheetAtlas"
+                                     Message="Start here: File → Load Files"/>
 
                 <!-- Content Area: Tab Control (full height) -->
                 <TabControl SelectedIndex="{Binding SelectedTabIndex}"
@@ -153,17 +141,8 @@
                     <!-- File Details Tab -->
                     <TabItem IsVisible="{Binding IsFileDetailsTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="File Details" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseFileDetailsTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="File Details"
+                                                    CloseCommand="{Binding CloseFileDetailsTabCommand}"/>
                         </TabItem.Header>
                         <ContentControl Content="{Binding FileDetailsViewModel}">
                             <ContentControl.ContentTemplate>
@@ -177,17 +156,8 @@
                     <!-- Search Tab -->
                     <TabItem IsVisible="{Binding IsSearchTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Search" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseSearchTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="Search"
+                                                    CloseCommand="{Binding CloseSearchTabCommand}"/>
                         </TabItem.Header>
 
                         <!-- Search Tab Content -->
@@ -291,17 +261,8 @@
                     <!-- Row Comparison Tab -->
                     <TabItem IsVisible="{Binding IsComparisonTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Row Comparison" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseComparisonTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="Row Comparison"
+                                                    CloseCommand="{Binding CloseComparisonTabCommand}"/>
                         </TabItem.Header>
 
                         <Grid Margin="8">
@@ -376,39 +337,18 @@
                             </ScrollViewer>
 
                             <!-- Empty State (when no comparisons) -->
-                            <Border HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   IsVisible="{Binding !RowComparisons.Count}">
-                                <StackPanel Spacing="16" HorizontalAlignment="Center">
-                                    <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Opacity="0.4"/>
-                                    <TextBlock Text="No comparisons yet"
-                                              FontSize="16"
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource PrimaryText}"
-                                              HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Select rows from search results to compare"
-                                              FontSize="14"
-                                              Foreground="{DynamicResource SecondaryText}"
-                                              HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
+                            <views:EmptyStateView IsVisible="{Binding !RowComparisons.Count}"
+                                                 Icon="📊"
+                                                 Title="No comparisons yet"
+                                                 Message="Select rows from search results to compare"/>
                         </Grid>
                     </TabItem>
 
                     <!-- Templates Tab -->
                     <TabItem IsVisible="{Binding IsTemplatesTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Templates" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseTemplatesTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="Templates"
+                                                    CloseCommand="{Binding CloseTemplatesTabCommand}"/>
                         </TabItem.Header>
                         <ContentControl Content="{Binding TemplateManagementViewModel}">
                             <ContentControl.ContentTemplate>
@@ -422,17 +362,8 @@
                     <!-- Settings Tab -->
                     <TabItem IsVisible="{Binding IsSettingsTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Settings" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseSettingsTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="Settings"
+                                                    CloseCommand="{Binding CloseSettingsTabCommand}"/>
                         </TabItem.Header>
                         <ContentControl Content="{Binding SettingsViewModel}">
                             <ContentControl.ContentTemplate>

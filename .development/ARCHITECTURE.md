@@ -263,7 +263,9 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `ViewModelBase.cs` — Base class for ViewModels. Implements INotifyPropertyChanged with helper methods for property change notifications.
 
 ### SheetAtlas.UI.Avalonia/Views
+- `ClosableTabHeader.axaml.cs`
 - `ColumnsSidebarView.axaml.cs`
+- `EmptyStateView.axaml.cs`
 - `FileDetailsView.axaml.cs`
 - `FileLoadResultView.axaml.cs`
 - `FilesSidebarView.axaml.cs`
