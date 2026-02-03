@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
+             xmlns:views="using:SheetAtlas.UI.Avalonia.Views"
              xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -187,12 +188,9 @@
                                 </ItemsControl>
 
                                 <!-- Empty State -->
-                                <TextBlock Text="No error logs available. File load attempts will appear here."
-                                          FontStyle="Italic"
-                                          Foreground="{DynamicResource SecondaryText}"
-                                          HorizontalAlignment="Center"
-                                          Margin="0,40,0,40"
-                                          IsVisible="{Binding !HasErrorLogs}"/>
+                                <views:EmptyStateView Message="No error logs available. File load attempts will appear here."
+                                                     Margin="0,40,0,40"
+                                                     IsVisible="{Binding !HasErrorLogs}"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
