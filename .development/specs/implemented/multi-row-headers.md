@@ -1,7 +1,7 @@
 # Multi-Row Headers
 
-**Status**: planned
-**Release**: v0.4.x
+**Status**: implemented
+**Release**: v0.5.x
 **Priority**: should-have
 **Depends on**: settings-configuration.md
 
@@ -21,19 +21,19 @@ This is the **simple** solution for the common case (80%+ of files). For complex
 
 ### Functional
 
-- [ ] Global Setting for Header Row Count
-  - [ ] Add to Settings: "Default header rows: 1 / 2 / 3 / Custom"
-  - [ ] Default value: 1 (current behavior)
-  - [ ] Apply to all newly loaded files
+- [x] Global Setting for Header Row Count
+  - [x] Add to Settings: "Default header rows: 1 / 2 / 3 / Custom"
+  - [x] Default value: 1 (current behavior)
+  - [x] Apply to all newly loaded files
 
-- [ ] Header Concatenation
-  - [ ] When HeaderRowCount > 1, concatenate header cells vertically
-  - [ ] Separator option: space (default), hyphen, or newline
-  - [ ] Handle empty cells gracefully (skip in concatenation)
+- [x] Header Concatenation
+  - [x] When HeaderRowCount > 1, concatenate header cells vertically
+  - [x] Separator option: space (default), hyphen, or newline
+  - [x] Handle empty cells gracefully (skip in concatenation)
 
-- [ ] Visual Indicator
-  - [ ] Show header row count in file details panel
-  - [ ] Display concatenated column names
+- [x] Visual Indicator
+  - [x] Show header row count in file details panel
+  - [x] Display concatenated column names
 
 ### Non-Functional
 
@@ -56,8 +56,8 @@ This is the **simple** solution for the common case (80%+ of files). For complex
 
 ## Acceptance Criteria
 
-- [ ] Setting exists in Settings panel
-- [ ] Files with 2-row headers load correctly when setting = 2
-- [ ] Concatenated headers displayed in column names
-- [ ] Search correctly skips all header rows
-- [ ] Comparison uses correct data rows
+- [x] Setting exists in Settings panel
+- [x] Files with 2-row headers load correctly when setting = 2
+- [x] Concatenated headers displayed in column names
+- [x] Search correctly skips all header rows
+- [x] Comparison uses correct data rows
