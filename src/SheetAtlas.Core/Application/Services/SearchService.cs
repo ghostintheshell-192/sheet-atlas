@@ -27,8 +27,9 @@ namespace SheetAtlas.Core.Application.Services
         /// <param name="query">The search query string</param>
         /// <param name="options">Optional search configuration (case sensitivity, regex, exact match)</param>
         /// <param name="includedColumns">Optional set of column names to include in search. If null, all columns are searched.</param>
+        /// <param name="regionName">Optional DataRegion name to restrict search bounds. If null, searches whole sheet.</param>
         /// <returns>List of search results found in the specified sheet</returns>
-        List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null, IEnumerable<string>? includedColumns = null);
+        List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null, IEnumerable<string>? includedColumns = null, string? regionName = null);
     }
 
     /// <summary>
@@ -74,12 +75,29 @@ namespace SheetAtlas.Core.Application.Services
             return results;
         }
 
-        public List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null, IEnumerable<string>? includedColumns = null)
+        public List<SearchResult> SearchInSheet(ExcelFile file, string sheetName, string query, SearchOptions? options = null, IEnumerable<string>? includedColumns = null, string? regionName = null)
         {
             List<SearchResult> results = new();
             var sheet = file.GetSheet(sheetName);
 
             if (sheet == null) return results;
+
+            // Region-aware bounds
+            int rowStart = sheet.HeaderRowCount;
+            int rowEnd = sheet.RowCount - 1;
+            int colStart = 0;
+            int colEnd = sheet.ColumnCount - 1;
+
+            if (regionName != null)
+            {
+                var region = sheet.GetDataRegion(regionName);
+                if (region == null) return results;
+
+                rowStart = region.DataStartRow;
+                rowEnd = region.DataEndRow ?? (sheet.RowCount - 1);
+                colStart = region.StartColumn ?? 0;
+                colEnd = region.EndColumn ?? (sheet.ColumnCount - 1);
+            }
 
             // Create a hashset for fast column lookup (case-insensitive)
             HashSet<string>? includedColumnsSet = null;
@@ -90,12 +108,10 @@ namespace SheetAtlas.Core.Application.Services
                 _logger.LogInfo($"SearchInSheet [{file.FileName}]: filtering by {includedColumnsSet.Count} columns (from {columnsList.Count} input)", "SearchService");
             }
 
-            // Start from HeaderRowCount to skip header rows (search only in data)
-            // This supports multi-row headers (HeaderRowCount can be 1, 2, or more)
-            for (int rowIndex = sheet.HeaderRowCount; rowIndex < sheet.RowCount; rowIndex++)
+            for (int rowIndex = rowStart; rowIndex <= rowEnd && rowIndex < sheet.RowCount; rowIndex++)
             {
                 var row = sheet.GetRow(rowIndex);
-                for (int colIndex = 0; colIndex < sheet.ColumnCount; colIndex++)
+                for (int colIndex = colStart; colIndex <= colEnd && colIndex < sheet.ColumnCount; colIndex++)
                 {
                     var columnName = sheet.ColumnNames[colIndex];
 
@@ -116,6 +132,11 @@ namespace SheetAtlas.Core.Application.Services
                         }
 
                         result.Context["CellCoordinates"] = $"R{rowIndex + 1}C{colIndex + 1}";
+
+                        if (regionName != null)
+                        {
+                            result.RegionName = regionName;
+                        }
 
                         results.Add(result);
                     }

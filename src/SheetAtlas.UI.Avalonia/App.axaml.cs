@@ -159,6 +159,7 @@ public partial class App : Application
                 services.AddSingleton<IColumnLinkingService, ColumnLinkingService>();
                 services.AddSingleton<IExceptionHandler, ExceptionHandler>();
                 services.AddSingleton<IFileLogService, FileLogService>();
+                services.AddSingleton<IDataRegionPersistenceService, DataRegionPersistenceService>();
                 services.AddSingleton<ISettingsService, SettingsService>();
 
                 // Register Avalonia-specific services

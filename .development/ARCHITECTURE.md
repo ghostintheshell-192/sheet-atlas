@@ -39,6 +39,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `ColumnAnalysisResult.cs` — Result of analyzing column characteristics. Extends ColumnMetadata record with detected information.
 - `ColumnValidationResult.cs` — Validation result for a single column. Combines expected column definition with actual column analysis.
 - `CsvReaderOptions.cs` — Configuration options for CSV file reading
+- `DataRegionFile.cs` — Root DTO for regions.json persistence. See ADR-011.
 - `ErrorSummary.cs` — Pre-calculated aggregations for UI performance
 - `ExportResult.cs` — Result of an export operation. Follows Result pattern - check IsSuccess before using output path.
 - `FileInfoDto.cs` — Information about the Excel file being logged
@@ -59,6 +60,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `IComparisonExportService.cs` — Service for exporting row comparison results to various formats. Includes metadata (search terms, files, timestamps) for context.
 - `ICurrencyDetector.cs` — Extracts currency information from Excel number format strings. Used during file load to enhance ColumnMetadata with currency awareness.
 - `IDataNormalizationService.cs` — Normalizes cell values: dates, numbers, text, booleans. Populates OriginalValue and CleanedValue in CellMetadata. Core to search accuracy (+40% improvement).
+- `IDataRegionPersistenceService.cs` — Persists DataRegion definitions to/from JSON files. Each Excel file gets its own regions.json in the DataRegions folder.
 - `IExcelWriterService.cs` — Service for exporting enriched sheet data to various formats. Uses CleanedValue from cell metadata to write typed cells.
 - `IExceptionHandler.cs` — Centralized exception handling service. Converts exceptions to user-friendly error messages and logs technical details.
 - `IFileFormatReader.cs` — Reader for specific Excel file formats
@@ -80,6 +82,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `CellReferenceParser.cs` — Implementation of ICellReferenceParser. Parses Excel cell references using regex.
 - `CellValueReader.cs` — Reads and parses cell values from Excel with type preservation. Handles shared strings, numbers, dates, booleans. Uses string interning for memory efficiency.
 - `ColumnLinkingService.cs` — Input for column linking: column info from a loaded file.
+- `DataRegionPersistenceService.cs` — Persists DataRegion definitions as JSON files. Storage: {LocalApplicationData}/SheetAtlas/DataRegions/{folder}/regions.json Follows FileLogService pattern for folder naming and atomic writes.
 - `ExcelErrorJsonConverter.cs` — Custom JSON converter for ExcelError Handles serialization of Exception property by extracting only serializable info
 - `ExceptionHandler.cs` — Centralized exception handling implementation. Converts technical exceptions to user-friendly messages and logs details.
 - `FileLogService.cs` — Manages structured logging of Excel file load attempts to JSON files Each Excel file gets its own folder with chronological JSON logs
