@@ -27,6 +27,12 @@ namespace SheetAtlas.Core.Domain.Entities
         public int Row { get; set; }
         public int Column { get; set; }
         public string Value { get; set; }
+
+        /// <summary>
+        /// Name of the DataRegion where this match was found. Null if searching whole sheet.
+        /// </summary>
+        public string? RegionName { get; set; }
+
         public Dictionary<string, string> Context { get; set; }
 
         public string FileName => SourceFile?.FileName ?? string.Empty;

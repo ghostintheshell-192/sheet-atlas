@@ -124,7 +124,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `CellAnomaly.cs` — Represents an anomaly detected in a cell during column analysis. Used by ColumnAnalysisService to report data quality issues with context.
 - `ColumnLink.cs` — Links multiple column names to a single semantic concept. Used for grouping semantically equivalent columns across files.
 - `CurrencyInfo.cs` — Immutable currency information extracted from Excel number format. Used for currency-aware comparison and normalization.
-- `DataRegion.cs` — Defines a data region within an Excel sheet. Supports both auto-detection and manual user selection (future UI).
+- `DataRegion.cs` — Defines a named rectangular data region within an Excel sheet. Used as interpretive lens for search, comparison, and normalization. Stored in SASheetData as Dictionary&lt;string, DataRegion&gt; keyed ... ⚠️
 - `DataType.cs` — Detected data type for cell or column. Used by normalization and column analysis services.
 - `DateSystem.cs` — Indicates which date serial number system the Excel workbook uses. Affects how date serial numbers are converted to DateTime values.
 - `ExcelError.cs` — Indicates the overall outcome of a file load operation.
