@@ -149,29 +149,6 @@ namespace SheetAtlas.Core.Domain.ValueObjects
                 : 1;
 
         /// <summary>
-        /// Checks if a cell at the given absolute row and column falls within this region.
-        /// Null bounds are treated as unbounded (any value is within range).
-        /// </summary>
-        public bool ContainsCell(int row, int col)
-        {
-            int effectiveStartRow = HeaderStartRow ?? DataStartRow;
-
-            if (row < effectiveStartRow)
-                return false;
-
-            if (DataEndRow.HasValue && row > DataEndRow.Value)
-                return false;
-
-            if (StartColumn.HasValue && col < StartColumn.Value)
-                return false;
-
-            if (EndColumn.HasValue && col > EndColumn.Value)
-                return false;
-
-            return true;
-        }
-
-        /// <summary>
         /// Checks if this region overlaps with another region (both row and column ranges).
         /// Two regions overlap if their row ranges AND column ranges intersect.
         /// </summary>
