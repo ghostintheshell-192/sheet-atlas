@@ -19,11 +19,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$PWD/.personal/scripts/generate-index.py\" 2>/dev/null || true"
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.personal/scripts/generate-index.py\" 2>/dev/null || true"
           },
           {
             "type": "command",
-            "command": "python3 \"$PWD/.personal/scripts/update-tech-debt-index.py\" 2>/dev/null || true"
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.personal/scripts/update-tech-debt-index.py\" 2>/dev/null || true"
           }
         ]
       }
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'cat | python3 \"$PWD/.development/scripts/session-archive.py\"'"
+            "command": "bash -c 'cat | python3 \"$(git rev-parse --show-toplevel)/.development/scripts/session-archive.py\"'"
           }
         ]
       }

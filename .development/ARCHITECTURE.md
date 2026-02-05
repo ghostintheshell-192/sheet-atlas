@@ -24,6 +24,10 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - [ADR-006: Git Workflow](reference/decisions/006-git-workflow.md)
 - [ADR-007: Unified Data Flow For Export](reference/decisions/007-unified-data-flow-for-export.md)
 - [ADR-008: Facade Pattern For Dependency Injection](reference/decisions/008-facade-pattern-for-dependency-injection.md)
+- [ADR-009: Dataregion Data Model](reference/decisions/009-dataregion-data-model.md)
+- [ADR-010: Dataregion Ui Pattern](reference/decisions/010-dataregion-ui-pattern.md)
+- [ADR-011: Dataregion Persistence](reference/decisions/011-dataregion-persistence.md)
+- [ADR-012: Dataregion Cross File Detection](reference/decisions/012-dataregion-cross-file-detection.md)
 
 ## Project Tree
 

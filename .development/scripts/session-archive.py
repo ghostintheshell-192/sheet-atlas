@@ -44,10 +44,10 @@ def main():
     destination_dir = project_root / ".memory-bank" / "sessions"
     destination_dir.mkdir(parents=True, exist_ok=True)
 
-    # Verify transcript exists
+    # Verify transcript exists (may not exist for short/empty sessions)
     if not transcript_path.exists():
-        print(f"Transcript file not found: {transcript_path}", file=sys.stderr)
-        sys.exit(1)
+        print(f"No transcript to archive (session: {short_id}, reason: {reason})")
+        sys.exit(0)
 
     # Generate filename: YYYY-MM-DD_HHmm_<short-id>.jsonl
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
