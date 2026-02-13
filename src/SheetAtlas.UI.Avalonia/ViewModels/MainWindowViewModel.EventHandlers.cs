@@ -46,6 +46,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 FileDetailsViewModel.CleanAllDataRequested -= OnCleanAllDataRequested;
                 FileDetailsViewModel.RemoveNotificationRequested -= OnRemoveNotificationRequested;
                 FileDetailsViewModel.TryAgainRequested -= OnTryAgainRequested;
+                FileDetailsViewModel.RegionAdded -= OnRegionAdded;
             }
 
             if (TemplateManagementViewModel != null)
@@ -57,6 +58,11 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 ColumnLinkingViewModel.ColumnLinks.CollectionChanged -= OnColumnLinksCollectionChanged;
             }
+
+            if (RegionsSidebarViewModel != null)
+            {
+                RegionsSidebarViewModel.RegionDeleteRequested -= OnRegionDeleteRequested;
+            }
         }
 
         private void OnFileLoaded(object? sender, FileLoadedEventArgs e)
@@ -65,6 +71,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             OnPropertyChanged(nameof(HasLoadedFiles));
             OnPropertyChanged(nameof(StatusText));
+
+            // Refresh regions sidebar (persisted regions are loaded before this event fires)
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
 
             if (LoadedFiles.Count == 1)
             {
@@ -88,6 +98,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             OnPropertyChanged(nameof(HasLoadedFiles));
             OnPropertyChanged(nameof(StatusText));
+
+            // Refresh regions sidebar (removed file's regions should disappear)
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
 
             if (!e.IsRetry && SelectedFile == e.File)
             {
@@ -257,6 +271,57 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             OnPropertyChanged(nameof(StatusText));
         }
 
+        public void SetRegionsSidebarViewModel(RegionsSidebarViewModel regionsSidebarViewModel)
+        {
+            RegionsSidebarViewModel = regionsSidebarViewModel ?? throw new ArgumentNullException(nameof(regionsSidebarViewModel));
+
+            // Connect FileDetailsViewModel region events to sidebar
+            if (FileDetailsViewModel != null)
+            {
+                FileDetailsViewModel.RegionAdded += OnRegionAdded;
+            }
+
+            // Connect delete from sidebar
+            RegionsSidebarViewModel.RegionDeleteRequested += OnRegionDeleteRequested;
+
+            // Populate from already-loaded files
+            RegionsSidebarViewModel.RefreshFromFiles(LoadedFiles);
+        }
+
+        private void OnRegionAdded(object? sender, RegionEventArgs e)
+        {
+            var fileName = Path.GetFileName(e.FilePath);
+            RegionsSidebarViewModel?.AddRegion(e.FilePath, fileName, e.SheetName, e.Region);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+        }
+
+        private void OnRegionDeleteRequested(object? sender, RegionEventArgs e)
+        {
+            // Find the file and sheet
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm?.File == null) return;
+
+            var sheet = fileVm.File.GetSheet(e.SheetName);
+            if (sheet == null) return;
+
+            // Remove from domain model
+            sheet.RemoveDataRegion(e.Region.Name);
+
+            // Remove from sidebar
+            RegionsSidebarViewModel?.RemoveRegion(e.FilePath, e.SheetName, e.Region.Name);
+
+            // Persist the change and refresh canvas
+            if (FileDetailsViewModel != null)
+            {
+                _ = FileDetailsViewModel.PersistAndRefreshRegionsAsync();
+            }
+
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo($"Region '{e.Region.Name}' deleted from sheet '{e.SheetName}'", "MainWindowViewModel");
+        }
+
         public void SetSettingsViewModel(SettingsViewModel settingsViewModel)
         {
             SettingsViewModel = settingsViewModel ?? throw new ArgumentNullException(nameof(settingsViewModel));
@@ -355,12 +420,13 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             return tabName switch
             {
-                "FileDetails" => 0,  // First TabItem in XAML
-                "Search" => 1,       // Second TabItem in XAML
-                "Comparison" => 2,   // Third TabItem in XAML
-                "Templates" => 3,    // Fourth TabItem in XAML
-                "Settings" => 4,     // Fifth TabItem in XAML
-                _ => -1              // Invalid tab name
+                "FileDetails" => 0,   // First TabItem in XAML
+                "Search" => 1,        // Second TabItem in XAML
+                "Comparison" => 2,    // Third TabItem in XAML
+                "Templates" => 3,     // Fourth TabItem in XAML
+                "DataRegions" => 4,   // Fifth TabItem in XAML
+                "Settings" => 5,      // Sixth TabItem in XAML
+                _ => -1               // Invalid tab name
             };
         }
 
@@ -376,11 +442,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Each tab type has its preferred fallback sequence
             var tabPriorities = closedTabName switch
             {
-                "FileDetails" => new[] { "Search", "Comparison", "Templates", "Settings" },
-                "Search" => new[] { "FileDetails", "Comparison", "Templates", "Settings" },
-                "Comparison" => new[] { "Search", "FileDetails", "Templates", "Settings" },
-                "Templates" => new[] { "Search", "FileDetails", "Comparison", "Settings" },
-                "Settings" => new[] { "Search", "FileDetails", "Comparison", "Templates" },
+                "FileDetails" => new[] { "Search", "Comparison", "Templates", "DataRegions", "Settings" },
+                "Search" => new[] { "FileDetails", "Comparison", "Templates", "DataRegions", "Settings" },
+                "Comparison" => new[] { "Search", "FileDetails", "Templates", "DataRegions", "Settings" },
+                "Templates" => new[] { "Search", "FileDetails", "Comparison", "DataRegions", "Settings" },
+                "DataRegions" => new[] { "FileDetails", "Search", "Comparison", "Templates", "Settings" },
+                "Settings" => new[] { "Search", "FileDetails", "Comparison", "Templates", "DataRegions" },
                 _ => Array.Empty<string>()
             };
 
@@ -392,6 +459,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                     "Search" => IsSearchTabVisible,
                     "Comparison" => IsComparisonTabVisible,
                     "Templates" => IsTemplatesTabVisible,
+                    "DataRegions" => IsDataRegionsTabVisible,
                     "Settings" => IsSettingsTabVisible,
                     _ => false
                 };

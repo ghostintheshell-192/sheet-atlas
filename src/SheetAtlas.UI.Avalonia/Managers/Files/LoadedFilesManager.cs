@@ -22,6 +22,7 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
     private readonly IDialogService _dialogService;
     private readonly ILogService _logger;
     private readonly IFileLogService _fileLogService;
+    private readonly IDataRegionPersistenceService _dataRegionPersistenceService;
 
     private readonly ObservableCollection<IFileLoadResultViewModel> _loadedFiles = new();
     private bool _disposed;
@@ -46,12 +47,14 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
         IExcelReaderService excelReaderService,
         IDialogService dialogService,
         ILogService logger,
-        IFileLogService fileLogService)
+        IFileLogService fileLogService,
+        IDataRegionPersistenceService dataRegionPersistenceService)
     {
         _excelReaderService = excelReaderService ?? throw new ArgumentNullException(nameof(excelReaderService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileLogService = fileLogService ?? throw new ArgumentNullException(nameof(fileLogService));
+        _dataRegionPersistenceService = dataRegionPersistenceService ?? throw new ArgumentNullException(nameof(dataRegionPersistenceService));
 
         LoadedFiles = new ReadOnlyObservableCollection<IFileLoadResultViewModel>(_loadedFiles);
     }
@@ -346,12 +349,53 @@ public class LoadedFilesManager : ILoadedFilesManager, IDisposable
             _loadedFiles.Add(fileViewModel);
         }
 
+        // Load persisted DataRegions for this file
+        await LoadDataRegionsAsync(excelFile);
+
         if (!skipLogSave)
         {
             await SaveFileLogAsync(excelFile);
         }
 
         FileLoaded?.Invoke(this, new FileLoadedEventArgs(fileViewModel, hasErrors));
+    }
+
+    /// <summary>
+    /// Loads persisted DataRegion definitions from disk and populates each sheet.
+    /// </summary>
+    private async Task LoadDataRegionsAsync(ExcelFile excelFile)
+    {
+        try
+        {
+            var regionFile = await _dataRegionPersistenceService.LoadAsync(excelFile.FilePath);
+            if (regionFile == null) return;
+
+            foreach (var (sheetName, sheetRegions) in regionFile.Sheets)
+            {
+                var sheet = excelFile.GetSheet(sheetName);
+                if (sheet == null) continue;
+
+                foreach (var region in sheetRegions.Regions.Values)
+                {
+                    try
+                    {
+                        sheet.AddDataRegion(region);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        _logger.LogWarning($"Skipping region '{region.Name}' on sheet '{sheetName}': {ex.Message}", "LoadedFilesManager");
+                    }
+                }
+            }
+
+            var totalRegions = regionFile.Sheets.Sum(s => s.Value.Regions.Count);
+            if (totalRegions > 0)
+                _logger.LogInfo($"Loaded {totalRegions} persisted regions for {excelFile.FileName}", "LoadedFilesManager");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning($"Failed to load regions for {excelFile.FileName}: {ex.Message}", "LoadedFilesManager");
+        }
     }
 
     /// <summary>

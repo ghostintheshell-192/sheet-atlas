@@ -1,4 +1,5 @@
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.UI.Avalonia.Models.Search;
 using SheetAtlas.UI.Avalonia.ViewModels;
 
@@ -23,6 +24,16 @@ public interface ISearchResultsManager
     /// When set, only columns returned by this function will be searched.
     /// </summary>
     void SetIncludedColumnsProvider(Func<IEnumerable<string>>? provider);
+
+    /// <summary>
+    /// Sets a DataRegion filter for search. When set, only cells within this region are searched.
+    /// </summary>
+    void SetSelectedRegion(string? filePath, string? sheetName, DataRegion? region);
+
+    /// <summary>
+    /// Clears the DataRegion filter.
+    /// </summary>
+    void ClearSelectedRegion();
 
     void RemoveResultsForFile(ExcelFile file);
 

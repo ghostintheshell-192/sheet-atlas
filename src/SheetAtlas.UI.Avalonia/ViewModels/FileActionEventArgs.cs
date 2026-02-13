@@ -1,4 +1,5 @@
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels;
 
@@ -94,5 +95,22 @@ public class ExportCompletedEventArgs : EventArgs
         Format = format;
         RowsExported = rowsExported;
         NormalizedCellCount = normalizedCellCount;
+    }
+}
+
+/// <summary>
+/// Event arguments for DataRegion creation/deletion.
+/// </summary>
+public class RegionEventArgs : EventArgs
+{
+    public string FilePath { get; }
+    public string SheetName { get; }
+    public DataRegion Region { get; }
+
+    public RegionEventArgs(string filePath, string sheetName, DataRegion region)
+    {
+        FilePath = filePath;
+        SheetName = sheetName;
+        Region = region;
     }
 }

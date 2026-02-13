@@ -27,6 +27,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isComparisonTabVisible;
     private bool _isTemplatesTabVisible;
     private bool _isSettingsTabVisible;
+    private bool _isDataRegionsTabVisible;
     private bool _isStatusBarVisible = true;
     private bool _disposed = false;
 
@@ -45,6 +46,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public TreeSearchResultsViewModel? TreeSearchResultsViewModel { get; private set; }
     public TemplateManagementViewModel? TemplateManagementViewModel { get; private set; }
     public ColumnLinkingViewModel? ColumnLinkingViewModel { get; private set; }
+    public RegionsSidebarViewModel? RegionsSidebarViewModel { get; private set; }
     public SettingsViewModel? SettingsViewModel { get; private set; }
 
     public IFileLoadResultViewModel? SelectedFile
@@ -154,7 +156,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible;
+    public bool IsDataRegionsTabVisible
+    {
+        get => _isDataRegionsTabVisible;
+        set
+        {
+            if (SetField(ref _isDataRegionsTabVisible, value))
+            {
+                OnPropertyChanged(nameof(HasAnyTabVisible));
+            }
+        }
+    }
+
+    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible || IsDataRegionsTabVisible;
 
     public bool IsStatusBarVisible
     {
@@ -167,6 +181,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     /// Used for badge display on Columns sidebar icon.
     /// </summary>
     public int ColumnCount => ColumnLinkingViewModel?.ColumnLinks.Count ?? 0;
+
+    /// <summary>
+    /// True when at least one file has multiple regions, showing the info message in Search tab.
+    /// </summary>
+    public bool HasMultipleRegionsMessage =>
+        RegionsSidebarViewModel != null &&
+        RegionsSidebarViewModel.TotalRegionCount > 0;
 
     /// <summary>
     /// Status text shown in the status bar.
@@ -235,6 +256,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             TreeSearchResultsViewModel?.Dispose();
             TemplateManagementViewModel?.Dispose();
             ColumnLinkingViewModel?.Dispose();
+            RegionsSidebarViewModel?.Dispose();
         }
     }
 }

@@ -1,0 +1,165 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
+             xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="SheetAtlas.UI.Avalonia.Views.DataRegionsView"
+             x:DataType="vm:FileDetailsViewModel">
+
+    <Design.DataContext>
+        <vm:FileDetailsViewModel/>
+    </Design.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Sheet Selector -->
+            <RowDefinition Height="*"/>     <!-- Sheet Grid Canvas -->
+        </Grid.RowDefinitions>
+
+        <!-- SHEET SELECTOR -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SecondaryBackground}"
+                BorderBrush="{DynamicResource SubtleBorder}"
+                BorderThickness="0,0,0,1"
+                Padding="8,6"
+                IsVisible="{Binding HasSelectedFile}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="SHEET"
+                           FontWeight="SemiBold"
+                           FontSize="11"
+                           Foreground="{DynamicResource SecondaryText}"
+                           VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding SheetNames}"
+                          SelectedItem="{Binding SelectedSheetName}"
+                          MinWidth="160"
+                          FontSize="11"/>
+            </StackPanel>
+        </Border>
+
+        <!-- SHEET GRID CANVAS + REGIONS -->
+        <Grid Grid.Row="1"
+              IsVisible="{Binding HasSheetData}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>     <!-- Canvas -->
+                <RowDefinition Height="Auto"/>  <!-- Region Chips -->
+                <RowDefinition Height="Auto"/>  <!-- Action Panel -->
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Background="{DynamicResource MainBackground}"
+                    BorderBrush="{DynamicResource SubtleBorder}"
+                    BorderThickness="0,0,0,1">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                    <controls:SheetGridCanvas SheetData="{Binding CurrentSheetData}"
+                                              Regions="{Binding CurrentRegions}"
+                                              SelectionRegion="{Binding CanvasSelectedRegion}"
+                                              ActiveRegion="{Binding ActiveRegion}"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Region Chips (always visible when regions exist) -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource SecondaryBackground}"
+                    BorderBrush="{DynamicResource SubtleBorder}"
+                    BorderThickness="0,1,0,0"
+                    Padding="8,4"
+                    IsVisible="{Binding HasRegions}">
+                <ItemsControl ItemsSource="{Binding RegionNames}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Button Content="{Binding}"
+                                    Command="{Binding DataContext.ActivateRegionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    FontSize="10"
+                                    FontWeight="SemiBold"
+                                    Padding="8,3"
+                                    Margin="0,0,4,0"
+                                    CornerRadius="3"
+                                    Background="{DynamicResource TertiaryBackground}"
+                                    Foreground="{DynamicResource PrimaryText}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <!-- Region Creation Panel (visible during drag selection) -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource SecondaryBackground}"
+                    BorderBrush="{DynamicResource SubtleBorder}"
+                    BorderThickness="0,1,0,1"
+                    Padding="8,6"
+                    IsVisible="{Binding HasCanvasSelection}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding SelectionBoundsText}"
+                               FontSize="11"
+                               Foreground="{DynamicResource SecondaryText}"
+                               VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding NewRegionName}"
+                             Watermark="Region name"
+                             MinWidth="140"
+                             FontSize="11"
+                             VerticalAlignment="Center"/>
+                    <Button Content="Create Region"
+                            Classes="ModernButton"
+                            Command="{Binding CreateRegionCommand}"
+                            FontSize="11"/>
+                    <Button Content="Cancel"
+                            Classes="SecondaryButton"
+                            Command="{Binding ClearSelectionCommand}"
+                            FontSize="11"/>
+                    <TextBlock Text="{Binding RegionErrorMessage}"
+                               FontSize="11"
+                               Foreground="OrangeRed"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding HasRegionError}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Active Region Panel (visible when a region chip is clicked) -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource SecondaryBackground}"
+                    BorderBrush="{DynamicResource SubtleBorder}"
+                    BorderThickness="0,1,0,1"
+                    Padding="8,6"
+                    IsVisible="{Binding HasActiveRegion}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding ActiveRegionInfoText}"
+                               FontSize="11"
+                               Foreground="{DynamicResource PrimaryText}"
+                               VerticalAlignment="Center"/>
+                    <Button Content="Edit"
+                            Classes="SecondaryButton"
+                            FontSize="11"
+                            IsEnabled="False"
+                            ToolTip.Tip="Rename region (coming soon)"/>
+                    <Button Content="Delete"
+                            Classes="SecondaryButton"
+                            Command="{Binding DeleteActiveRegionCommand}"
+                            FontSize="11"/>
+                    <Button Content="Deselect"
+                            Classes="SecondaryButton"
+                            Command="{Binding ClearActiveRegionCommand}"
+                            FontSize="11"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Empty State (no file selected) -->
+        <TextBlock Text="Select a file from the list to view data regions"
+                  Grid.RowSpan="2"
+                  FontStyle="Italic"
+                  Foreground="{DynamicResource SecondaryText}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Margin="0,40,0,0"
+                  IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNull}}"/>
+    </Grid>
+</UserControl>
