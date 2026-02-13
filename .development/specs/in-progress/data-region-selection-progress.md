@@ -22,210 +22,95 @@ All architectural decisions are documented in ADRs:
 | Topic | Decision | Phase |
 | ----- | -------- | ----- |
 | Search behavior | Search in regions selected via Sidebar; explicit, no defaults | 2 |
-| Normalization storage | `RegionId` field in CellMetadata | 2 |
-| Template scope | Single region (Phase 2) → multiple regions (Phase 3) | 2-3 |
-| Export behavior | File export: whole sheet with per-region normalization. Search/comparison export: unchanged | 2 |
-| Merged cells | Prevent partial selection (snap-to-bounds, like Excel) | 2 |
-| Column indexing | Absolute + `RegionName` context in SearchResult | 2 |
-| Region propagation | Detect similar files, explicit user action to apply. See ADR-012 for detection algorithm | 2 |
-| Similarity detection | Simplified for Phase 2 (column count + header names only). Full system (type detection, weighting, background analysis) in Phase 3 | 2-3 |
-| Cross-file bounds | Header-anchored detection (not fixed bounds). Phase 2: stop at empty row. Phase 3: type-based window analysis. User confirms via preview | 2-3 |
+| Normalization storage | `RegionId` field in CellMetadata | 1 |
+| Template scope | Single region → multiple regions (Phase 3+) | future |
+| Export behavior | File export: whole sheet with per-region normalization. Search/comparison export: unchanged | future |
+| Merged cells | Prevent partial selection (snap-to-bounds, like Excel) | future |
+| Column indexing | Absolute + `RegionName` context in SearchResult | 1 |
+| Region propagation | Detect similar files, explicit user action to apply. See ADR-012 for detection algorithm | future |
+| Similarity detection | Simplified (column count + header names only). Full system in Phase 3+ | future |
+| Cross-file bounds | Header-anchored detection (not fixed bounds). User confirms via preview | future |
 | Auto-detection (within file) | Excluded. User defines regions manually via canvas | - |
-| Template mismatch | Error (not intersection) | 2 |
+| Template mismatch | Error (not intersection) | future |
 | Default region name | Sheet name (covers entire sheet) | 1 |
+| ContainsCell | Removed per YAGNI. If needed later: point-in-rectangle O(1) on DataRegion | - |
 
 ---
 
-## Impact Analysis
+## Impact Analysis — What Was Actually Done
 
-### Core Domain
+### Phase 1: Core Domain (complete)
 
-#### DataRegion.cs (ValueObject)
+| File | Changes |
+| ---- | ------- |
+| `DataRegion.cs` | `Name` (required), `StartColumn`/`EndColumn`, `IsValid()`, `OverlapsWith()`, `WholeSheet()`, `Manual()`, `FromDataRange()`, `AutoDetect()`, `HeaderRowCount` |
+| `SASheetData.cs` | `_dataRegions` + `_regionColumnMetadata` dictionaries, CRUD (`Add`/`Remove`/`Get`), `EnumerateDataRows(region)`, per-region `Get`/`SetColumnMetadata(regionName, ...)` |
+| `SACellData.cs` | `CellMetadata.RegionId` field |
+| `SearchResult.cs` | `RegionName` property |
 
-- Add `string Name` (required, used as Dictionary key)
-- Add `int? StartColumn`, `int? EndColumn`
-- Update `IsValid()` to validate column bounds
-- Add `bool ContainsCell(int row, int col)` helper
-- Add `bool OverlapsWith(DataRegion other)` for validation
-- Add `static DataRegion WholeSheet(string name, int rowCount, int colCount)` factory
+**Note**: `ContainsCell` was implemented then removed per YAGNI.
 
-#### SASheetData.cs (Entity)
+### Phase 2: Service Integration + Persistence (complete)
 
-- Add `Dictionary<string, DataRegion>? _dataRegions`
-- Add `Dictionary<string, Dictionary<int, ColumnMetadata>>? _regionColumnMetadata`
-- Add region CRUD: `AddDataRegion()`, `RemoveDataRegion()`, `GetDataRegion()`
-- Add `IReadOnlyDictionary<string, DataRegion> DataRegions` property
-- Add `IEnumerable<RowView> EnumerateDataRows(DataRegion region)` (filtered iterator)
-- Add `ColumnMetadata? GetColumnMetadata(string regionName, int columnIndex)`
-- Add `void SetColumnMetadata(string regionName, int columnIndex, ColumnMetadata metadata)`
-- Initialize with default region (sheet name = whole sheet) when no user regions defined
+| File | Changes |
+| ---- | ------- |
+| `ISheetAnalysisOrchestrator.cs` | Added `EnrichRegionAsync(SASheetData, DataRegion, List<ExcelError>)` |
+| `SheetAnalysisOrchestrator.cs` | `EnrichRegionAsync` + private `EnrichRegionWithColumnAnalysis` (mirrors global but respects region bounds, sets RegionId) |
+| `SearchService.cs` | `SearchInSheet` gained `string? regionName` parameter. When set: row/col iteration bounded by region, `RegionName` set on results. When null: unchanged behavior |
+| `DataRegionFile.cs` (NEW) | Persistence DTOs: `DataRegionFile` (root), `SheetRegionsDto` (per-sheet) |
+| `IDataRegionPersistenceService.cs` (NEW) | Interface: `SaveAsync`, `LoadAsync`, `DeleteAsync` |
+| `DataRegionPersistenceService.cs` (NEW) | JSON persistence in `{LocalAppData}/SheetAtlas/DataRegions/`. Atomic write, graceful errors. Uses `FilePathHelper.GenerateLogFolderName` |
+| `AppJsonContext.cs` | Registered `DataRegion`, `DataRegionFile`, `SheetRegionsDto`, related dictionaries |
+| `App.axaml.cs` | DI: `IDataRegionPersistenceService` → `DataRegionPersistenceService` |
 
-#### CellMetadata (in SACellData.cs)
+**What was NOT done (deferred per plan):**
+- RowComparisonService — no consumer yet
+- SimilarityComparisonService — deferred to cross-file detection phase
+- Template system changes — deferred
+- Export changes — deferred
+- File reader changes — regions NOT auto-loaded on file open yet
 
-- Add `string? RegionId` (name of DataRegion that normalized this cell)
+### Tests added in Phase 2
 
-#### SearchResult.cs
+| File | Tests |
+| ---- | ----- |
+| `SheetAnalysisOrchestratorRegionTests.cs` (NEW) | 5 tests: region bounds, per-region metadata, RegionId on cells, column bounds, null throws |
+| `SearchServiceRegionTests.cs` (NEW) | 5 tests: region bounds, RegionName on results, nonexistent region, whole-sheet fallback, column filter |
+| `DataRegionPersistenceServiceTests.cs` (NEW) | 6 tests: save, load, no-file, corrupted, delete, round-trip |
+| `AppJsonContextTests.cs` (extended) | 2 tests: DataRegion serialization, DataRegionFile serialization |
 
-- Add `string? RegionName` (region where match was found)
-
-### Core Services
-
-#### SearchService.cs
-
-- Add `IEnumerable<DataRegion>? regions` parameter to `SearchInSheet()`
-- Filter cells by `region.ContainsCell(row, col)`
-- Set `SearchResult.RegionName` when creating results
-- If no regions specified → search whole sheet (backward compatible)
-
-#### RowComparisonService.cs
-
-- Add `DataRegion? region` parameter to `CreateRowComparison()`
-- Extract only columns within region bounds
-- RowComparison.ColumnHeaders include only region columns
-
-#### SheetAnalysisOrchestrator.cs
-
-- Becomes **reactive**: re-analyzes when user selects a new region
-- Add `AnalyzeRegionAsync(SASheetData sheet, DataRegion region, CancellationToken ct)`
-- Call ColumnAnalysisService only on columns within region
-- Store ColumnMetadata per-region (via `SASheetData.SetColumnMetadata(regionName, ...)`)
-
-#### SimilarityComparisonService.cs (NEW - Phase 2 simplified)
-
-- Phase 2: compare column count + header names (case-insensitive)
-- Synchronous, triggered by explicit user action ("Find Similar Files")
-- Returns match/no-match per file
-
-### Template System
-
-#### ExcelTemplate.cs
-
-- Phase 2: Add `DataRegion? TargetRegion` (template validates this region)
-- Phase 3: Evolve to `List<TemplateRegion> Regions` (template = full file schema)
-
-#### TemplateValidationService.cs
-
-- Validate region bounds against file structure
-- If template has region but file doesn't → error
-- If template region bounds don't match file → error (not intersection)
-
-### Infrastructure
-
-#### File Readers (OpenXmlFileReader, CsvFileReader)
-
-- **No changes needed**: read entire sheet, DataRegion applied after loading
-
-#### ExcelWriterService.cs
-
-- Export whole sheet, normalization applied per-region
-- Use `CellMetadata.RegionId` to determine which region normalized each cell
-- Cells outside any region: copied unchanged
-
-#### ComparisonExportService.cs
-
-- **No changes needed**: exports comparison results, not raw files
-
-### UI Layer
-
-#### RegionsSidebarView (NEW)
-
-- Third sidebar alongside Files and Columns
-- Per-file grouping (no automatic name-based merging)
-- Checkboxes for region selection (multi-select)
-- Region info: name, bounds, row/column count
-
-#### RegionSelectionCanvas (NEW)
-
-- Sheet grid preview in FileDetailsView
-- Click-and-drag selection
-- Snap-to-merged-cells
-- Visual highlight of selected region, dimmed area outside
-- Coordinates display
-
-#### FileDetailsViewModel
-
-- Add `ObservableCollection<DataRegion> DataRegions`
-- Add commands: `AddRegionCommand`, `RemoveRegionCommand`
-- Display region info (name, bounds, size)
-
-#### SearchViewModel
-
-- Use `SelectedRegions` from RegionsSidebarViewModel
-- Display "Searched in: [Region Name]" in results
-
-#### TemplateManagementViewModel
-
-- When creating template: include current DataRegion
-- Validation: warn if template region doesn't match file
+**Total**: 557 tests, all passing.
 
 ---
 
-## Implementation Phases
+## Implementation Phases (revised)
 
-### Phase 1: Core Domain (No UI)
+### Phase 1: Core Domain — COMPLETE
 
-**Goal**: DataRegion supports columns, SASheetData supports Dictionary of regions
+Commits: `c9ec7a0`, `1845a1a`
 
-1. Extend DataRegion ValueObject (Name required, StartColumn, EndColumn, validation, helpers)
-2. Extend SASheetData Entity (Dictionary storage, per-region ColumnMetadata, CRUD, filtered iterators)
-3. Add RegionId to CellMetadata
-4. Unit tests (validation, overlaps, filtered iteration, region CRUD)
+### Phase 2: Service Integration + Persistence — COMPLETE
 
-**Deliverable**: Core domain ready and tested, no UI
+Commit: `1e24df5`
 
-### Phase 2: Services Integration
+### Phase 3: UI (next)
 
-**Goal**: Search and Compare respect DataRegions
+**Goal**: Region management UI — define, view, delete regions
 
-1. Modify SearchService (region parameter, filter by bounds, RegionName in results)
-2. Modify RowComparisonService (extract only columns within region)
-3. Modify SheetAnalysisOrchestrator (per-region analysis, reactive re-analysis)
-4. Add RegionName to SearchResult
-5. Integration tests
+Scope to be planned. Reference mockups: `data-region-selection-mockups.md`
 
-**Deliverable**: Search/Compare/Analysis respect regions
+Key components:
+1. Region definition UX (how user defines a region — canvas or form-based)
+2. Regions display in FileDetailsView
+3. Search integration (use selected region)
+4. Persistence hooks (save/load on file open/close)
 
-### Phase 3: Template Integration
+### Future Phases (not yet planned in detail)
 
-**Goal**: Templates save/load DataRegions
-
-1. Extend ExcelTemplate (TargetRegion)
-2. Modify TemplateValidationService (region bounds validation)
-3. Modify TemplateRepository (save/load with regions)
-
-**Deliverable**: Template system region-aware
-
-### Phase 4: Export Integration
-
-**Goal**: Export respects DataRegions
-
-1. Modify ExcelWriterService (per-region normalization via RegionId)
-2. Verify ComparisonExportService unchanged
-
-**Deliverable**: Export region-aware
-
-### Phase 5: UI
-
-**Goal**: Full UI with canvas and Regions Sidebar
-
-1. RegionsSidebarView (per-file grouping, checkboxes, region info)
-2. RegionSelectionCanvas (grid preview, click-and-drag, snap-to-merged-cells)
-3. FileDetailsViewModel updates (region display and management)
-4. SearchViewModel updates (use SelectedRegions from sidebar)
-5. Similarity detection UI (simplified: "Find Similar Files" button, file list with match indicator)
-
-**Deliverable**: Complete UI for DataRegion management
-
-### Phase 6: Persistence
-
-**Goal**: DataRegions persist across sessions
-
-1. Implement DataRegionPersistenceService (JSON read/write per ADR-011)
-2. Load regions on file open
-3. Save regions on user action (define/modify/delete)
-4. Handle missing/corrupted regions.json gracefully
-
-**Deliverable**: DataRegions persist to disk
+- Template integration (ExcelTemplate + TargetRegion)
+- Export integration (per-region normalization via RegionId)
+- Cross-file detection (ADR-012, similarity service)
+- Multiple regions per sheet
 
 ---
 
@@ -234,28 +119,11 @@ All architectural decisions are documented in ADRs:
 | Risk | Impact | Mitigation |
 | ---- | ------ | ---------- |
 | Performance (per-region iteration) | Medium | Filtered iterators (yield, no allocations). Benchmark with 10k+ rows |
-| Complexity explosion (multiple regions) | High | Phase 2 = single region UX. Default = whole sheet. Advanced users opt-in in Phase 3 |
+| Complexity explosion (multiple regions) | High | Start with single region UX. Default = whole sheet. Advanced users opt-in later |
 | Template compatibility (old templates) | Medium | Template without region = whole sheet. Validation warns, doesn't fail |
 | Export data loss | High | Default = export whole sheet. Normalization per-region via RegionId |
 
 ---
 
-## Next Steps
-
-### Before Phase 1
-
-1. **Verify existing code** (confirm no blockers):
-   - [ ] SASheetData.cs - current cell storage and ColumnMetadata
-   - [ ] SheetAnalysisOrchestrator.cs - current analysis flow
-   - [ ] SearchService.cs - current search logic
-   - [ ] ExcelWriterService.cs - current export logic
-   - [ ] TemplateValidationService.cs - current validation
-
-2. **Create implementation task list**:
-   - [ ] Break down Phase 1 into atomic tasks
-   - [ ] Define acceptance criteria per task
-
----
-
 *Document created: 2026-02-03*
-*Last updated: 2026-02-05 (cleaned up: decisions moved to ADRs)*
+*Last updated: 2026-02-05 (Phase 1+2 complete, impact analysis aligned with implementation)*
