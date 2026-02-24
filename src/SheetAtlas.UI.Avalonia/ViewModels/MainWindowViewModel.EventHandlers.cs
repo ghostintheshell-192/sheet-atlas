@@ -34,10 +34,15 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             _comparisonCoordinator.ComparisonRemoved -= OnComparisonRemoved;
             _comparisonCoordinator.PropertyChanged -= OnComparisonCoordinatorPropertyChanged;
 
-            if (SearchViewModel != null && _searchViewModelPropertyChangedHandler != null)
+            if (SearchViewModel != null)
             {
-                SearchViewModel.PropertyChanged -= _searchViewModelPropertyChangedHandler;
-                _searchViewModelPropertyChangedHandler = null;
+                SearchViewModel.RegionFilterCleared -= OnRegionFilterCleared;
+
+                if (_searchViewModelPropertyChangedHandler != null)
+                {
+                    SearchViewModel.PropertyChanged -= _searchViewModelPropertyChangedHandler;
+                    _searchViewModelPropertyChangedHandler = null;
+                }
             }
 
             if (FileDetailsViewModel != null)
@@ -47,6 +52,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 FileDetailsViewModel.RemoveNotificationRequested -= OnRemoveNotificationRequested;
                 FileDetailsViewModel.TryAgainRequested -= OnTryAgainRequested;
                 FileDetailsViewModel.RegionAdded -= OnRegionAdded;
+                FileDetailsViewModel.RegionDeleted -= OnRegionDeleted;
             }
 
             if (TemplateManagementViewModel != null)
@@ -62,6 +68,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             if (RegionsSidebarViewModel != null)
             {
                 RegionsSidebarViewModel.RegionDeleteRequested -= OnRegionDeleteRequested;
+                RegionsSidebarViewModel.PropertyChanged -= OnRegionsSidebarPropertyChanged;
             }
         }
 
@@ -168,6 +175,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Connect column filter to search (in case ColumnLinkingViewModel was set first)
             ConnectColumnFilterToSearch();
 
+            SearchViewModel.RegionFilterCleared += OnRegionFilterCleared;
+
             if (SearchViewModel != null)
             {
                 _searchViewModelPropertyChangedHandler = (s, e) =>
@@ -198,6 +207,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             FileDetailsViewModel.CleanAllDataRequested += OnCleanAllDataRequested;
             FileDetailsViewModel.RemoveNotificationRequested += OnRemoveNotificationRequested;
             FileDetailsViewModel.TryAgainRequested += OnTryAgainRequested;
+            FileDetailsViewModel.RegionDeleted += OnRegionDeleted;
 
             // Connect semantic name provider (in case ColumnLinkingViewModel was set first)
             ConnectSemanticNameProvider();
@@ -284,8 +294,54 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Connect delete from sidebar
             RegionsSidebarViewModel.RegionDeleteRequested += OnRegionDeleteRequested;
 
+            // Connect region selection to search filtering
+            RegionsSidebarViewModel.PropertyChanged += OnRegionsSidebarPropertyChanged;
+
             // Populate from already-loaded files
             RegionsSidebarViewModel.RefreshFromFiles(LoadedFiles);
+        }
+
+        private void OnRegionsSidebarPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(RegionsSidebarViewModel.SelectedRegion)) return;
+            if (SearchViewModel == null || RegionsSidebarViewModel == null) return;
+
+            var selected = RegionsSidebarViewModel.SelectedRegion;
+            if (selected != null)
+            {
+                SearchViewModel.SetSelectedRegion(selected.FilePath, selected.SheetName, selected.Region);
+                _logger.LogInfo($"Region filter set: '{selected.Name}' on sheet '{selected.SheetName}'", "MainWindowViewModel");
+            }
+            else
+            {
+                SearchViewModel.ClearSelectedRegion();
+                _logger.LogInfo("Region filter cleared", "MainWindowViewModel");
+            }
+
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+        }
+
+        private void OnRegionFilterCleared(object? sender, EventArgs e)
+        {
+            if (RegionsSidebarViewModel != null)
+                RegionsSidebarViewModel.SelectedRegion = null;
+
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+        }
+
+        private void OnRegionDeleted(object? sender, RegionEventArgs e)
+        {
+            RegionsSidebarViewModel?.RemoveRegion(e.FilePath, e.SheetName, e.Region.Name);
+            ClearSearchFilterIfNeeded(e.Region.Name);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo($"Region '{e.Region.Name}' deleted from canvas, sidebar synced", "MainWindowViewModel");
+        }
+
+        private void ClearSearchFilterIfNeeded(string regionName)
+        {
+            if (SearchViewModel?.ActiveRegionName == regionName)
+                SearchViewModel.ClearSelectedRegion();
         }
 
         private void OnRegionAdded(object? sender, RegionEventArgs e)
@@ -311,12 +367,17 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Remove from sidebar
             RegionsSidebarViewModel?.RemoveRegion(e.FilePath, e.SheetName, e.Region.Name);
 
+            // Clear active region in canvas if it was the deleted one
+            if (FileDetailsViewModel?.ActiveRegion?.Name == e.Region.Name)
+                FileDetailsViewModel.ActiveRegion = null;
+
             // Persist the change and refresh canvas
             if (FileDetailsViewModel != null)
             {
                 _ = FileDetailsViewModel.PersistAndRefreshRegionsAsync();
             }
 
+            ClearSearchFilterIfNeeded(e.Region.Name);
             OnPropertyChanged(nameof(HasMultipleRegionsMessage));
 
             _logger.LogInfo($"Region '{e.Region.Name}' deleted from sheet '{e.SheetName}'", "MainWindowViewModel");

@@ -5,6 +5,7 @@ This project uses Claude Code's official `.claude/rules/` pattern. All `.md` fil
 ## Project Rules
 
 The following rules are automatically loaded from `.claude/rules/`:
+
 - **overview.md** - Project overview, development methodology, and tech stack
 - **coding-standards.md** - Coding standards and conventions
 - **principles.md** - General development principles

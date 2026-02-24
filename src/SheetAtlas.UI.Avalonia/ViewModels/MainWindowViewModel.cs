@@ -183,11 +183,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public int ColumnCount => ColumnLinkingViewModel?.ColumnLinks.Count ?? 0;
 
     /// <summary>
-    /// True when at least one file has multiple regions, showing the info message in Search tab.
+    /// True when regions exist but none is selected — shows hint to select one.
     /// </summary>
     public bool HasMultipleRegionsMessage =>
         RegionsSidebarViewModel != null &&
-        RegionsSidebarViewModel.TotalRegionCount > 0;
+        RegionsSidebarViewModel.TotalRegionCount > 0 &&
+        SearchViewModel?.IsRegionFilterActive != true;
 
     /// <summary>
     /// Status text shown in the status bar.

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.UI.Avalonia.Managers.Search;
 using SheetAtlas.UI.Avalonia.Managers.Selection;
 using SheetAtlas.UI.Avalonia.Models.Search;
@@ -22,6 +23,8 @@ public class SearchViewModel : ViewModelBase, IDisposable
     private bool _useRegexSearch;
     private bool _isDropDownOpen;
     private ObservableCollection<string> _searchSuggestions = new();
+    private string? _activeRegionName;
+    private string? _activeRegionSheetName;
     private bool _disposed;
 
     public string SearchQuery
@@ -71,6 +74,33 @@ public class SearchViewModel : ViewModelBase, IDisposable
         private set => SetField(ref _searchSuggestions, value);
     }
 
+    public string? ActiveRegionName
+    {
+        get => _activeRegionName;
+        private set
+        {
+            if (SetField(ref _activeRegionName, value))
+                OnPropertyChanged(nameof(IsRegionFilterActive));
+        }
+    }
+
+    public string? ActiveRegionSheetName
+    {
+        get => _activeRegionSheetName;
+        private set => SetField(ref _activeRegionSheetName, value);
+    }
+
+    public bool IsRegionFilterActive => ActiveRegionName != null;
+
+    public string ActiveRegionDisplayText =>
+        ActiveRegionName != null
+            ? $"Searching in: \"{ActiveRegionName}\" ({ActiveRegionSheetName})"
+            : string.Empty;
+
+    public ICommand ClearRegionFilterCommand { get; }
+
+    public event EventHandler? RegionFilterCleared;
+
     // Properties exposed for UI binding (delegating to managers)
     public IReadOnlyList<SearchResult> SearchResults => _searchResultsManager.Results;
     public IReadOnlyList<IGroupedSearchResult> GroupedResults => _searchResultsManager.GroupedResults;
@@ -107,6 +137,11 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
         SearchCommand = new RelayCommand(async () => await PerformSearchAsync(SearchQuery), () => !string.IsNullOrWhiteSpace(SearchQuery));
         ClearSearchCommand = new RelayCommand(() => Task.Run(ClearSearch));
+        ClearRegionFilterCommand = new RelayCommand(() =>
+        {
+            ClearSelectedRegion();
+            return Task.CompletedTask;
+        });
         ShowAllFilesCommand = new RelayCommand(() => Task.Run(() => _selectionManager.ShowAllFiles()));
 
         ToggleCellSelectionCommand = new RelayCommand<ICellOccurrence>(
@@ -159,6 +194,23 @@ public class SearchViewModel : ViewModelBase, IDisposable
     public void SetIncludedColumnsProvider(Func<IEnumerable<string>>? provider)
     {
         _searchResultsManager.SetIncludedColumnsProvider(provider);
+    }
+
+    public void SetSelectedRegion(string filePath, string sheetName, DataRegion region)
+    {
+        _searchResultsManager.SetSelectedRegion(filePath, sheetName, region);
+        ActiveRegionName = region.Name;
+        ActiveRegionSheetName = sheetName;
+        OnPropertyChanged(nameof(ActiveRegionDisplayText));
+    }
+
+    public void ClearSelectedRegion()
+    {
+        _searchResultsManager.ClearSelectedRegion();
+        ActiveRegionName = null;
+        ActiveRegionSheetName = null;
+        OnPropertyChanged(nameof(ActiveRegionDisplayText));
+        RegionFilterCleared?.Invoke(this, EventArgs.Empty);
     }
 
     public void RemoveResultsForFile(ExcelFile file)

@@ -105,11 +105,12 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         get => _currentRegions;
         private set
         {
-            if (SetField(ref _currentRegions, value))
-            {
-                OnPropertyChanged(nameof(RegionNames));
-                OnPropertyChanged(nameof(HasRegions));
-            }
+            // Always notify: SASheetData.DataRegions returns the same dictionary reference
+            // even after Add/Remove, so reference equality check would skip updates.
+            _currentRegions = value;
+            OnPropertyChanged(nameof(CurrentRegions));
+            OnPropertyChanged(nameof(RegionNames));
+            OnPropertyChanged(nameof(HasRegions));
         }
     }
 

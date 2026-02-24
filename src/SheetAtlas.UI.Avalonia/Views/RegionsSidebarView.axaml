@@ -41,7 +41,8 @@
                   BorderBrush="{DynamicResource BorderColor}"
                   BorderThickness="1"
                   CornerRadius="4"
-                  ItemsSource="{Binding FileGroups}">
+                  ItemsSource="{Binding FileGroups}"
+                  SelectionChanged="OnTreeViewSelectionChanged">
 
             <TreeView.DataTemplates>
                 <!-- File Level -->
