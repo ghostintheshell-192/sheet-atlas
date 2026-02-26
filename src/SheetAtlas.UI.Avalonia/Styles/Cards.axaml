@@ -1,0 +1,77 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Sidebar card: standard grouped item card used in Columns and Regions sidebars -->
+    <Style Selector="Border.SidebarCard">
+        <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                <ThicknessTransition Property="BorderThickness" Duration="0:0:0.15"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!-- Sidebar card: selected state (orange accent border) -->
+    <Style Selector="Border.SidebarCard.selected">
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentOrange}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <!-- Sidebar card: highlighted state (same visual, different semantic class) -->
+    <Style Selector="Border.SidebarCard.highlighted">
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentOrange}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <!-- Count badge: small rounded pill showing a number -->
+    <Style Selector="Border.CountBadge">
+        <Setter Property="Background" Value="{DynamicResource InfoBackground}"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="6,2"/>
+    </Style>
+
+    <Style Selector="Border.CountBadge > TextBlock">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource InfoColor}"/>
+    </Style>
+
+    <!-- Warning badge: small rounded pill with warning icon -->
+    <Style Selector="Border.WarningBadge">
+        <Setter Property="Background" Value="#FFF3CD"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="4,2"/>
+    </Style>
+
+    <Style Selector="Border.WarningBadge > TextBlock">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="Foreground" Value="#856404"/>
+    </Style>
+
+    <!-- Expand/collapse arrow panel -->
+    <Style Selector="Panel.ExpandCollapseArrow">
+        <Setter Property="Margin" Value="0,0,6,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Panel.ExpandCollapseArrow > TextBlock">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryText}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Tree connector text (├─) -->
+    <Style Selector="TextBlock.TreeConnector">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Foreground" Value="{DynamicResource DisabledText}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,0,4,0"/>
+    </Style>
+
+</Styles>

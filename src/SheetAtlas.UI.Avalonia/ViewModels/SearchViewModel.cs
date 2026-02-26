@@ -25,6 +25,8 @@ public class SearchViewModel : ViewModelBase, IDisposable
     private ObservableCollection<string> _searchSuggestions = new();
     private string? _activeRegionName;
     private string? _activeRegionSheetName;
+    private bool _isCrossFileFilter;
+    private int _crossFileCount;
     private bool _disposed;
 
     public string SearchQuery
@@ -94,7 +96,9 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     public string ActiveRegionDisplayText =>
         ActiveRegionName != null
-            ? $"Searching in: \"{ActiveRegionName}\" ({ActiveRegionSheetName})"
+            ? _isCrossFileFilter
+                ? $"Searching in: \"{ActiveRegionName}\" across {_crossFileCount} files"
+                : $"Searching in: \"{ActiveRegionName}\" ({ActiveRegionSheetName})"
             : string.Empty;
 
     public ICommand ClearRegionFilterCommand { get; }
@@ -201,6 +205,18 @@ public class SearchViewModel : ViewModelBase, IDisposable
         _searchResultsManager.SetSelectedRegion(filePath, sheetName, region);
         ActiveRegionName = region.Name;
         ActiveRegionSheetName = sheetName;
+        _isCrossFileFilter = false;
+        _crossFileCount = 0;
+        OnPropertyChanged(nameof(ActiveRegionDisplayText));
+    }
+
+    public void SetCrossFileRegionFilter(string regionName, IReadOnlyList<RegionFilterEntry> regions)
+    {
+        _searchResultsManager.SetCrossFileRegionFilter(regionName, regions);
+        ActiveRegionName = regionName;
+        ActiveRegionSheetName = null;
+        _isCrossFileFilter = true;
+        _crossFileCount = regions.Select(r => r.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         OnPropertyChanged(nameof(ActiveRegionDisplayText));
     }
 
@@ -209,6 +225,8 @@ public class SearchViewModel : ViewModelBase, IDisposable
         _searchResultsManager.ClearSelectedRegion();
         ActiveRegionName = null;
         ActiveRegionSheetName = null;
+        _isCrossFileFilter = false;
+        _crossFileCount = 0;
         OnPropertyChanged(nameof(ActiveRegionDisplayText));
         RegionFilterCleared?.Invoke(this, EventArgs.Empty);
     }

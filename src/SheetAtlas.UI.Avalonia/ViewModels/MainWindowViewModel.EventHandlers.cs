@@ -316,12 +316,30 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
         private void OnRegionsSidebarPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName != nameof(RegionsSidebarViewModel.SelectedRegion)) return;
+            if (e.PropertyName == nameof(RegionsSidebarViewModel.SelectedRegion)
+                || e.PropertyName == nameof(RegionsSidebarViewModel.SelectedRegionGroup)
+                || e.PropertyName == nameof(RegionsSidebarViewModel.IsRegionView))
+            {
+                ApplyRegionFilter();
+            }
+        }
+
+        private void ApplyRegionFilter()
+        {
             if (SearchViewModel == null || RegionsSidebarViewModel == null) return;
 
-            var selected = RegionsSidebarViewModel.SelectedRegion;
-            if (selected != null)
+            if (RegionsSidebarViewModel.IsRegionView && RegionsSidebarViewModel.SelectedRegionGroup != null)
             {
+                // "By Region" view: cross-file filter by region name
+                var group = RegionsSidebarViewModel.SelectedRegionGroup;
+                var regions = RegionsSidebarViewModel.CollectRegionsByName(group.RegionName);
+                SearchViewModel.SetCrossFileRegionFilter(group.RegionName, regions);
+                _logger.LogInfo($"Cross-file region filter set: '{group.RegionName}' across {regions.Count} entries", "MainWindowViewModel");
+            }
+            else if (!RegionsSidebarViewModel.IsRegionView && RegionsSidebarViewModel.SelectedRegion != null)
+            {
+                // "By File" view: single-file filter
+                var selected = RegionsSidebarViewModel.SelectedRegion;
                 SearchViewModel.SetSelectedRegion(selected.FilePath, selected.SheetName, selected.Region);
                 _logger.LogInfo($"Region filter set: '{selected.Name}' on sheet '{selected.SheetName}'", "MainWindowViewModel");
             }

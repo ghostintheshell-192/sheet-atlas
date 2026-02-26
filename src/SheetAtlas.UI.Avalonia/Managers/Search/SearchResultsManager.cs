@@ -22,6 +22,8 @@ public class SearchResultsManager : ISearchResultsManager
     private string? _selectedRegionFilePath;
     private string? _selectedRegionSheetName;
     private DataRegion? _selectedRegion;
+    private string? _crossFileRegionName;
+    private IReadOnlyList<RegionFilterEntry>? _crossFileRegions;
     private readonly List<SearchResult> _results = new();
     private readonly ObservableCollection<IGroupedSearchResult> _groupedResults = new();
     private readonly ObservableCollection<string> _suggestions = new();
@@ -64,6 +66,19 @@ public class SearchResultsManager : ISearchResultsManager
         _selectedRegionFilePath = filePath;
         _selectedRegionSheetName = sheetName;
         _selectedRegion = region;
+        // Mutually exclusive: clear cross-file filter
+        _crossFileRegionName = null;
+        _crossFileRegions = null;
+    }
+
+    public void SetCrossFileRegionFilter(string regionName, IReadOnlyList<RegionFilterEntry> regions)
+    {
+        _crossFileRegionName = regionName;
+        _crossFileRegions = regions;
+        // Mutually exclusive: clear single-file filter
+        _selectedRegionFilePath = null;
+        _selectedRegionSheetName = null;
+        _selectedRegion = null;
     }
 
     public void ClearSelectedRegion()
@@ -71,6 +86,8 @@ public class SearchResultsManager : ISearchResultsManager
         _selectedRegionFilePath = null;
         _selectedRegionSheetName = null;
         _selectedRegion = null;
+        _crossFileRegionName = null;
+        _crossFileRegions = null;
     }
 
     public void RemoveResultsForFile(ExcelFile file)
@@ -139,8 +156,8 @@ public class SearchResultsManager : ISearchResultsManager
                 return results;
             });
 
-            // Filter by selected region if set
-            if (_selectedRegion != null)
+            // Filter by region if set (cross-file or single-file)
+            if (_crossFileRegions is { Count: > 0 } || _selectedRegion != null)
             {
                 allResults = FilterByRegion(allResults);
             }
@@ -244,34 +261,53 @@ public class SearchResultsManager : ISearchResultsManager
 
     private List<SearchResult> FilterByRegion(List<SearchResult> results)
     {
+        // Cross-file filter: match results against any of the provided region entries
+        if (_crossFileRegions is { Count: > 0 })
+        {
+            return results.Where(r =>
+            {
+                return _crossFileRegions.Any(entry =>
+                {
+                    var entryFileName = Path.GetFileName(entry.FilePath);
+                    if (!r.FileName.Equals(entryFileName, StringComparison.OrdinalIgnoreCase))
+                        return false;
+                    if (!r.SheetName.Equals(entry.SheetName, StringComparison.OrdinalIgnoreCase))
+                        return false;
+
+                    return IsWithinRegionBounds(r, entry.Region);
+                });
+            }).ToList();
+        }
+
+        // Single-file filter
         var region = _selectedRegion!;
         var filePath = _selectedRegionFilePath;
         var sheetName = _selectedRegionSheetName;
 
         return results.Where(r =>
         {
-            // If file filter is set, only include results from that file
             if (filePath != null && !r.FileName.Equals(Path.GetFileName(filePath), StringComparison.OrdinalIgnoreCase))
                 return false;
-
-            // If sheet filter is set, only include results from that sheet
             if (sheetName != null && !r.SheetName.Equals(sheetName, StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            // Check row bounds
-            int regionStart = region.HeaderStartRow ?? region.DataStartRow;
-            int regionEnd = region.DataEndRow ?? int.MaxValue;
-            if (r.Row < regionStart || r.Row > regionEnd)
-                return false;
-
-            // Check column bounds
-            int colStart = region.StartColumn ?? 0;
-            int colEnd = region.EndColumn ?? int.MaxValue;
-            if (r.Column < colStart || r.Column > colEnd)
-                return false;
-
-            return true;
+            return IsWithinRegionBounds(r, region);
         }).ToList();
+    }
+
+    private static bool IsWithinRegionBounds(SearchResult result, DataRegion region)
+    {
+        int regionStart = region.HeaderStartRow ?? region.DataStartRow;
+        int regionEnd = region.DataEndRow ?? int.MaxValue;
+        if (result.Row < regionStart || result.Row > regionEnd)
+            return false;
+
+        int colStart = region.StartColumn ?? 0;
+        int colEnd = region.EndColumn ?? int.MaxValue;
+        if (result.Column < colStart || result.Column > colEnd)
+            return false;
+
+        return true;
     }
 
     private void GroupSearchResults(IEnumerable<SearchResult> results)

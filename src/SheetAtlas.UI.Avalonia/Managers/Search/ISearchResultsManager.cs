@@ -31,6 +31,12 @@ public interface ISearchResultsManager
     void SetSelectedRegion(string? filePath, string? sheetName, DataRegion? region);
 
     /// <summary>
+    /// Sets a cross-file DataRegion filter. When set, only cells within matching regions across
+    /// multiple files are searched. Mutually exclusive with single-file SetSelectedRegion.
+    /// </summary>
+    void SetCrossFileRegionFilter(string regionName, IReadOnlyList<RegionFilterEntry> regions);
+
+    /// <summary>
     /// Clears the DataRegion filter.
     /// </summary>
     void ClearSelectedRegion();
@@ -42,6 +48,11 @@ public interface ISearchResultsManager
 
     event EventHandler<GroupedResultsEventArgs> GroupedResultsUpdated;
 }
+
+/// <summary>
+/// Represents a single file+sheet+region entry for cross-file region filtering.
+/// </summary>
+public record RegionFilterEntry(string FilePath, string SheetName, DataRegion Region);
 
 /// <summary>
 /// Event arguments for grouped results updates

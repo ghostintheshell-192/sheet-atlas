@@ -16,36 +16,60 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Margin="8,8,8,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="0" Margin="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <TextBlock Grid.Column="0" Text="Data Regions" FontWeight="SemiBold"
-                      FontSize="14"
-                      Foreground="{DynamicResource PrimaryText}"/>
+            <!-- Title row -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="1" Content="Apply to Files"
-                    Padding="8,4"
-                    FontSize="11"
-                    Margin="0,0,4,0"
-                    ToolTip.Tip="Detect and apply this region to other loaded files"
-                    Command="{Binding DetectSimilarFilesCommand}"
-                    IsVisible="{Binding HasSelectedRegion}"/>
+                <TextBlock Grid.Column="0" Text="Data Regions"
+                           FontWeight="SemiBold"
+                           FontSize="14"
+                           Foreground="{DynamicResource PrimaryText}"
+                           VerticalAlignment="Center"/>
 
-            <Button Grid.Column="2" Content="Delete"
-                    Classes="DangerButton"
-                    Padding="8,4"
-                    FontSize="11"
-                    ToolTip.Tip="Delete selected region"
-                    Command="{Binding DeleteRegionCommand}"
-                    IsVisible="{Binding HasSelectedRegion}"/>
+                <!-- View mode toggle -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2"
+                            VerticalAlignment="Center">
+                    <RadioButton Content="By File" GroupName="ViewMode"
+                                 IsChecked="{Binding !IsRegionView}"
+                                 FontSize="11" Padding="8,3"/>
+                    <RadioButton Content="By Region" GroupName="ViewMode"
+                                 IsChecked="{Binding IsRegionView}"
+                                 FontSize="11" Padding="8,3"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Action buttons row (By File view) -->
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        Spacing="4"
+                        Margin="0,4,0,0"
+                        IsVisible="{Binding HasSelectedRegion}">
+                <Button Content="Apply to Files"
+                        Padding="6,2"
+                        FontSize="10"
+                        ToolTip.Tip="Detect and apply this region to other loaded files"
+                        Command="{Binding DetectSimilarFilesCommand}"/>
+                <Button Content="Delete"
+                        Classes="DangerButton"
+                        Padding="6,2"
+                        FontSize="10"
+                        ToolTip.Tip="Delete selected region"
+                        Command="{Binding DeleteRegionCommand}"/>
+            </StackPanel>
         </Grid>
 
-        <!-- Region Tree -->
+        <!-- Region Tree (By File view) -->
         <TreeView Grid.Row="1"
+                  IsVisible="{Binding !IsRegionView}"
                   Margin="4"
                   Background="{DynamicResource CardBackground}"
                   BorderBrush="{DynamicResource BorderColor}"
@@ -128,6 +152,117 @@
                 </DataTemplate>
             </TreeView.DataTemplates>
         </TreeView>
+
+        <!-- Region Name Groups (By Region view) -->
+        <ScrollViewer Grid.Row="1"
+                      IsVisible="{Binding IsRegionView}"
+                      Margin="4">
+            <ItemsControl ItemsSource="{Binding RegionNameGroups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="models:RegionNameGroup">
+                        <Border Classes="SidebarCard"
+                                Classes.selected="{Binding IsSelected}"
+                                Cursor="Hand"
+                                PointerPressed="OnRegionGroupCardPressed">
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Header row: expand arrow + region name + file count badge -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Expand/Collapse indicator -->
+                                    <Panel Grid.Column="0"
+                                           Classes="ExpandCollapseArrow"
+                                           IsVisible="{Binding IsMultiFile}"
+                                           PointerPressed="OnExpandCollapseClick">
+                                        <TextBlock Text="▼"
+                                                   IsVisible="{Binding IsExpanded}"/>
+                                        <TextBlock Text="▶"
+                                                   IsVisible="{Binding !IsExpanded}"/>
+                                    </Panel>
+
+                                    <!-- Region name -->
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding RegionName}"
+                                               FontWeight="Medium"
+                                               Foreground="{DynamicResource PrimaryText}"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip.Tip="{Binding RegionName}"/>
+
+                                    <!-- File count badge -->
+                                    <Border Grid.Column="2"
+                                            Classes="CountBadge"
+                                            IsVisible="{Binding IsMultiFile}">
+                                        <TextBlock Text="{Binding FileCount}"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Expanded: file entries with tree connectors -->
+                                <ItemsControl Grid.Row="1"
+                                              ItemsSource="{Binding FileEntries}"
+                                              IsVisible="{Binding IsExpanded}"
+                                              Margin="16,8,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="models:RegionFileEntry">
+                                            <Grid Margin="0,2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <TextBlock Grid.Column="0"
+                                                           Grid.RowSpan="2"
+                                                           Classes="TreeConnector"
+                                                           Text="├─"/>
+
+                                                <!-- Row 1: File name + sheet -->
+                                                <TextBlock Grid.Column="1"
+                                                           Grid.Row="0"
+                                                           Text="{Binding FileName}"
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource PrimaryText}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding FileName}"/>
+
+                                                <TextBlock Grid.Column="2"
+                                                           Grid.Row="0"
+                                                           Text="{Binding SheetName}"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource SecondaryText}"
+                                                           VerticalAlignment="Center"
+                                                           ToolTip.Tip="{Binding SheetName}"/>
+
+                                                <!-- Row 2: Bounds -->
+                                                <TextBlock Grid.Column="1"
+                                                           Grid.Row="1"
+                                                           Text="{Binding BoundsText}"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource DisabledText}"
+                                                           Margin="0,-2,0,0"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
 
         <!-- Empty State -->
         <TextBlock Grid.Row="1"

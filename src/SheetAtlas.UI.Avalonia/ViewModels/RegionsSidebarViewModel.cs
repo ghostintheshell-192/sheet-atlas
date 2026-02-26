@@ -4,6 +4,7 @@ using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.UI.Avalonia.Commands;
+using SheetAtlas.UI.Avalonia.Managers.Search;
 using SheetAtlas.UI.Avalonia.Models;
 using SheetAtlas.Logging.Services;
 
@@ -17,6 +18,8 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
 {
     private readonly ILogService _logger;
     private RegionItem? _selectedRegion;
+    private bool _isRegionView;
+    private RegionNameGroup? _selectedRegionGroup;
     private bool _isDetectionActive;
     private string _detectionTitle = "";
     private bool _disposed;
@@ -25,6 +28,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
     private Func<IEnumerable<IFileLoadResultViewModel>>? _loadedFilesProvider;
 
     public ObservableCollection<FileRegionGroup> FileGroups { get; } = new();
+    public ObservableCollection<RegionNameGroup> RegionNameGroups { get; } = new();
     public ObservableCollection<CrossFileApplyViewModel> DetectionResults { get; } = new();
 
     public RegionItem? SelectedRegion
@@ -42,6 +46,40 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
     }
 
     public bool HasSelectedRegion => SelectedRegion != null;
+
+    /// <summary>
+    /// When true, the sidebar shows the "By Region" view (grouped by region name across files).
+    /// When false (default), shows the "By File" view (File → Sheet → Region hierarchy).
+    /// </summary>
+    public bool IsRegionView
+    {
+        get => _isRegionView;
+        set
+        {
+            if (SetField(ref _isRegionView, value))
+            {
+                if (!_isRegionView)
+                    SelectedRegionGroup = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The selected group in the "By Region" view. Setting this activates cross-file filtering.
+    /// </summary>
+    public RegionNameGroup? SelectedRegionGroup
+    {
+        get => _selectedRegionGroup;
+        set
+        {
+            var old = _selectedRegionGroup;
+            if (SetField(ref _selectedRegionGroup, value))
+            {
+                if (old != null) old.IsSelected = false;
+                if (value != null) value.IsSelected = true;
+            }
+        }
+    }
 
     /// <summary>
     /// Whether the detection results panel is visible.
@@ -254,6 +292,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         }
 
         OnPropertyChanged(nameof(TotalRegionCount));
+        BuildRegionNameGroups();
     }
 
     /// <summary>
@@ -284,6 +323,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         });
 
         OnPropertyChanged(nameof(TotalRegionCount));
+        BuildRegionNameGroups();
     }
 
     /// <summary>
@@ -340,6 +380,71 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         }
 
         OnPropertyChanged(nameof(TotalRegionCount));
+        BuildRegionNameGroups();
+    }
+
+    /// <summary>
+    /// Collects all region entries across all files that match the given region name.
+    /// </summary>
+    public List<RegionFilterEntry> CollectRegionsByName(string name)
+    {
+        var entries = new List<RegionFilterEntry>();
+        foreach (var fileGroup in FileGroups)
+        {
+            foreach (var sheetGroup in fileGroup.Sheets)
+            {
+                foreach (var regionItem in sheetGroup.Regions)
+                {
+                    if (regionItem.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        entries.Add(new RegionFilterEntry(
+                            regionItem.FilePath, regionItem.SheetName, regionItem.Region));
+                    }
+                }
+            }
+        }
+        return entries;
+    }
+
+    /// <summary>
+    /// Rebuild the "By Region" groups from the current FileGroups data.
+    /// </summary>
+    private void BuildRegionNameGroups()
+    {
+        var previousSelection = _selectedRegionGroup?.RegionName;
+        RegionNameGroups.Clear();
+        _selectedRegionGroup = null;
+
+        var groups = FileGroups
+            .SelectMany(fg => fg.Sheets.SelectMany(sg => sg.Regions.Select(r => new { fg.FileName, fg.FilePath, sg.SheetName, Region = r })))
+            .GroupBy(x => x.Region.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in groups)
+        {
+            var nameGroup = new RegionNameGroup { RegionName = group.Key };
+            foreach (var entry in group)
+            {
+                nameGroup.FileEntries.Add(new RegionFileEntry
+                {
+                    FileName = entry.FileName,
+                    FilePath = entry.FilePath,
+                    SheetName = entry.SheetName,
+                    Region = entry.Region.Region
+                });
+            }
+            RegionNameGroups.Add(nameGroup);
+        }
+
+        // Restore selection if the region name still exists
+        if (previousSelection != null)
+        {
+            var restored = RegionNameGroups.FirstOrDefault(g =>
+                g.RegionName.Equals(previousSelection, StringComparison.OrdinalIgnoreCase));
+            if (restored != null)
+                SelectedRegionGroup = restored;
+            else
+                OnPropertyChanged(nameof(SelectedRegionGroup));
+        }
     }
 
     public void Dispose()
@@ -349,6 +454,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         EditRegionRequested = null;
         ApplyDetectedRegionsRequested = null;
         FileGroups.Clear();
+        RegionNameGroups.Clear();
         DetectionResults.Clear();
         _disposed = true;
     }

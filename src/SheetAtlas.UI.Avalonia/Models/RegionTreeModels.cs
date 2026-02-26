@@ -44,36 +44,24 @@ public class SheetRegionGroup : ViewModelBase
 }
 
 /// <summary>
-/// Leaf item: represents a single DataRegion.
+/// Shared helper for formatting DataRegion bounds as "A1:E50 (50x5)".
 /// </summary>
-public class RegionItem
+public static class RegionBoundsFormatter
 {
-    public string Name { get; init; } = "";
-    public string FilePath { get; init; } = "";
-    public string SheetName { get; init; } = "";
-    public DataRegion Region { get; init; } = null!;
-
-    public string BoundsText
+    public static string Format(DataRegion region)
     {
-        get
-        {
-            int startRow = Region.HeaderStartRow ?? Region.DataStartRow;
-            int endRow = Region.DataEndRow ?? startRow;
-            int startCol = Region.StartColumn ?? 0;
-            int endCol = Region.EndColumn ?? startCol;
+        int startRow = region.HeaderStartRow ?? region.DataStartRow;
+        int endRow = region.DataEndRow ?? startRow;
+        int startCol = region.StartColumn ?? 0;
+        int endCol = region.EndColumn ?? startCol;
 
-            string startCell = $"{GetColumnLetter(startCol)}{startRow + 1}";
-            string endCell = $"{GetColumnLetter(endCol)}{endRow + 1}";
-            int rows = endRow - startRow + 1;
-            int cols = endCol - startCol + 1;
+        string startCell = $"{GetColumnLetter(startCol)}{startRow + 1}";
+        string endCell = $"{GetColumnLetter(endCol)}{endRow + 1}";
+        int rows = endRow - startRow + 1;
+        int cols = endCol - startCol + 1;
 
-            return $"{startCell}:{endCell} ({rows}x{cols})";
-        }
+        return $"{startCell}:{endCell} ({rows}x{cols})";
     }
-
-    public bool IsAutoDetected => Region.IsAutoDetected;
-    public bool HasWarnings => !string.IsNullOrEmpty(Region.WarningMessage);
-    public string? WarningMessage => Region.WarningMessage;
 
     private static string GetColumnLetter(int colIndex)
     {
@@ -86,4 +74,59 @@ public class RegionItem
         } while (col >= 0);
         return result;
     }
+}
+
+/// <summary>
+/// Leaf item: represents a single DataRegion.
+/// </summary>
+public class RegionItem
+{
+    public string Name { get; init; } = "";
+    public string FilePath { get; init; } = "";
+    public string SheetName { get; init; } = "";
+    public DataRegion Region { get; init; } = null!;
+
+    public string BoundsText => RegionBoundsFormatter.Format(Region);
+
+    public bool IsAutoDetected => Region.IsAutoDetected;
+    public bool HasWarnings => !string.IsNullOrEmpty(Region.WarningMessage);
+    public string? WarningMessage => Region.WarningMessage;
+}
+
+/// <summary>
+/// Group in the "By Region" view: one per unique region name across all files.
+/// </summary>
+public class RegionNameGroup : ViewModelBase
+{
+    private bool _isExpanded;
+    private bool _isSelected;
+
+    public string RegionName { get; init; } = "";
+    public ObservableCollection<RegionFileEntry> FileEntries { get; } = new();
+    public int FileCount => FileEntries.Count;
+    public bool IsMultiFile => FileCount > 1;
+
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set => SetField(ref _isExpanded, value);
+    }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetField(ref _isSelected, value);
+    }
+}
+
+/// <summary>
+/// Leaf in the "By Region" view: one file+sheet occurrence of a named region.
+/// </summary>
+public class RegionFileEntry
+{
+    public string FileName { get; init; } = "";
+    public string FilePath { get; init; } = "";
+    public string SheetName { get; init; } = "";
+    public DataRegion Region { get; init; } = null!;
+    public string BoundsText => RegionBoundsFormatter.Format(Region);
 }
