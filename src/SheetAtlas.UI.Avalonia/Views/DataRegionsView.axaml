@@ -53,10 +53,12 @@
                     BorderThickness="0,0,0,1">
                 <ScrollViewer HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto">
-                    <controls:SheetGridCanvas SheetData="{Binding CurrentSheetData}"
+                    <controls:SheetGridCanvas x:Name="SheetCanvas"
+                                              SheetData="{Binding CurrentSheetData}"
                                               Regions="{Binding CurrentRegions}"
                                               SelectionRegion="{Binding CanvasSelectedRegion}"
-                                              ActiveRegion="{Binding ActiveRegion}"/>
+                                              ActiveRegion="{Binding ActiveRegion}"
+                                              IsEditMode="{Binding IsEditingRegion}"/>
                 </ScrollViewer>
             </Border>
 
@@ -123,23 +125,25 @@
                 </StackPanel>
             </Border>
 
-            <!-- Active Region Panel (visible when a region chip is clicked) -->
+            <!-- Active Region Panel: VIEW mode (not editing) -->
             <Border Grid.Row="2"
                     Background="{DynamicResource SecondaryBackground}"
                     BorderBrush="{DynamicResource SubtleBorder}"
                     BorderThickness="0,1,0,1"
                     Padding="8,6"
-                    IsVisible="{Binding HasActiveRegion}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
+                    IsVisible="{Binding IsNotEditingRegion}">
+                <!-- Only show when HasActiveRegion AND not editing -->
+                <StackPanel Orientation="Horizontal" Spacing="8"
+                            IsVisible="{Binding HasActiveRegion}">
                     <TextBlock Text="{Binding ActiveRegionInfoText}"
                                FontSize="11"
                                Foreground="{DynamicResource PrimaryText}"
                                VerticalAlignment="Center"/>
                     <Button Content="Edit"
                             Classes="SecondaryButton"
+                            Command="{Binding StartEditRegionCommand}"
                             FontSize="11"
-                            IsEnabled="False"
-                            ToolTip.Tip="Rename region (coming soon)"/>
+                            ToolTip.Tip="Adjust region boundaries"/>
                     <Button Content="Delete"
                             Classes="SecondaryButton"
                             Command="{Binding DeleteActiveRegionCommand}"
@@ -147,6 +151,43 @@
                     <Button Content="Deselect"
                             Classes="SecondaryButton"
                             Command="{Binding ClearActiveRegionCommand}"
+                            FontSize="11"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Active Region Panel: EDIT mode -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource SecondaryBackground}"
+                    BorderBrush="{DynamicResource SubtleBorder}"
+                    BorderThickness="0,1,0,1"
+                    Padding="8,6"
+                    IsVisible="{Binding IsEditingRegion}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding ActiveRegionInfoText}"
+                               FontSize="11"
+                               Foreground="{DynamicResource PrimaryText}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Drag bottom edge to resize"
+                               FontSize="10"
+                               FontStyle="Italic"
+                               Foreground="{DynamicResource SecondaryText}"
+                               VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource SuccessBackground}"
+                            CornerRadius="10"
+                            Padding="6,2"
+                            IsVisible="{Binding IsResizeSaved}">
+                        <TextBlock Text="Saved"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource SuccessColor}"/>
+                    </Border>
+                    <Button Content="Save"
+                            Classes="ModernButton"
+                            Command="{Binding SaveRegionEditCommand}"
+                            FontSize="11"/>
+                    <Button Content="Cancel"
+                            Classes="SecondaryButton"
+                            Command="{Binding CancelRegionEditCommand}"
                             FontSize="11"/>
                 </StackPanel>
             </Border>

@@ -162,6 +162,7 @@ public partial class App : Application
                 services.AddSingleton<IExceptionHandler, ExceptionHandler>();
                 services.AddSingleton<IFileLogService, FileLogService>();
                 services.AddSingleton<IDataRegionPersistenceService, DataRegionPersistenceService>();
+                services.AddSingleton<IRegionDetectionService, RegionDetectionService>();
                 services.AddSingleton<ISettingsService, SettingsService>();
 
                 // Register Avalonia-specific services

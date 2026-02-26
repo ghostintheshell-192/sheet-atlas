@@ -35,6 +35,17 @@ public class SheetGridCanvas : Control
     private int _dragCurrentRow;
     private int _dragCurrentCol;
 
+    // Resize state (bottom-edge drag on active region)
+    private bool _isResizing;
+    private int _resizeStartRow;
+    private const double ResizeHitZone = 5.0;
+
+    /// <summary>
+    /// Fired when the user finishes resizing the active region's bottom edge.
+    /// The event arg contains the updated DataRegion with new DataEndRow.
+    /// </summary>
+    public event EventHandler<DataRegion>? RegionResizeCompleted;
+
     #region Styled Properties
 
     public static readonly StyledProperty<SASheetData?> SheetDataProperty =
@@ -53,6 +64,10 @@ public class SheetGridCanvas : Control
 
     public static readonly StyledProperty<bool> IsReadOnlyProperty =
         AvaloniaProperty.Register<SheetGridCanvas, bool>(nameof(IsReadOnly));
+
+    public static readonly StyledProperty<bool> IsEditModeProperty =
+        AvaloniaProperty.Register<SheetGridCanvas, bool>(nameof(IsEditMode),
+            defaultBindingMode: BindingMode.TwoWay);
 
     public SASheetData? SheetData
     {
@@ -90,6 +105,16 @@ public class SheetGridCanvas : Control
     {
         get => GetValue(IsReadOnlyProperty);
         set => SetValue(IsReadOnlyProperty, value);
+    }
+
+    /// <summary>
+    /// When true, enables bottom-edge resize on the active region.
+    /// Bound to ViewModel's IsEditingRegion.
+    /// </summary>
+    public bool IsEditMode
+    {
+        get => GetValue(IsEditModeProperty);
+        set => SetValue(IsEditModeProperty, value);
     }
 
     #endregion
@@ -399,7 +424,7 @@ public class SheetGridCanvas : Control
     private void RenderRegionOverlays(DrawingContext context, SASheetData sheet)
     {
         var activeRegion = ActiveRegion;
-        if (activeRegion == null || activeRegion.IsAutoDetected) return;
+        if (activeRegion == null) return;
 
         int startRow = activeRegion.HeaderStartRow ?? activeRegion.DataStartRow;
         int endRow = activeRegion.DataEndRow ?? (sheet.RowCount - 1);
@@ -480,6 +505,17 @@ public class SheetGridCanvas : Control
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
 
         var pos = e.GetPosition(this);
+
+        // Check if near active region bottom edge → start resize (only in edit mode)
+        if (IsEditMode && ActiveRegion != null && IsNearActiveRegionBottomEdge(pos))
+        {
+            _isResizing = true;
+            _resizeStartRow = ActiveRegion.DataEndRow ?? (SheetData.RowCount - 1);
+            e.Pointer.Capture(this);
+            e.Handled = true;
+            return;
+        }
+
         if (!HitTestCell(pos, out int row, out int col)) return;
 
         // Starting a new drag clears the active region
@@ -504,26 +540,65 @@ public class SheetGridCanvas : Control
     {
         base.OnPointerMoved(e);
 
-        if (!_isDragging || SheetData == null) return;
-
         var pos = e.GetPosition(this);
-        HitTestCell(pos, out int row, out int col);
 
-        // Clamp to sheet bounds
-        row = Math.Clamp(row, 0, SheetData.RowCount - 1);
-        col = Math.Clamp(col, 0, SheetData.ColumnCount - 1);
-
-        if (row != _dragCurrentRow || col != _dragCurrentCol)
+        if (_isResizing && SheetData != null && ActiveRegion != null)
         {
-            _dragCurrentRow = row;
-            _dragCurrentCol = col;
-            InvalidateVisual();
+            // Calculate new row from pointer position
+            int newRow = (int)((pos.Y - ColumnHeaderHeight) / CellHeight);
+            newRow = Math.Clamp(newRow, ActiveRegion.DataStartRow, SheetData.RowCount - 1);
+
+            if (newRow != (ActiveRegion.DataEndRow ?? SheetData.RowCount - 1))
+            {
+                ActiveRegion = ActiveRegion with { DataEndRow = newRow };
+                InvalidateVisual();
+            }
+            return;
+        }
+
+        if (_isDragging && SheetData != null)
+        {
+            HitTestCell(pos, out int row, out int col);
+
+            // Clamp to sheet bounds
+            row = Math.Clamp(row, 0, SheetData.RowCount - 1);
+            col = Math.Clamp(col, 0, SheetData.ColumnCount - 1);
+
+            if (row != _dragCurrentRow || col != _dragCurrentCol)
+            {
+                _dragCurrentRow = row;
+                _dragCurrentCol = col;
+                InvalidateVisual();
+            }
+            return;
+        }
+
+        // Cursor hint: change to resize cursor near bottom edge (only in edit mode)
+        if (IsEditMode && ActiveRegion != null && !IsReadOnly && IsNearActiveRegionBottomEdge(pos))
+        {
+            Cursor = new Cursor(StandardCursorType.SizeNorthSouth);
+        }
+        else
+        {
+            Cursor = Cursor.Default;
         }
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+
+        if (_isResizing)
+        {
+            _isResizing = false;
+            e.Pointer.Capture(null);
+
+            if (ActiveRegion != null)
+            {
+                RegionResizeCompleted?.Invoke(this, ActiveRegion);
+            }
+            return;
+        }
 
         if (!_isDragging) return;
 
@@ -595,6 +670,28 @@ public class SheetGridCanvas : Control
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// Returns true if the pointer position is within ResizeHitZone pixels
+    /// of the active region's bottom edge.
+    /// </summary>
+    private bool IsNearActiveRegionBottomEdge(Point pos)
+    {
+        var region = ActiveRegion;
+        if (region == null || SheetData == null) return false;
+
+        int endRow = region.DataEndRow ?? (SheetData.RowCount - 1);
+        double bottomEdgeY = ColumnHeaderHeight + (endRow + 1) * CellHeight;
+
+        // Check horizontal bounds too
+        int startCol = region.StartColumn ?? 0;
+        int endCol = region.EndColumn ?? (SheetData.ColumnCount - 1);
+        double leftX = GetColumnX(startCol);
+        double rightX = GetColumnX(endCol) + (endCol < _columnWidths.Length ? _columnWidths[endCol] : 0);
+
+        return Math.Abs(pos.Y - bottomEdgeY) <= ResizeHitZone
+            && pos.X >= leftX && pos.X <= rightX;
+    }
 
     private static string GetColumnLetter(int colIndex)
     {

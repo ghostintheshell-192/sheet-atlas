@@ -50,6 +50,12 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         public bool IsAutoDetected { get; init; }
 
         /// <summary>
+        /// Optional warning message set during cross-file detection (e.g. truncation).
+        /// Persisted so the user retains context about detection quality.
+        /// </summary>
+        public string? WarningMessage { get; init; }
+
+        /// <summary>
         /// Factory: Auto-detect everything (default behavior).
         /// </summary>
         public static DataRegion AutoDetect(string name) => new()

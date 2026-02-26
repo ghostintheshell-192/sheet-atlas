@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.UI.Avalonia.Services;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.UI.Avalonia.Managers;
@@ -17,6 +18,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IThemeManager _themeManager;
     private readonly IActivityLogService _activityLog;
     private readonly IDialogService _dialogService;
+    private readonly IRegionDetectionService _regionDetectionService;
+    private readonly IDataRegionPersistenceService _dataRegionPersistenceService;
 
     private IFileLoadResultViewModel? _selectedFile;
     private object? _currentView;
@@ -210,7 +213,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ILogService logger,
         IThemeManager themeManager,
         IActivityLogService activityLog,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IRegionDetectionService regionDetectionService,
+        IDataRegionPersistenceService dataRegionPersistenceService)
     {
         _filesManager = filesManager ?? throw new ArgumentNullException(nameof(filesManager));
         _comparisonCoordinator = comparisonCoordinator ?? throw new ArgumentNullException(nameof(comparisonCoordinator));
@@ -219,6 +224,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
         _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+        _regionDetectionService = regionDetectionService ?? throw new ArgumentNullException(nameof(regionDetectionService));
+        _dataRegionPersistenceService = dataRegionPersistenceService ?? throw new ArgumentNullException(nameof(dataRegionPersistenceService));
 
         ThemeManager = themeManager;
 

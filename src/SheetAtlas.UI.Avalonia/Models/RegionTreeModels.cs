@@ -1,27 +1,46 @@
 using System.Collections.ObjectModel;
 using SheetAtlas.Core.Domain.ValueObjects;
+using SheetAtlas.UI.Avalonia.ViewModels;
 
 namespace SheetAtlas.UI.Avalonia.Models;
 
 /// <summary>
 /// Top-level group in the Regions sidebar: one per loaded file.
 /// </summary>
-public class FileRegionGroup
+public class FileRegionGroup : ViewModelBase
 {
+    private bool _isExpanded;
+
     public string FileName { get; init; } = "";
     public string FilePath { get; init; } = "";
     public ObservableCollection<SheetRegionGroup> Sheets { get; } = new();
 
     public int TotalRegionCount => Sheets.Sum(s => s.Regions.Count);
+    public bool HasAnyWarnings => Sheets.Any(s => s.HasAnyWarnings);
+
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set => SetField(ref _isExpanded, value);
+    }
 }
 
 /// <summary>
 /// Second-level group: one per sheet within a file.
 /// </summary>
-public class SheetRegionGroup
+public class SheetRegionGroup : ViewModelBase
 {
+    private bool _isExpanded;
+
     public string SheetName { get; init; } = "";
     public ObservableCollection<RegionItem> Regions { get; } = new();
+    public bool HasAnyWarnings => Regions.Any(r => r.HasWarnings);
+
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set => SetField(ref _isExpanded, value);
+    }
 }
 
 /// <summary>
@@ -53,6 +72,8 @@ public class RegionItem
     }
 
     public bool IsAutoDetected => Region.IsAutoDetected;
+    public bool HasWarnings => !string.IsNullOrEmpty(Region.WarningMessage);
+    public string? WarningMessage => Region.WarningMessage;
 
     private static string GetColumnLetter(int colIndex)
     {

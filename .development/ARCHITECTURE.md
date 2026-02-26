@@ -69,6 +69,7 @@ For detailed documentation, see [docs/project/ARCHITECTURE.md](../docs/project/A
 - `IHeaderResolver.cs` — Resolves semantic names for column headers. Provides unified interface for different resolution sources (ColumnLink, Template, Dictionary).
 - `IMergedCellResolver.cs` — Resolves merged cells using configurable strategies. Handles horizontal/vertical merges, warns on complex patterns.
 - `IMergedRangeExtractor.cs` — Generic interface for extracting merged cell range information from various file formats. Each format (OpenXML, ODF, etc.) provides its own context type.
+- `IRegionDetectionService.cs` — Detects DataRegion boundaries in target sheets by matching headers from a source region. Used for cross-file region application (ADR-012 Phase 2).
 - `IRowComparisonService.cs` — Service for comparing rows from search results. Extracts row data and column headers.
 - `ISettingsService.cs` — Service for managing user preferences with persistent storage. Settings are stored as JSON in the user's application data folder.
 - `ISheetAnalysisOrchestrator.cs` — Orchestrates the analysis and enrichment pipeline for sheet data. Coordinates foundation services to analyze columns, resolve merged cells, and populate metadata.
@@ -87,6 +88,7 @@ For detailed documentation, see [docs/project/ARCHITECTURE.md](../docs/project/A
 - `ExceptionHandler.cs` — Centralized exception handling implementation. Converts technical exceptions to user-friendly messages and logs details.
 - `FileLogService.cs` — Manages structured logging of Excel file load attempts to JSON files Each Excel file gets its own folder with chronological JSON logs
 - `HeaderGroupingService.cs` — Groups headers by semantic name, merging columns that map to the same name. Consolidates header grouping logic previously duplicated across ComparisonExportService and RowComparisonViewModel.
+- `RegionDetectionService.cs` — Detects DataRegion boundaries in target sheets using header-anchored matching. Phase 2 algorithm: case-insensitive header match, boundary = empty row or known header pattern. Fallback: source region r...
 - `RowComparisonService.cs` — Implementation of IRowComparisonService. Creates row comparisons from search results.
 - `SearchService.cs` — Service for searching within Excel files across sheets and cells.
 - `SettingsService.cs` — Manages user preferences with persistent JSON storage. Settings are stored in %AppData%/SheetAtlas/settings.json.
@@ -221,6 +223,7 @@ For detailed documentation, see [docs/project/ARCHITECTURE.md](../docs/project/A
 ### SheetAtlas.UI.Avalonia/Models
 - `CellComparisonResult.cs` — Represents the result of comparing a cell value with other values in the same column
 - `ComparisonType.cs` — Represents the type of difference found when comparing cells across rows
+- `CrossFileApplyViewModel.cs` — UI model for a single cross-file detection result. Displayed as a card in the detection results panel.
 - `FileDetailAction.cs`
 - `FileDetailProperty.cs`
 - `IToggleable.cs` — Interface for items that can be toggled (expanded/collapsed or selected/deselected)
@@ -260,7 +263,7 @@ For detailed documentation, see [docs/project/ARCHITECTURE.md](../docs/project/A
 - `MainWindowViewModel.EventHandlers.cs`
 - `MainWindowViewModel.FileOperations.cs`
 - `MainWindowViewModel.HelpCommands.cs`
-- `RegionsSidebarViewModel.cs` — ViewModel for the Regions sidebar. Displays a File → Sheet → Region hierarchy.
+- `RegionsSidebarViewModel.cs` — ViewModel for the Regions sidebar. Displays a File → Sheet → Region hierarchy and supports cross-file region detection (ADR-012 Phase 2).
 - `RowComparisonViewModel.cs` — Builds a mapping from original column names to their semantic names for export.
 - `SearchHistoryItem.cs`
 - `SearchResultItem.cs`

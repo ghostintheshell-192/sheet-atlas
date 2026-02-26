@@ -41,6 +41,10 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private DataRegion? _activeRegion;
     private string _newRegionName = "";
     private string? _regionErrorMessage;
+    private bool _isResizeSaved;
+    private bool _isEditingRegion;
+    private DataRegion? _originalRegionBeforeEdit;
+    private CancellationTokenSource? _resizeFeedbackCts;
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -165,6 +169,30 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public bool HasRegionError => !string.IsNullOrEmpty(RegionErrorMessage);
 
     /// <summary>
+    /// Brief feedback shown after resize save. Auto-clears after 2 seconds.
+    /// </summary>
+    public bool IsResizeSaved
+    {
+        get => _isResizeSaved;
+        private set => SetField(ref _isResizeSaved, value);
+    }
+
+    /// <summary>
+    /// Whether the user is currently editing (resizing) the active region.
+    /// </summary>
+    public bool IsEditingRegion
+    {
+        get => _isEditingRegion;
+        private set
+        {
+            if (SetField(ref _isEditingRegion, value))
+                OnPropertyChanged(nameof(IsNotEditingRegion));
+        }
+    }
+
+    public bool IsNotEditingRegion => !IsEditingRegion;
+
+    /// <summary>
     /// The region activated by clicking its badge on the canvas.
     /// </summary>
     public DataRegion? ActiveRegion
@@ -274,6 +302,9 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public ICommand DeleteActiveRegionCommand { get; }
     public ICommand ClearActiveRegionCommand { get; }
     public ICommand ActivateRegionCommand { get; }
+    public ICommand StartEditRegionCommand { get; }
+    public ICommand SaveRegionEditCommand { get; }
+    public ICommand CancelRegionEditCommand { get; }
 
     public FileDetailsViewModel(
         ILogService logger,
@@ -306,6 +337,9 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         DeleteActiveRegionCommand = new RelayCommand(ExecuteDeleteActiveRegionAsync);
         ClearActiveRegionCommand = new RelayCommand(() => { ActiveRegion = null; return Task.CompletedTask; });
         ActivateRegionCommand = new RelayCommand<string>(name => ActivateRegionByName(name));
+        StartEditRegionCommand = new RelayCommand(() => { StartEditRegion(); return Task.CompletedTask; });
+        SaveRegionEditCommand = new RelayCommand(SaveRegionEditAsync);
+        CancelRegionEditCommand = new RelayCommand(() => { CancelRegionEdit(); return Task.CompletedTask; });
     }
 
     private void UpdateDetails()
@@ -334,6 +368,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
     private void UpdateCurrentSheet()
     {
+        if (IsEditingRegion) CancelRegionEdit();
         ActiveRegion = null;
         ClearCanvasSelection();
 
@@ -611,12 +646,98 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void ActivateRegionByName(string name)
+    /// <summary>
+    /// Updates a region after bottom-edge resize: removes old, adds new with updated bounds, persists.
+    /// </summary>
+    public async Task UpdateResizedRegionAsync(DataRegion resizedRegion)
+    {
+        if (CurrentSheetData == null || SelectedFile?.File == null) return;
+
+        try
+        {
+            // Clear warning since user manually adjusted bounds
+            var updated = resizedRegion with { WarningMessage = null };
+
+            // Remove the old region by name, add the updated one
+            CurrentSheetData.RemoveDataRegion(updated.Name);
+            CurrentSheetData.AddDataRegion(updated);
+
+            await PersistRegionsAsync();
+            CurrentRegions = CurrentSheetData.DataRegions;
+            ActiveRegion = updated;
+
+            RegionResized?.Invoke(this, new RegionEventArgs(SelectedFile.FilePath, _selectedSheetName!, updated));
+            _logger.LogInfo($"Region '{updated.Name}' resized on sheet '{_selectedSheetName}'", "FileDetailsViewModel");
+
+            ShowResizeSavedFeedback();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to update resized region: {ex.Message}", ex, "FileDetailsViewModel");
+        }
+    }
+
+    public void ActivateRegionByName(string name)
     {
         if (CurrentRegions != null && CurrentRegions.TryGetValue(name, out var region))
             ActiveRegion = (ActiveRegion?.Name == name) ? null : region;
         else
             ActiveRegion = null;
+
+        // Exit edit mode when switching regions
+        if (IsEditingRegion)
+            CancelRegionEdit();
+    }
+
+    /// <summary>
+    /// Activate a region and immediately enter edit mode (used by sidebar navigation).
+    /// </summary>
+    public void ActivateRegionForEditing(string name)
+    {
+        if (CurrentRegions != null && CurrentRegions.TryGetValue(name, out var region))
+        {
+            ActiveRegion = region;
+            StartEditRegion();
+        }
+    }
+
+    private void StartEditRegion()
+    {
+        if (ActiveRegion == null) return;
+        _originalRegionBeforeEdit = ActiveRegion;
+        IsEditingRegion = true;
+    }
+
+    private async Task SaveRegionEditAsync()
+    {
+        if (ActiveRegion == null || !IsEditingRegion) return;
+
+        await UpdateResizedRegionAsync(ActiveRegion);
+        IsEditingRegion = false;
+        _originalRegionBeforeEdit = null;
+    }
+
+    private void CancelRegionEdit()
+    {
+        if (_originalRegionBeforeEdit != null)
+            ActiveRegion = _originalRegionBeforeEdit;
+
+        IsEditingRegion = false;
+        _originalRegionBeforeEdit = null;
+    }
+
+    private void ShowResizeSavedFeedback()
+    {
+        _resizeFeedbackCts?.Cancel();
+        _resizeFeedbackCts = new CancellationTokenSource();
+        var token = _resizeFeedbackCts.Token;
+
+        IsResizeSaved = true;
+        _ = Task.Delay(2000, token).ContinueWith(_ =>
+        {
+            if (!token.IsCancellationRequested)
+                IsResizeSaved = false;
+        }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     private void ClearCanvasSelection()
@@ -821,10 +942,14 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public event EventHandler<FileActionEventArgs>? TryAgainRequested;
     public event EventHandler<RegionEventArgs>? RegionAdded;
     public event EventHandler<RegionEventArgs>? RegionDeleted;
+    public event EventHandler<RegionEventArgs>? RegionResized;
 
     public void Dispose()
     {
         if (_disposed) return;
+
+        _resizeFeedbackCts?.Cancel();
+        _resizeFeedbackCts?.Dispose();
 
         RemoveFromListRequested = null;
         CleanAllDataRequested = null;
@@ -833,6 +958,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         ExportCompleted = null;
         RegionAdded = null;
         RegionDeleted = null;
+        RegionResized = null;
 
         Properties.Clear();
         ErrorLogs.Clear();
