@@ -99,6 +99,21 @@ public class ExportCompletedEventArgs : EventArgs
 }
 
 /// <summary>
+/// Event arguments for clearing all regions of a specific file.
+/// </summary>
+public class ClearFileRegionsEventArgs : EventArgs
+{
+    public string FilePath { get; }
+    public string FileName { get; }
+
+    public ClearFileRegionsEventArgs(string filePath, string fileName)
+    {
+        FilePath = filePath;
+        FileName = fileName;
+    }
+}
+
+/// <summary>
 /// Event arguments for DataRegion creation/deletion.
 /// </summary>
 public class RegionEventArgs : EventArgs

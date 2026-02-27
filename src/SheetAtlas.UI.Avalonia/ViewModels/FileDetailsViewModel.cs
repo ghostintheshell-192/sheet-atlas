@@ -215,7 +215,6 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     /// </summary>
     public string[] RegionNames =>
         CurrentRegions?.Values
-            .Where(r => !r.IsAutoDetected)
             .Select(r => r.Name)
             .ToArray() ?? Array.Empty<string>();
 

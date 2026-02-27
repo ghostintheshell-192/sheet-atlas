@@ -70,7 +70,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             if (RegionsSidebarViewModel != null)
             {
-                RegionsSidebarViewModel.RegionDeleteRequested -= OnRegionDeleteRequested;
+                RegionsSidebarViewModel.RegionClearRequested -= OnRegionClearRequested;
+                RegionsSidebarViewModel.ClearAllRegionsRequested -= OnClearAllRegionsRequested;
+                RegionsSidebarViewModel.ClearFileRegionsRequested -= OnClearFileRegionsRequested;
                 RegionsSidebarViewModel.EditRegionRequested -= OnEditRegionRequested;
                 RegionsSidebarViewModel.PropertyChanged -= OnRegionsSidebarPropertyChanged;
                 RegionsSidebarViewModel.ApplyDetectedRegionsRequested -= OnApplyDetectedRegionsRequested;
@@ -297,8 +299,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 FileDetailsViewModel.RegionAdded += OnRegionAdded;
             }
 
-            // Connect delete and edit from sidebar
-            RegionsSidebarViewModel.RegionDeleteRequested += OnRegionDeleteRequested;
+            // Connect clear and edit from sidebar
+            RegionsSidebarViewModel.RegionClearRequested += OnRegionClearRequested;
+            RegionsSidebarViewModel.ClearAllRegionsRequested += OnClearAllRegionsRequested;
+            RegionsSidebarViewModel.ClearFileRegionsRequested += OnClearFileRegionsRequested;
             RegionsSidebarViewModel.EditRegionRequested += OnEditRegionRequested;
 
             // Connect region selection to search filtering
@@ -393,9 +397,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             NavigateToDataRegion(e.FilePath, e.SheetName, e.Region.Name);
         }
 
-        private void OnRegionDeleteRequested(object? sender, RegionEventArgs e)
+        private void OnRegionClearRequested(object? sender, RegionEventArgs e)
         {
-            // Find the file and sheet
             var fileVm = LoadedFiles.FirstOrDefault(f =>
                 f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
             if (fileVm?.File == null) return;
@@ -403,26 +406,83 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             var sheet = fileVm.File.GetSheet(e.SheetName);
             if (sheet == null) return;
 
-            // Remove from domain model
             sheet.RemoveDataRegion(e.Region.Name);
-
-            // Remove from sidebar
             RegionsSidebarViewModel?.RemoveRegion(e.FilePath, e.SheetName, e.Region.Name);
 
-            // Clear active region in canvas if it was the deleted one
             if (FileDetailsViewModel?.ActiveRegion?.Name == e.Region.Name)
                 FileDetailsViewModel.ActiveRegion = null;
 
-            // Persist the correct file (not necessarily the selected one)
             _ = PersistRegionsForFileAsync(fileVm);
-
-            // Refresh canvas if the deleted region was on the currently viewed file
             FileDetailsViewModel?.RefreshRegions();
-
             ClearSearchFilterIfNeeded(e.Region.Name);
             OnPropertyChanged(nameof(HasMultipleRegionsMessage));
 
-            _logger.LogInfo($"Region '{e.Region.Name}' deleted from sheet '{e.SheetName}'", "MainWindowViewModel");
+            _logger.LogInfo($"Region '{e.Region.Name}' cleared from sheet '{e.SheetName}'", "MainWindowViewModel");
+        }
+
+        private async void OnClearAllRegionsRequested(object? sender, EventArgs e)
+        {
+            bool confirmed = await _dialogService.ShowConfirmationAsync(
+                "This will remove all data region definitions from all loaded files.\n\nThe spreadsheet data is not affected.",
+                "Clear All Regions");
+            if (!confirmed) return;
+
+            foreach (var fileVm in LoadedFiles.ToList())
+            {
+                if (fileVm.File == null) continue;
+                ClearAllRegionsForFile(fileVm);
+            }
+
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+            if (FileDetailsViewModel != null)
+            {
+                FileDetailsViewModel.ActiveRegion = null;
+                FileDetailsViewModel.RefreshRegions();
+            }
+            SearchViewModel?.ClearSelectedRegion();
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo("All regions cleared from all files", "MainWindowViewModel");
+        }
+
+        private async void OnClearFileRegionsRequested(object? sender, ClearFileRegionsEventArgs e)
+        {
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm?.File == null) return;
+
+            bool confirmed = await _dialogService.ShowConfirmationAsync(
+                $"This will remove all data region definitions from \"{e.FileName}\".\n\nThe spreadsheet data is not affected.",
+                "Clear File Regions");
+            if (!confirmed) return;
+
+            ClearAllRegionsForFile(fileVm);
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+
+            if (FileDetailsViewModel != null &&
+                FileDetailsViewModel.SelectedFile?.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                FileDetailsViewModel.ActiveRegion = null;
+                FileDetailsViewModel.RefreshRegions();
+            }
+
+            SearchViewModel?.ClearSelectedRegion();
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo($"All regions cleared from file '{e.FileName}'", "MainWindowViewModel");
+        }
+
+        private void ClearAllRegionsForFile(IFileLoadResultViewModel fileVm)
+        {
+            if (fileVm.File == null) return;
+
+            foreach (var (_, sheetData) in fileVm.File.Sheets)
+            {
+                foreach (var regionName in sheetData.DataRegions.Keys.ToList())
+                    sheetData.RemoveDataRegion(regionName);
+            }
+
+            _ = PersistRegionsForFileAsync(fileVm);
         }
 
         private void OnApplyDetectedRegionsRequested(object? sender, ApplyDetectedRegionsEventArgs e)

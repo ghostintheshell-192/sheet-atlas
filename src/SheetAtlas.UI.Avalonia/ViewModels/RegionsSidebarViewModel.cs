@@ -107,15 +107,24 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         SelectedRegion != null && _detectionService != null && _loadedFilesProvider != null;
 
     public int TotalRegionCount => FileGroups.Sum(f => f.TotalRegionCount);
+    public bool HasAnyRegions => TotalRegionCount > 0;
 
-    public ICommand DeleteRegionCommand { get; }
+    public ICommand ClearRegionCommand { get; }
+    public ICommand ClearAllRegionsCommand { get; }
+    public ICommand ClearFileRegionsCommand { get; }
     public ICommand EditRegionCommand { get; }
     public RelayCommand DetectSimilarFilesCommand { get; }
     public RelayCommand ApplyToSelectedFilesCommand { get; }
     public ICommand CancelDetectionCommand { get; }
 
-    /// <summary>Raised when user deletes a region from the sidebar.</summary>
-    public event EventHandler<RegionEventArgs>? RegionDeleteRequested;
+    /// <summary>Raised when user requests to clear a single region.</summary>
+    public event EventHandler<RegionEventArgs>? RegionClearRequested;
+
+    /// <summary>Raised when user requests to clear all regions across all files.</summary>
+    public event EventHandler? ClearAllRegionsRequested;
+
+    /// <summary>Raised when user requests to clear all regions of a specific file.</summary>
+    public event EventHandler<ClearFileRegionsEventArgs>? ClearFileRegionsRequested;
 
     /// <summary>Raised when user wants to navigate to a region on the canvas.</summary>
     public event EventHandler<RegionEventArgs>? EditRegionRequested;
@@ -127,14 +136,26 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        DeleteRegionCommand = new RelayCommand(() =>
+        ClearRegionCommand = new RelayCommand(() =>
         {
             if (SelectedRegion != null)
             {
-                RegionDeleteRequested?.Invoke(this, new RegionEventArgs(
+                RegionClearRequested?.Invoke(this, new RegionEventArgs(
                     SelectedRegion.FilePath, SelectedRegion.SheetName, SelectedRegion.Region));
             }
             return Task.CompletedTask;
+        });
+
+        ClearAllRegionsCommand = new RelayCommand(() =>
+        {
+            ClearAllRegionsRequested?.Invoke(this, EventArgs.Empty);
+            return Task.CompletedTask;
+        });
+
+        ClearFileRegionsCommand = new RelayCommand<FileRegionGroup>(group =>
+        {
+            if (group != null)
+                ClearFileRegionsRequested?.Invoke(this, new ClearFileRegionsEventArgs(group.FilePath, group.FileName));
         });
 
         EditRegionCommand = new RelayCommand<RegionItem>(item =>
@@ -292,6 +313,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         }
 
         OnPropertyChanged(nameof(TotalRegionCount));
+        OnPropertyChanged(nameof(HasAnyRegions));
         BuildRegionNameGroups();
     }
 
@@ -323,6 +345,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         });
 
         OnPropertyChanged(nameof(TotalRegionCount));
+        OnPropertyChanged(nameof(HasAnyRegions));
         BuildRegionNameGroups();
     }
 
@@ -380,6 +403,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         }
 
         OnPropertyChanged(nameof(TotalRegionCount));
+        OnPropertyChanged(nameof(HasAnyRegions));
         BuildRegionNameGroups();
     }
 
@@ -450,7 +474,9 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        RegionDeleteRequested = null;
+        RegionClearRequested = null;
+        ClearAllRegionsRequested = null;
+        ClearFileRegionsRequested = null;
         EditRegionRequested = null;
         ApplyDetectedRegionsRequested = null;
         FileGroups.Clear();

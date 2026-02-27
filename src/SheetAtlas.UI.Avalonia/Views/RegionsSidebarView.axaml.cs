@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using SheetAtlas.UI.Avalonia.Models;
 using SheetAtlas.UI.Avalonia.ViewModels;
 
@@ -56,5 +57,12 @@ public partial class RegionsSidebarView : UserControl
 
         group.IsExpanded = !group.IsExpanded;
         e.Handled = true; // Prevent card selection
+    }
+
+    private void OnClearFileClick(object? sender, RoutedEventArgs e)
+    {
+        var group = (sender as MenuItem)?.DataContext as FileRegionGroup;
+        if (group != null && DataContext is RegionsSidebarViewModel vm)
+            vm.ClearFileRegionsCommand.Execute(group);
     }
 }
