@@ -148,10 +148,19 @@
                 <DataTemplate DataType="models:RegionItem">
                     <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2">
                         <StackPanel Grid.Column="0" Orientation="Vertical">
+                            <!-- Display mode -->
                             <TextBlock Text="{Binding Name}"
                                        FontSize="12"
                                        FontWeight="Medium"
-                                       Foreground="{DynamicResource PrimaryText}"/>
+                                       Foreground="{DynamicResource PrimaryText}"
+                                       IsVisible="{Binding !IsEditing}"/>
+                            <!-- Inline rename TextBox -->
+                            <TextBox Text="{Binding EditName, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontWeight="Medium"
+                                     IsVisible="{Binding IsEditing}"
+                                     KeyDown="OnRegionEditTextBoxKeyDown"
+                                     LostFocus="OnRegionEditTextBoxLostFocus"/>
                             <TextBlock Text="{Binding BoundsText}"
                                        FontSize="10"
                                        Foreground="{DynamicResource SecondaryText}"/>
@@ -173,17 +182,30 @@
                                        VerticalAlignment="Center"
                                        IsVisible="{Binding IsAutoDetected}"/>
                         </StackPanel>
+                        <!-- ⋮ context menu button -->
                         <Button Grid.Column="2"
-                                Content="›"
-                                FontSize="14"
-                                FontWeight="Bold"
-                                Padding="6,0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="4,0"
                                 MinWidth="0"
                                 MinHeight="0"
-                                VerticalAlignment="Center"
-                                ToolTip.Tip="View on canvas"
-                                Command="{Binding DataContext.EditRegionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}"/>
+                                VerticalAlignment="Center">
+                            <Button.Flyout>
+                                <MenuFlyout>
+                                    <MenuItem Header="Edit"
+                                              ToolTip.Tip="View on canvas"
+                                              Click="OnEditRegionMenuItemClick"/>
+                                    <MenuItem Header="Rename"
+                                              Click="OnRenameMenuItemClick"/>
+                                    <MenuItem Header="Clear"
+                                              Click="OnClearRegionMenuItemClick"/>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                            <TextBlock Text="⋮"
+                                       FontSize="14"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource SecondaryText}"/>
+                        </Button>
                     </Grid>
                 </DataTemplate>
             </TreeView.DataTemplates>

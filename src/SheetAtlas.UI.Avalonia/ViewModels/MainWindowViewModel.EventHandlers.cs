@@ -71,6 +71,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             if (RegionsSidebarViewModel != null)
             {
                 RegionsSidebarViewModel.RegionClearRequested -= OnRegionClearRequested;
+                RegionsSidebarViewModel.RenameRegionRequested -= OnRenameRegionRequested;
                 RegionsSidebarViewModel.ClearAllRegionsRequested -= OnClearAllRegionsRequested;
                 RegionsSidebarViewModel.ClearFileRegionsRequested -= OnClearFileRegionsRequested;
                 RegionsSidebarViewModel.EditRegionRequested -= OnEditRegionRequested;
@@ -299,8 +300,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 FileDetailsViewModel.RegionAdded += OnRegionAdded;
             }
 
-            // Connect clear and edit from sidebar
+            // Connect clear, rename and edit from sidebar
             RegionsSidebarViewModel.RegionClearRequested += OnRegionClearRequested;
+            RegionsSidebarViewModel.RenameRegionRequested += OnRenameRegionRequested;
             RegionsSidebarViewModel.ClearAllRegionsRequested += OnClearAllRegionsRequested;
             RegionsSidebarViewModel.ClearFileRegionsRequested += OnClearFileRegionsRequested;
             RegionsSidebarViewModel.EditRegionRequested += OnEditRegionRequested;
@@ -418,6 +420,49 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             OnPropertyChanged(nameof(HasMultipleRegionsMessage));
 
             _logger.LogInfo($"Region '{e.Region.Name}' cleared from sheet '{e.SheetName}'", "MainWindowViewModel");
+        }
+
+        private void OnRenameRegionRequested(object? sender, RenameRegionEventArgs e)
+        {
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm?.File == null) return;
+
+            var sheet = fileVm.File.GetSheet(e.SheetName);
+            if (sheet == null) return;
+
+            var existing = sheet.GetDataRegion(e.Region.Name);
+            if (existing == null) return;
+
+            // Reject if the target name already exists
+            if (sheet.GetDataRegion(e.NewName) != null)
+            {
+                _logger.LogWarning(
+                    $"Region rename skipped: '{e.NewName}' already exists in sheet '{e.SheetName}'",
+                    "MainWindowViewModel");
+                return;
+            }
+
+            sheet.RemoveDataRegion(e.Region.Name);
+            var renamed = existing with { Name = e.NewName };
+            sheet.AddDataRegion(renamed);
+
+            // Keep canvas in sync when the renamed region is currently active
+            if (FileDetailsViewModel?.ActiveRegion?.Name == e.Region.Name &&
+                FileDetailsViewModel.SelectedFile?.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                FileDetailsViewModel.ActiveRegion = renamed;
+            }
+
+            _ = PersistRegionsForFileAsync(fileVm);
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+            FileDetailsViewModel?.RefreshRegions();
+            ClearSearchFilterIfNeeded(e.Region.Name);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo(
+                $"Region '{e.Region.Name}' renamed to '{e.NewName}' in sheet '{e.SheetName}'",
+                "MainWindowViewModel");
         }
 
         private async void OnClearAllRegionsRequested(object? sender, EventArgs e)

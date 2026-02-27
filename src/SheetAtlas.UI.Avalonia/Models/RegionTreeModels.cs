@@ -78,9 +78,13 @@ public static class RegionBoundsFormatter
 
 /// <summary>
 /// Leaf item: represents a single DataRegion.
+/// Extends ViewModelBase to support inline rename (IsEditing/EditName).
 /// </summary>
-public class RegionItem
+public class RegionItem : ViewModelBase
 {
+    private bool _isEditing;
+    private string _editName = "";
+
     public string Name { get; init; } = "";
     public string FilePath { get; init; } = "";
     public string SheetName { get; init; } = "";
@@ -91,6 +95,29 @@ public class RegionItem
     public bool IsAutoDetected => Region.IsAutoDetected;
     public bool HasWarnings => !string.IsNullOrEmpty(Region.WarningMessage);
     public string? WarningMessage => Region.WarningMessage;
+
+    /// <summary>
+    /// Whether the inline rename TextBox is active for this item.
+    /// Setting to true initialises EditName with the current Name.
+    /// </summary>
+    public bool IsEditing
+    {
+        get => _isEditing;
+        set
+        {
+            if (SetField(ref _isEditing, value) && value)
+                EditName = Name;
+        }
+    }
+
+    /// <summary>
+    /// Mutable name used while the TextBox is active. Committed on Enter/LostFocus.
+    /// </summary>
+    public string EditName
+    {
+        get => _editName;
+        set => SetField(ref _editName, value);
+    }
 }
 
 /// <summary>

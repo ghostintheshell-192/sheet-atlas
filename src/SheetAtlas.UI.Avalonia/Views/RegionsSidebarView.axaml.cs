@@ -4,6 +4,8 @@ using Avalonia.Interactivity;
 using SheetAtlas.UI.Avalonia.Models;
 using SheetAtlas.UI.Avalonia.ViewModels;
 
+// ReSharper disable UnusedParameter.Local
+
 namespace SheetAtlas.UI.Avalonia.Views;
 
 public partial class RegionsSidebarView : UserControl
@@ -65,4 +67,57 @@ public partial class RegionsSidebarView : UserControl
         if (group != null && DataContext is RegionsSidebarViewModel vm)
             vm.ClearFileRegionsCommand.Execute(group);
     }
+
+    #region RegionItem ⋮ menu handlers
+
+    private void OnEditRegionMenuItemClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem && menuItem.DataContext is RegionItem item
+            && DataContext is RegionsSidebarViewModel vm)
+            vm.EditRegionCommand.Execute(item);
+    }
+
+    private void OnRenameMenuItemClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem && menuItem.DataContext is RegionItem item)
+            item.IsEditing = true;
+    }
+
+    private void OnClearRegionMenuItemClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem && menuItem.DataContext is RegionItem item
+            && DataContext is RegionsSidebarViewModel vm)
+            vm.ClearItemCommand.Execute(item);
+    }
+
+    #endregion
+
+    #region Inline rename TextBox handlers
+
+    private void OnRegionEditTextBoxKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (sender is TextBox textBox && textBox.DataContext is RegionItem item
+            && DataContext is RegionsSidebarViewModel vm)
+        {
+            if (e.Key == Key.Enter)
+            {
+                vm.CommitRegionRename(item);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                item.IsEditing = false;
+                e.Handled = true;
+            }
+        }
+    }
+
+    private void OnRegionEditTextBoxLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox textBox && textBox.DataContext is RegionItem item
+            && DataContext is RegionsSidebarViewModel vm)
+            vm.CommitRegionRename(item);
+    }
+
+    #endregion
 }

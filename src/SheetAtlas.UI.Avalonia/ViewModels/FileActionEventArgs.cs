@@ -114,6 +114,25 @@ public class ClearFileRegionsEventArgs : EventArgs
 }
 
 /// <summary>
+/// Event arguments raised when the user renames a DataRegion via the sidebar.
+/// </summary>
+public class RenameRegionEventArgs : EventArgs
+{
+    public string FilePath { get; }
+    public string SheetName { get; }
+    public DataRegion Region { get; }
+    public string NewName { get; }
+
+    public RenameRegionEventArgs(string filePath, string sheetName, DataRegion region, string newName)
+    {
+        FilePath = filePath;
+        SheetName = sheetName;
+        Region = region;
+        NewName = newName;
+    }
+}
+
+/// <summary>
 /// Event arguments for DataRegion creation/deletion.
 /// </summary>
 public class RegionEventArgs : EventArgs

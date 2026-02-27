@@ -93,15 +93,6 @@
                                     DragDrop.AllowDrop="True"
                                     PointerPressed="OnColumnPointerPressed">
 
-                                <Border.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Rename..." Click="OnRenameClick"/>
-                                        <MenuItem Header="Ungroup"
-                                                  Click="OnUngroupClick"
-                                                  IsVisible="{Binding IsGrouped}"/>
-                                    </ContextMenu>
-                                </Border.ContextMenu>
-
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -179,12 +170,19 @@
                                                 <TextBlock Text="{Binding ColumnCount}"/>
                                             </Border>
                                             <!-- Menu button -->
-                                            <Button x:Name="MenuButton"
-                                                    Background="Transparent"
+                                            <Button Background="Transparent"
                                                     BorderThickness="0"
                                                     Padding="4,2"
-                                                    Cursor="Hand"
-                                                    Click="OnMenuButtonClick">
+                                                    Cursor="Hand">
+                                                <Button.Flyout>
+                                                    <MenuFlyout>
+                                                        <MenuItem Header="Rename..."
+                                                                  Click="OnRenameMenuItemClick"/>
+                                                        <MenuItem Header="Ungroup"
+                                                                  IsVisible="{Binding IsGrouped}"
+                                                                  Click="OnUngroupMenuItemClick"/>
+                                                    </MenuFlyout>
+                                                </Button.Flyout>
                                                 <TextBlock Text="⋮"
                                                            FontSize="14"
                                                            FontWeight="Bold"

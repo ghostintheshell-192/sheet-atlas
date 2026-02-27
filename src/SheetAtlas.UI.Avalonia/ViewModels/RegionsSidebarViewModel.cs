@@ -110,6 +110,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
     public bool HasAnyRegions => TotalRegionCount > 0;
 
     public ICommand ClearRegionCommand { get; }
+    public ICommand ClearItemCommand { get; }
     public ICommand ClearAllRegionsCommand { get; }
     public ICommand ClearFileRegionsCommand { get; }
     public ICommand EditRegionCommand { get; }
@@ -119,6 +120,9 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
 
     /// <summary>Raised when user requests to clear a single region.</summary>
     public event EventHandler<RegionEventArgs>? RegionClearRequested;
+
+    /// <summary>Raised when user confirms a rename from the inline TextBox.</summary>
+    public event EventHandler<RenameRegionEventArgs>? RenameRegionRequested;
 
     /// <summary>Raised when user requests to clear all regions across all files.</summary>
     public event EventHandler? ClearAllRegionsRequested;
@@ -144,6 +148,12 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
                     SelectedRegion.FilePath, SelectedRegion.SheetName, SelectedRegion.Region));
             }
             return Task.CompletedTask;
+        });
+
+        ClearItemCommand = new RelayCommand<RegionItem>(item =>
+        {
+            if (item != null)
+                RegionClearRequested?.Invoke(this, new RegionEventArgs(item.FilePath, item.SheetName, item.Region));
         });
 
         ClearAllRegionsCommand = new RelayCommand(() =>
@@ -471,10 +481,27 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Called from code-behind when the user commits a rename (Enter key or LostFocus).
+    /// Validates, fires RenameRegionRequested, then exits editing mode.
+    /// </summary>
+    public void CommitRegionRename(RegionItem item)
+    {
+        var newName = item.EditName?.Trim();
+        item.IsEditing = false;
+
+        if (string.IsNullOrEmpty(newName) || newName == item.Name)
+            return;
+
+        RenameRegionRequested?.Invoke(this, new RenameRegionEventArgs(
+            item.FilePath, item.SheetName, item.Region, newName));
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         RegionClearRequested = null;
+        RenameRegionRequested = null;
         ClearAllRegionsRequested = null;
         ClearFileRegionsRequested = null;
         EditRegionRequested = null;
