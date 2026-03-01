@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using SheetAtlas.UI.Avalonia.Models;
 using SheetAtlas.UI.Avalonia.ViewModels;
 
@@ -80,7 +82,18 @@ public partial class RegionsSidebarView : UserControl
     private void OnRenameMenuItemClick(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem menuItem && menuItem.DataContext is RegionItem item)
+        {
             item.IsEditing = true;
+            // Focus the TextBox after layout updates; it lives in a DataTemplate
+            // so we find it by matching DataContext
+            Dispatcher.UIThread.Post(() =>
+            {
+                this.GetVisualDescendants()
+                    .OfType<TextBox>()
+                    .FirstOrDefault(tb => tb.DataContext == item && tb.IsVisible)
+                    ?.Focus();
+            });
+        }
     }
 
     private void OnClearRegionMenuItemClick(object? sender, RoutedEventArgs e)
@@ -114,8 +127,10 @@ public partial class RegionsSidebarView : UserControl
 
     private void OnRegionEditTextBoxLostFocus(object? sender, RoutedEventArgs e)
     {
+        // Skip commit if editing was cancelled (e.g. Escape already set IsEditing = false)
         if (sender is TextBox textBox && textBox.DataContext is RegionItem item
-            && DataContext is RegionsSidebarViewModel vm)
+            && DataContext is RegionsSidebarViewModel vm
+            && item.IsEditing)
             vm.CommitRegionRename(item);
     }
 

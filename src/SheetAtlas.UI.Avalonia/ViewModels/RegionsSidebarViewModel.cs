@@ -282,6 +282,12 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
     /// </summary>
     public void RefreshFromFiles(IEnumerable<IFileLoadResultViewModel> loadedFiles)
     {
+        // Preserve expansion state before clearing so the tree doesn't collapse on refresh
+        var fileExpanded = FileGroups.ToDictionary(f => f.FilePath, f => f.IsExpanded);
+        var sheetExpanded = FileGroups
+            .SelectMany(f => f.Sheets.Select(s => (Key: $"{f.FilePath}|{s.SheetName}", Value: s.IsExpanded)))
+            .ToDictionary(x => x.Key, x => x.Value);
+
         FileGroups.Clear();
 
         foreach (var fileVm in loadedFiles)
@@ -311,13 +317,18 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
                     });
                 }
 
-                sheetGroup.IsExpanded = sheetGroup.HasAnyWarnings;
+                var sheetKey = $"{fileVm.FilePath}|{sheetName}";
+                sheetGroup.IsExpanded = sheetExpanded.TryGetValue(sheetKey, out bool sheetWasExpanded)
+                    ? sheetWasExpanded
+                    : sheetGroup.HasAnyWarnings;
                 fileGroup.Sheets.Add(sheetGroup);
             }
 
             if (fileGroup.Sheets.Count > 0)
             {
-                fileGroup.IsExpanded = fileGroup.HasAnyWarnings;
+                fileGroup.IsExpanded = fileExpanded.TryGetValue(fileVm.FilePath, out bool wasExpanded)
+                    ? wasExpanded
+                    : fileGroup.HasAnyWarnings;
                 FileGroups.Add(fileGroup);
             }
         }
