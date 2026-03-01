@@ -15,53 +15,12 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Quick Actions -->
             <RowDefinition Height="Auto"/>  <!-- BASIC INFORMATION -->
             <RowDefinition Height="Auto"/>  <!-- NOTIFICATIONS AND ERRORS -->
         </Grid.RowDefinitions>
 
-        <!-- QUICK ACTIONS -->
-        <Border Grid.Row="0"
-                Background="{DynamicResource SecondaryBackground}"
-                BorderBrush="{DynamicResource SubtleBorder}"
-                BorderThickness="0,0,0,1"
-                Padding="16,12"
-                IsVisible="{Binding HasSelectedFile}">
-            <StackPanel Spacing="6">
-                <TextBlock Text="QUICK ACTIONS"
-                           FontWeight="Bold"
-                           FontSize="12"
-                           Foreground="{DynamicResource SecondaryText}"
-                           Margin="0,0,0,4"/>
-                <Button Classes="HyperlinkButton"
-                        Command="{Binding DataContext.ShowDataRegionsTabCommand, RelativeSource={RelativeSource AncestorType=views:MainWindow}}"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Padding="0"
-                        Cursor="Hand">
-                    <TextBlock FontSize="13"
-                               Foreground="{DynamicResource LinkText}">
-                        <Run Text="Data Regions"/>
-                        <Run Text=" &#x2192;" Foreground="{DynamicResource SecondaryText}"/>
-                    </TextBlock>
-                </Button>
-                <Button Classes="HyperlinkButton"
-                        Command="{Binding DataContext.ShowSearchTabCommand, RelativeSource={RelativeSource AncestorType=views:MainWindow}}"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Padding="0"
-                        Cursor="Hand">
-                    <TextBlock FontSize="13"
-                               Foreground="{DynamicResource LinkText}">
-                        <Run Text="Search"/>
-                        <Run Text=" &#x2192;" Foreground="{DynamicResource SecondaryText}"/>
-                    </TextBlock>
-                </Button>
-            </StackPanel>
-        </Border>
-
         <!-- BASIC INFORMATION Section -->
-        <controls:CollapsibleSection Grid.Row="1"
+        <controls:CollapsibleSection Grid.Row="0"
                                      IsExpanded="True"
                                      IsVisible="{Binding HasSelectedFile}">
             <controls:CollapsibleSection.Header>
@@ -130,7 +89,7 @@
         </controls:CollapsibleSection>
 
         <!-- NOTIFICATIONS AND ERRORS Section -->
-        <controls:CollapsibleSection Grid.Row="2"
+        <controls:CollapsibleSection Grid.Row="1"
                                      IsExpanded="True"
                                      IsVisible="{Binding HasSelectedFile}">
             <controls:CollapsibleSection.Header>
@@ -241,7 +200,7 @@
 
         <!-- Empty State (no file selected) -->
         <TextBlock Text="Select a file from the list to view details"
-                  Grid.RowSpan="3"
+                  Grid.RowSpan="2"
                   FontStyle="Italic"
                   Foreground="{DynamicResource SecondaryText}"
                   HorizontalAlignment="Center"

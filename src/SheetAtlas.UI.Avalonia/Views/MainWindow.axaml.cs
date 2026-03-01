@@ -11,6 +11,7 @@ namespace SheetAtlas.UI.Avalonia.Views;
 public partial class MainWindow : Window
 {
     private SidebarItem? _columnsSidebarItem;
+    private SidebarItem? _filesSidebarItem;
 
     public MainWindow()
     {
@@ -24,25 +25,26 @@ public partial class MainWindow : Window
         {
             viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
-            // Find the Columns sidebar item by tooltip
+            _filesSidebarItem = MainSidebar.Items.FirstOrDefault(i => i.Tooltip == "Loaded Files");
             _columnsSidebarItem = MainSidebar.Items.FirstOrDefault(i => i.Tooltip == "Columns");
 
-            // Initialize badge with current value
             if (_columnsSidebarItem != null)
-            {
                 _columnsSidebarItem.BadgeCount = viewModel.ColumnCount;
-            }
         }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainWindowViewModel.ColumnCount) && sender is MainWindowViewModel vm)
+        if (sender is not MainWindowViewModel vm) return;
+
+        if (e.PropertyName == nameof(MainWindowViewModel.ColumnCount) && _columnsSidebarItem != null)
+            _columnsSidebarItem.BadgeCount = vm.ColumnCount;
+
+        if (e.PropertyName == nameof(MainWindowViewModel.HasLoadedFiles)
+            && vm.HasLoadedFiles
+            && _filesSidebarItem != null)
         {
-            if (_columnsSidebarItem != null)
-            {
-                _columnsSidebarItem.BadgeCount = vm.ColumnCount;
-            }
+            _filesSidebarItem.IsOpen = true;
         }
     }
 

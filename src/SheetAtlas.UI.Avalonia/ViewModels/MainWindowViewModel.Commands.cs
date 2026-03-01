@@ -52,9 +52,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             ShowFileDetailsTabCommand = new RelayCommand(() =>
             {
                 if (SelectedFile == null && LoadedFiles.Any())
-                {
                     SelectedFile = LoadedFiles.First();
-                }
+                IsFileDetailsTabVisible = true;
+                SelectedTabIndex = GetTabIndex("FileDetails");
                 return Task.CompletedTask;
             });
 

@@ -61,22 +61,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             if (SetField(ref _selectedFile, value))
             {
                 if (FileDetailsViewModel != null)
-                {
                     FileDetailsViewModel.SelectedFile = value;
-                }
 
                 // Note: TemplateManagementViewModel is updated via UpdateSelectedFiles()
                 // which is called by the SelectionChanged event handler in MainWindow.
                 // This supports multi-selection properly.
 
-                if (value != null)
-                {
-                    IsFileDetailsTabVisible = true;
-                    SelectedTabIndex = GetTabIndex("FileDetails");
-                }
-                else
+                // When file is deselected, close File Details tab (nothing to show).
+                // Opening the tab only happens via explicit ShowFileDetailsTabCommand.
+                if (value == null && IsFileDetailsTabVisible)
                 {
                     IsFileDetailsTabVisible = false;
+                    SwitchToNextVisibleTab("FileDetails");
                 }
             }
         }
