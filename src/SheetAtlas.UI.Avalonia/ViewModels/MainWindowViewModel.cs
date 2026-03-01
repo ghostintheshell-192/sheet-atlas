@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.UI.Avalonia.Services;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.UI.Avalonia.Managers;
@@ -17,6 +18,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IThemeManager _themeManager;
     private readonly IActivityLogService _activityLog;
     private readonly IDialogService _dialogService;
+    private readonly IRegionDetectionService _regionDetectionService;
+    private readonly IDataRegionPersistenceService _dataRegionPersistenceService;
 
     private IFileLoadResultViewModel? _selectedFile;
     private object? _currentView;
@@ -27,6 +30,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isComparisonTabVisible;
     private bool _isTemplatesTabVisible;
     private bool _isSettingsTabVisible;
+    private bool _isDataRegionsTabVisible;
     private bool _isStatusBarVisible = true;
     private bool _disposed = false;
 
@@ -45,6 +49,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public TreeSearchResultsViewModel? TreeSearchResultsViewModel { get; private set; }
     public TemplateManagementViewModel? TemplateManagementViewModel { get; private set; }
     public ColumnLinkingViewModel? ColumnLinkingViewModel { get; private set; }
+    public RegionsSidebarViewModel? RegionsSidebarViewModel { get; private set; }
     public SettingsViewModel? SettingsViewModel { get; private set; }
 
     public IFileLoadResultViewModel? SelectedFile
@@ -154,7 +159,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible;
+    public bool IsDataRegionsTabVisible
+    {
+        get => _isDataRegionsTabVisible;
+        set
+        {
+            if (SetField(ref _isDataRegionsTabVisible, value))
+            {
+                OnPropertyChanged(nameof(HasAnyTabVisible));
+            }
+        }
+    }
+
+    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible || IsDataRegionsTabVisible;
 
     public bool IsStatusBarVisible
     {
@@ -167,6 +184,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     /// Used for badge display on Columns sidebar icon.
     /// </summary>
     public int ColumnCount => ColumnLinkingViewModel?.ColumnLinks.Count ?? 0;
+
+    /// <summary>
+    /// True when regions exist but none is selected — shows hint to select one.
+    /// </summary>
+    public bool HasMultipleRegionsMessage =>
+        RegionsSidebarViewModel != null &&
+        RegionsSidebarViewModel.TotalRegionCount > 0 &&
+        SearchViewModel?.IsRegionFilterActive != true;
 
     /// <summary>
     /// Status text shown in the status bar.
@@ -188,7 +213,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ILogService logger,
         IThemeManager themeManager,
         IActivityLogService activityLog,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IRegionDetectionService regionDetectionService,
+        IDataRegionPersistenceService dataRegionPersistenceService)
     {
         _filesManager = filesManager ?? throw new ArgumentNullException(nameof(filesManager));
         _comparisonCoordinator = comparisonCoordinator ?? throw new ArgumentNullException(nameof(comparisonCoordinator));
@@ -197,6 +224,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
         _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+        _regionDetectionService = regionDetectionService ?? throw new ArgumentNullException(nameof(regionDetectionService));
+        _dataRegionPersistenceService = dataRegionPersistenceService ?? throw new ArgumentNullException(nameof(dataRegionPersistenceService));
 
         ThemeManager = themeManager;
 
@@ -235,6 +264,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             TreeSearchResultsViewModel?.Dispose();
             TemplateManagementViewModel?.Dispose();
             ColumnLinkingViewModel?.Dispose();
+            RegionsSidebarViewModel?.Dispose();
         }
     }
 }

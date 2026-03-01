@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Application.Interfaces;
+using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.UI.Avalonia.Commands;
 using SheetAtlas.UI.Avalonia.Models;
@@ -25,12 +27,24 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private readonly IDataNormalizationService _dataNormalizationService;
     private readonly IExcelWriterService _excelWriterService;
     private readonly ISettingsService _settingsService;
+    private readonly IDataRegionPersistenceService _dataRegionPersistenceService;
 
     private IFileLoadResultViewModel? _selectedFile;
     private bool _isLoadingHistory;
     private bool _disposed;
     private Func<string, IReadOnlyDictionary<string, string>>? _getSemanticNamesForFile;
     private Func<IEnumerable<string>>? _getIncludedColumns;
+    private string? _selectedSheetName;
+    private SASheetData? _currentSheetData;
+    private IReadOnlyDictionary<string, DataRegion>? _currentRegions;
+    private DataRegion? _canvasSelectedRegion;
+    private DataRegion? _activeRegion;
+    private string _newRegionName = "";
+    private string? _regionErrorMessage;
+    private bool _isResizeSaved;
+    private bool _isEditingRegion;
+    private DataRegion? _originalRegionBeforeEdit;
+    private CancellationTokenSource? _resizeFeedbackCts;
 
     public IFileLoadResultViewModel? SelectedFile
     {
@@ -60,6 +74,201 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public bool HasSelectedFile => SelectedFile != null;
 
     /// <summary>
+    /// Sheet names available in the currently selected file.
+    /// </summary>
+    public string[] SheetNames =>
+        SelectedFile?.File?.Sheets.Keys.ToArray() ?? Array.Empty<string>();
+
+    /// <summary>
+    /// Currently selected sheet name in the sheet selector.
+    /// </summary>
+    public string? SelectedSheetName
+    {
+        get => _selectedSheetName;
+        set
+        {
+            if (SetField(ref _selectedSheetName, value))
+                UpdateCurrentSheet();
+        }
+    }
+
+    /// <summary>
+    /// Sheet data for the currently selected sheet (bound to SheetGridCanvas).
+    /// </summary>
+    public SASheetData? CurrentSheetData
+    {
+        get => _currentSheetData;
+        private set => SetField(ref _currentSheetData, value);
+    }
+
+    /// <summary>
+    /// DataRegions for the currently selected sheet (bound to SheetGridCanvas overlay).
+    /// </summary>
+    public IReadOnlyDictionary<string, DataRegion>? CurrentRegions
+    {
+        get => _currentRegions;
+        private set
+        {
+            // Always notify: SASheetData.DataRegions returns the same dictionary reference
+            // even after Add/Remove, so reference equality check would skip updates.
+            _currentRegions = value;
+            OnPropertyChanged(nameof(CurrentRegions));
+            OnPropertyChanged(nameof(RegionNames));
+            OnPropertyChanged(nameof(HasRegions));
+        }
+    }
+
+    /// <summary>
+    /// Whether a sheet with data is available for display.
+    /// </summary>
+    public bool HasSheetData => CurrentSheetData != null;
+
+    /// <summary>
+    /// Region selected by dragging on the canvas (two-way bound).
+    /// </summary>
+    public DataRegion? CanvasSelectedRegion
+    {
+        get => _canvasSelectedRegion;
+        set
+        {
+            if (SetField(ref _canvasSelectedRegion, value))
+            {
+                OnPropertyChanged(nameof(HasCanvasSelection));
+                OnPropertyChanged(nameof(SelectionBoundsText));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Name for the new region being created.
+    /// </summary>
+    public string NewRegionName
+    {
+        get => _newRegionName;
+        set => SetField(ref _newRegionName, value);
+    }
+
+    /// <summary>
+    /// Whether a canvas selection is active.
+    /// </summary>
+    public bool HasCanvasSelection => CanvasSelectedRegion != null;
+
+    /// <summary>
+    /// Error message shown in the creation panel when region creation fails.
+    /// </summary>
+    public string? RegionErrorMessage
+    {
+        get => _regionErrorMessage;
+        private set
+        {
+            if (SetField(ref _regionErrorMessage, value))
+                OnPropertyChanged(nameof(HasRegionError));
+        }
+    }
+
+    public bool HasRegionError => !string.IsNullOrEmpty(RegionErrorMessage);
+
+    /// <summary>
+    /// Brief feedback shown after resize save. Auto-clears after 2 seconds.
+    /// </summary>
+    public bool IsResizeSaved
+    {
+        get => _isResizeSaved;
+        private set => SetField(ref _isResizeSaved, value);
+    }
+
+    /// <summary>
+    /// Whether the user is currently editing (resizing) the active region.
+    /// </summary>
+    public bool IsEditingRegion
+    {
+        get => _isEditingRegion;
+        private set
+        {
+            if (SetField(ref _isEditingRegion, value))
+                OnPropertyChanged(nameof(IsNotEditingRegion));
+        }
+    }
+
+    public bool IsNotEditingRegion => !IsEditingRegion;
+
+    /// <summary>
+    /// The region activated by clicking its badge on the canvas.
+    /// </summary>
+    public DataRegion? ActiveRegion
+    {
+        get => _activeRegion;
+        set
+        {
+            if (SetField(ref _activeRegion, value))
+            {
+                OnPropertyChanged(nameof(HasActiveRegion));
+                OnPropertyChanged(nameof(ActiveRegionInfoText));
+            }
+        }
+    }
+
+    public bool HasActiveRegion => ActiveRegion != null;
+
+    /// <summary>
+    /// Region names for the current sheet (used for chip display below the grid).
+    /// </summary>
+    public string[] RegionNames =>
+        CurrentRegions?.Values
+            .Select(r => r.Name)
+            .ToArray() ?? Array.Empty<string>();
+
+    public bool HasRegions => RegionNames.Length > 0;
+
+    /// <summary>
+    /// Human-readable info about the active region.
+    /// </summary>
+    public string ActiveRegionInfoText
+    {
+        get
+        {
+            var region = ActiveRegion;
+            if (region == null) return "";
+
+            int startRow = region.HeaderStartRow ?? region.DataStartRow;
+            int endRow = region.DataEndRow ?? startRow;
+            int startCol = region.StartColumn ?? 0;
+            int endCol = region.EndColumn ?? startCol;
+
+            string startCell = $"{GetColumnLetter(startCol)}{startRow + 1}";
+            string endCell = $"{GetColumnLetter(endCol)}{endRow + 1}";
+            int rows = endRow - startRow + 1;
+            int cols = endCol - startCol + 1;
+
+            return $"Region '{region.Name}' — {startCell}:{endCell} ({rows} rows x {cols} cols)";
+        }
+    }
+
+    /// <summary>
+    /// Human-readable description of the current selection bounds.
+    /// </summary>
+    public string SelectionBoundsText
+    {
+        get
+        {
+            var region = CanvasSelectedRegion;
+            if (region == null) return "";
+
+            int startRow = region.HeaderStartRow ?? region.DataStartRow;
+            int endRow = region.DataEndRow ?? startRow;
+            int startCol = region.StartColumn ?? 0;
+            int endCol = region.EndColumn ?? startCol;
+
+            string startCell = $"{GetColumnLetter(startCol)}{startRow + 1}";
+            string endCell = $"{GetColumnLetter(endCol)}{endRow + 1}";
+            int rows = endRow - startRow + 1;
+            int cols = endCol - startCol + 1;
+
+            return $"{startCell}:{endCell} ({rows} rows x {cols} cols)";
+        }
+    }
+
+    /// <summary>
     /// Sets the provider for semantic names used during export.
     /// When set, export will use semantic names for column headers instead of original names.
     /// </summary>
@@ -87,6 +296,14 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public ICommand ViewErrorLogCommand { get; }
     public ICommand ExportExcelCommand { get; }
     public ICommand ExportCsvCommand { get; }
+    public ICommand CreateRegionCommand { get; }
+    public ICommand ClearSelectionCommand { get; }
+    public ICommand DeleteActiveRegionCommand { get; }
+    public ICommand ClearActiveRegionCommand { get; }
+    public ICommand ActivateRegionCommand { get; }
+    public ICommand StartEditRegionCommand { get; }
+    public ICommand SaveRegionEditCommand { get; }
+    public ICommand CancelRegionEditCommand { get; }
 
     public FileDetailsViewModel(
         ILogService logger,
@@ -94,7 +311,8 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         IFilePickerService filePickerService,
         IDataNormalizationService dataNormalizationService,
         IExcelWriterService excelWriterService,
-        ISettingsService settingsService)
+        ISettingsService settingsService,
+        IDataRegionPersistenceService dataRegionPersistenceService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileLogService = fileLogService ?? throw new ArgumentNullException(nameof(fileLogService));
@@ -102,6 +320,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         _dataNormalizationService = dataNormalizationService ?? throw new ArgumentNullException(nameof(dataNormalizationService));
         _excelWriterService = excelWriterService ?? throw new ArgumentNullException(nameof(excelWriterService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _dataRegionPersistenceService = dataRegionPersistenceService ?? throw new ArgumentNullException(nameof(dataRegionPersistenceService));
 
         RemoveFromListCommand = new RelayCommand(() => { ExecuteRemoveFromList(); return Task.CompletedTask; });
         CleanAllDataCommand = new RelayCommand(() => { ExecuteCleanAllData(); return Task.CompletedTask; });
@@ -112,6 +331,14 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         ClearCommand = new RelayCommand(ExecuteClearAsync);
         ExportExcelCommand = new RelayCommand(ExecuteExportExcelAsync);
         ExportCsvCommand = new RelayCommand(ExecuteExportCsvAsync);
+        CreateRegionCommand = new RelayCommand(ExecuteCreateRegionAsync);
+        ClearSelectionCommand = new RelayCommand(() => { ClearCanvasSelection(); return Task.CompletedTask; });
+        DeleteActiveRegionCommand = new RelayCommand(ExecuteDeleteActiveRegionAsync);
+        ClearActiveRegionCommand = new RelayCommand(() => { ActiveRegion = null; return Task.CompletedTask; });
+        ActivateRegionCommand = new RelayCommand<string>(name => ActivateRegionByName(name));
+        StartEditRegionCommand = new RelayCommand(() => { StartEditRegion(); return Task.CompletedTask; });
+        SaveRegionEditCommand = new RelayCommand(SaveRegionEditAsync);
+        CancelRegionEditCommand = new RelayCommand(() => { CancelRegionEdit(); return Task.CompletedTask; });
     }
 
     private void UpdateDetails()
@@ -120,13 +347,42 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         ErrorLogs.Clear();
 
         OnPropertyChanged(nameof(HasSelectedFile));
+        OnPropertyChanged(nameof(SheetNames));
 
-        if (SelectedFile == null) return;
+        if (SelectedFile == null)
+        {
+            SelectedSheetName = null;
+            return;
+        }
 
         OnPropertyChanged(nameof(FilePath));
         OnPropertyChanged(nameof(FileSize));
 
+        // Auto-select first sheet
+        var sheets = SelectedFile.File?.Sheets;
+        SelectedSheetName = sheets?.Keys.FirstOrDefault();
+
         _ = LoadErrorHistoryAsync();
+    }
+
+    private void UpdateCurrentSheet()
+    {
+        if (IsEditingRegion) CancelRegionEdit();
+        ActiveRegion = null;
+        ClearCanvasSelection();
+
+        if (SelectedFile?.File == null || _selectedSheetName == null)
+        {
+            CurrentSheetData = null;
+            CurrentRegions = null;
+        }
+        else
+        {
+            CurrentSheetData = SelectedFile.File.GetSheet(_selectedSheetName);
+            CurrentRegions = CurrentSheetData?.DataRegions;
+        }
+
+        OnPropertyChanged(nameof(HasSheetData));
     }
 
     private void AddSuccessDetails()
@@ -330,6 +586,225 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         TryAgainRequested?.Invoke(this, new FileActionEventArgs(SelectedFile));
     }
 
+    #region Region Creation
+
+    private async Task ExecuteCreateRegionAsync()
+    {
+        var selection = CanvasSelectedRegion;
+        if (selection == null || CurrentSheetData == null || SelectedFile?.File == null)
+            return;
+
+        RegionErrorMessage = null;
+
+        var name = string.IsNullOrWhiteSpace(NewRegionName)
+            ? $"Region {CurrentSheetData.DataRegions.Count + 1}"
+            : NewRegionName.Trim();
+
+        var region = selection with { Name = name };
+
+        try
+        {
+            CurrentSheetData.AddDataRegion(region);
+            _logger.LogInfo($"Region '{name}' created on sheet '{_selectedSheetName}'", "FileDetailsViewModel");
+
+            // Persist
+            await PersistRegionsAsync();
+
+            // Refresh bindings
+            CurrentRegions = CurrentSheetData.DataRegions;
+            ClearCanvasSelection();
+
+            RegionAdded?.Invoke(this, new RegionEventArgs(SelectedFile.FilePath, _selectedSheetName!, region));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning($"Cannot create region: {ex.Message}", "FileDetailsViewModel");
+            RegionErrorMessage = ex.Message;
+        }
+    }
+
+    private async Task ExecuteDeleteActiveRegionAsync()
+    {
+        var region = ActiveRegion;
+        if (region == null || CurrentSheetData == null) return;
+
+        try
+        {
+            CurrentSheetData.RemoveDataRegion(region.Name);
+            _logger.LogInfo($"Region '{region.Name}' deleted from sheet '{_selectedSheetName}'", "FileDetailsViewModel");
+
+            ActiveRegion = null;
+            await PersistRegionsAsync();
+            CurrentRegions = CurrentSheetData.DataRegions;
+
+            RegionDeleted?.Invoke(this, new RegionEventArgs(SelectedFile!.FilePath, _selectedSheetName!, region));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to delete region: {ex.Message}", ex, "FileDetailsViewModel");
+        }
+    }
+
+    /// <summary>
+    /// Updates a region after bottom-edge resize: removes old, adds new with updated bounds, persists.
+    /// </summary>
+    public async Task UpdateResizedRegionAsync(DataRegion resizedRegion)
+    {
+        if (CurrentSheetData == null || SelectedFile?.File == null) return;
+
+        try
+        {
+            // Clear warning since user manually adjusted bounds
+            var updated = resizedRegion with { WarningMessage = null };
+
+            // Remove the old region by name, add the updated one
+            CurrentSheetData.RemoveDataRegion(updated.Name);
+            CurrentSheetData.AddDataRegion(updated);
+
+            await PersistRegionsAsync();
+            CurrentRegions = CurrentSheetData.DataRegions;
+            ActiveRegion = updated;
+
+            RegionResized?.Invoke(this, new RegionEventArgs(SelectedFile.FilePath, _selectedSheetName!, updated));
+            _logger.LogInfo($"Region '{updated.Name}' resized on sheet '{_selectedSheetName}'", "FileDetailsViewModel");
+
+            ShowResizeSavedFeedback();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Failed to update resized region: {ex.Message}", ex, "FileDetailsViewModel");
+        }
+    }
+
+    public void ActivateRegionByName(string name)
+    {
+        if (CurrentRegions != null && CurrentRegions.TryGetValue(name, out var region))
+            ActiveRegion = (ActiveRegion?.Name == name) ? null : region;
+        else
+            ActiveRegion = null;
+
+        // Exit edit mode when switching regions
+        if (IsEditingRegion)
+            CancelRegionEdit();
+    }
+
+    /// <summary>
+    /// Activate a region and immediately enter edit mode (used by sidebar navigation).
+    /// </summary>
+    public void ActivateRegionForEditing(string name)
+    {
+        if (CurrentRegions != null && CurrentRegions.TryGetValue(name, out var region))
+        {
+            ActiveRegion = region;
+            StartEditRegion();
+        }
+    }
+
+    private void StartEditRegion()
+    {
+        if (ActiveRegion == null) return;
+        _originalRegionBeforeEdit = ActiveRegion;
+        IsEditingRegion = true;
+    }
+
+    private async Task SaveRegionEditAsync()
+    {
+        if (ActiveRegion == null || !IsEditingRegion) return;
+
+        await UpdateResizedRegionAsync(ActiveRegion);
+        IsEditingRegion = false;
+        _originalRegionBeforeEdit = null;
+    }
+
+    private void CancelRegionEdit()
+    {
+        if (_originalRegionBeforeEdit != null)
+            ActiveRegion = _originalRegionBeforeEdit;
+
+        IsEditingRegion = false;
+        _originalRegionBeforeEdit = null;
+    }
+
+    private void ShowResizeSavedFeedback()
+    {
+        _resizeFeedbackCts?.Cancel();
+        _resizeFeedbackCts = new CancellationTokenSource();
+        var token = _resizeFeedbackCts.Token;
+
+        IsResizeSaved = true;
+        _ = Task.Delay(2000, token).ContinueWith(_ =>
+        {
+            if (!token.IsCancellationRequested)
+                IsResizeSaved = false;
+        }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    private void ClearCanvasSelection()
+    {
+        CanvasSelectedRegion = null;
+        NewRegionName = "";
+        RegionErrorMessage = null;
+    }
+
+    /// <summary>
+    /// Refreshes the region display from current sheet data.
+    /// Call after regions are loaded asynchronously (e.g., from persistence on file open).
+    /// </summary>
+    public void RefreshRegions()
+    {
+        if (CurrentSheetData != null)
+            CurrentRegions = CurrentSheetData.DataRegions;
+    }
+
+    /// <summary>
+    /// Persists current regions to disk and refreshes canvas bindings.
+    /// Called by MainWindowViewModel when regions are deleted from sidebar.
+    /// </summary>
+    public async Task PersistAndRefreshRegionsAsync()
+    {
+        await PersistRegionsAsync();
+        RefreshRegions();
+    }
+
+    private async Task PersistRegionsAsync()
+    {
+        if (SelectedFile?.File == null) return;
+
+        var data = new DataRegionFile
+        {
+            LastModified = DateTime.UtcNow,
+            Sheets = new Dictionary<string, SheetRegionsDto>()
+        };
+
+        foreach (var (sheetName, sheetData) in SelectedFile.File.Sheets)
+        {
+            var regions = sheetData.DataRegions;
+            if (regions.Count > 0)
+            {
+                data.Sheets[sheetName] = new SheetRegionsDto
+                {
+                    Regions = new Dictionary<string, DataRegion>(regions)
+                };
+            }
+        }
+
+        await _dataRegionPersistenceService.SaveAsync(SelectedFile.FilePath, data);
+    }
+
+    private static string GetColumnLetter(int colIndex)
+    {
+        string result = "";
+        int col = colIndex;
+        do
+        {
+            result = (char)('A' + col % 26) + result;
+            col = col / 26 - 1;
+        } while (col >= 0);
+        return result;
+    }
+
+    #endregion
+
     #region Export Methods
 
     private async Task ExecuteExportExcelAsync()
@@ -464,16 +939,25 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     public event EventHandler<FileActionEventArgs>? CleanAllDataRequested;
     public event EventHandler<FileActionEventArgs>? RemoveNotificationRequested;
     public event EventHandler<FileActionEventArgs>? TryAgainRequested;
+    public event EventHandler<RegionEventArgs>? RegionAdded;
+    public event EventHandler<RegionEventArgs>? RegionDeleted;
+    public event EventHandler<RegionEventArgs>? RegionResized;
 
     public void Dispose()
     {
         if (_disposed) return;
+
+        _resizeFeedbackCts?.Cancel();
+        _resizeFeedbackCts?.Dispose();
 
         RemoveFromListRequested = null;
         CleanAllDataRequested = null;
         RemoveNotificationRequested = null;
         TryAgainRequested = null;
         ExportCompleted = null;
+        RegionAdded = null;
+        RegionDeleted = null;
+        RegionResized = null;
 
         Properties.Clear();
         ErrorLogs.Clear();

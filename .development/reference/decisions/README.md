@@ -7,11 +7,18 @@ This folder contains documentation of significant architectural decisions made f
 Each decision document follows this structure:
 
 - **Date**: When the decision was made
-- **Status**: Active, Superseded, Deprecated
+- **Status**: Proposed, Active, Superseded, Deprecated
 - **Context**: Why was this decision needed?
 - **Decision**: What was decided
 - **Rationale**: Why this option was chosen
 - **Consequences**: Implications and trade-offs
+
+## Status Legend
+
+- **Proposed**: Decision accepted, awaiting implementation
+- **Active**: Implemented and in effect
+- **Superseded**: Replaced by another decision
+- **Deprecated**: No longer applicable
 
 ## Decisions
 
@@ -23,3 +30,7 @@ Each decision document follows this structure:
 6. [Git Workflow](006-git-workflow.md) - Branch strategy and release process
 7. [Unified Data Flow for Export](007-unified-data-flow-for-export.md) - Single source of truth for normalized data
 8. [Facade Pattern for Dependency Injection](008-facade-pattern-for-dependency-injection.md) - Reduce constructor over-injection
+9. [DataRegion Data Model](009-dataregion-data-model.md) - Dictionary storage, no ActiveRegion, per-region metadata *(Proposed)*
+10. [DataRegion UI Pattern](010-dataregion-ui-pattern.md) - Canvas selection, Regions Sidebar, per-file display *(Proposed)*
+11. [DataRegion Persistence](011-dataregion-persistence.md) - JSON in dedicated subfolder *(Proposed)*
+12. [DataRegion Cross-File Detection](012-dataregion-cross-file-detection.md) - Header-anchored detection, not fixed bounds *(Proposed)*

@@ -88,31 +88,10 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:ColumnLinkViewModel">
                             <Border x:Name="ColumnCard"
-                                    Background="{DynamicResource CardBackground}"
-                                    BorderBrush="{DynamicResource BorderColor}"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    Margin="0,0,0,4"
-                                    Padding="8"
+                                    Classes="SidebarCard"
+                                    Classes.highlighted="{Binding IsHighlighted}"
                                     DragDrop.AllowDrop="True"
-                                    PointerPressed="OnColumnPointerPressed"
-                                    Classes.highlighted="{Binding IsHighlighted}">
-
-                                <Border.Styles>
-                                    <Style Selector="Border.highlighted">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentOrange}"/>
-                                        <Setter Property="BorderThickness" Value="2"/>
-                                    </Style>
-                                </Border.Styles>
-
-                                <Border.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Rename..." Click="OnRenameClick"/>
-                                        <MenuItem Header="Ungroup"
-                                                  Click="OnUngroupClick"
-                                                  IsVisible="{Binding IsGrouped}"/>
-                                    </ContextMenu>
-                                </Border.ContextMenu>
+                                    PointerPressed="OnColumnPointerPressed">
 
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -138,19 +117,12 @@
 
                                         <!-- Expand/Collapse indicator for groups -->
                                         <Panel Grid.Column="1"
-                                               Margin="0,0,6,0"
+                                               Classes="ExpandCollapseArrow"
                                                IsVisible="{Binding IsGrouped}"
-                                               Cursor="Hand"
                                                PointerPressed="OnExpandCollapseClick">
                                             <TextBlock Text="▼"
-                                                       FontSize="10"
-                                                       Foreground="{DynamicResource SecondaryText}"
-                                                       VerticalAlignment="Center"
                                                        IsVisible="{Binding IsExpanded}"/>
                                             <TextBlock Text="▶"
-                                                       FontSize="10"
-                                                       Foreground="{DynamicResource SecondaryText}"
-                                                       VerticalAlignment="Center"
                                                        IsVisible="{Binding !IsExpanded}"/>
                                         </Panel>
 
@@ -187,32 +159,30 @@
                                                     Spacing="4"
                                                     VerticalAlignment="Center">
                                             <!-- Warning badge for inconsistencies -->
-                                            <Border Background="#FFF3CD"
-                                                    CornerRadius="10"
-                                                    Padding="4,2"
+                                            <Border Classes="WarningBadge"
                                                     IsVisible="{Binding HasWarnings}"
                                                     ToolTip.Tip="{Binding WarningMessage}">
-                                                <TextBlock Text="⚠"
-                                                           FontSize="10"
-                                                           Foreground="#856404"/>
+                                                <TextBlock Text="⚠"/>
                                             </Border>
                                             <!-- Source count badge for groups -->
-                                            <Border Background="{DynamicResource InfoBackground}"
-                                                    CornerRadius="10"
-                                                    Padding="6,2"
+                                            <Border Classes="CountBadge"
                                                     IsVisible="{Binding IsGrouped}">
-                                                <TextBlock Text="{Binding ColumnCount}"
-                                                           FontSize="10"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource InfoColor}"/>
+                                                <TextBlock Text="{Binding ColumnCount}"/>
                                             </Border>
                                             <!-- Menu button -->
-                                            <Button x:Name="MenuButton"
-                                                    Background="Transparent"
+                                            <Button Background="Transparent"
                                                     BorderThickness="0"
                                                     Padding="4,2"
-                                                    Cursor="Hand"
-                                                    Click="OnMenuButtonClick">
+                                                    Cursor="Hand">
+                                                <Button.Flyout>
+                                                    <MenuFlyout>
+                                                        <MenuItem Header="Rename..."
+                                                                  Click="OnRenameMenuItemClick"/>
+                                                        <MenuItem Header="Ungroup"
+                                                                  IsVisible="{Binding IsGrouped}"
+                                                                  Click="OnUngroupMenuItemClick"/>
+                                                    </MenuFlyout>
+                                                </Button.Flyout>
                                                 <TextBlock Text="⋮"
                                                            FontSize="14"
                                                            FontWeight="Bold"
@@ -248,11 +218,8 @@
 
                                                     <TextBlock Grid.Column="1"
                                                                Grid.RowSpan="2"
-                                                               Text="├─"
-                                                               FontSize="11"
-                                                               Foreground="{DynamicResource DisabledText}"
-                                                               VerticalAlignment="Center"
-                                                               Margin="0,0,4,0"/>
+                                                               Classes="TreeConnector"
+                                                               Text="├─"/>
 
                                                     <!-- Row 1: Name + Source -->
                                                     <TextBlock Grid.Column="2"

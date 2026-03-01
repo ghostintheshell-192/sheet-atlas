@@ -2,7 +2,7 @@
 
 Private development documentation for spec-driven development workflow.
 
-**Not committed to git** - internal planning and technical reference.
+**Committed to git** - shared development documentation.
 
 ## Quick Start
 

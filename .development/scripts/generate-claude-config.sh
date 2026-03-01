@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEV_DIR="$(dirname "$SCRIPT_DIR")"
 PROJECT_ROOT="$(dirname "$DEV_DIR")"
 CLAUDE_DIR="$PROJECT_ROOT/.claude"
+RULES_DIR="$CLAUDE_DIR/rules"
 ADR_DIR="$DEV_DIR/reference/decisions"
 
 echo "Generating Claude Code configuration files..."
@@ -92,12 +93,13 @@ echo "✓ Generated $OUTFILE ($critical_count critical ADR(s))"
 
 echo "Generating coding-standards.md..."
 
-OUTFILE="$CLAUDE_DIR/coding-standards.md"
+# Ensure rules directory exists
+mkdir -p "$RULES_DIR"
+
+OUTFILE="$RULES_DIR/coding-standards.md"
 
 cat > "$OUTFILE" << 'ENDOFFILE'
 # Coding Standards
-
-Extracted from `.rules/coding-standards/csharp-dotnet.md`.
 
 ## Naming Conventions
 
@@ -158,10 +160,6 @@ Extracted from `.rules/coding-standards/csharp-dotnet.md`.
       }
   }
   ```
-
----
-
-*For complete coding standards, see `.rules/coding-standards/csharp-dotnet.md`.*
 ENDOFFILE
 
 echo "✓ Generated $OUTFILE"

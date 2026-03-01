@@ -1,4 +1,16 @@
-# Git Workflow & Release Process
+# Workflow
+
+## Session Start
+
+At the beginning of every session, before starting any work:
+
+1. **Read the latest handoff** in `.memory-bank/` (the most recent `.md` file by date in the filename)
+2. **Read any linked files** referenced in the handoff (e.g., progress specs, related notes)
+3. **Cross-reference** with `memory/MEMORY.md` for stable project facts
+
+This ensures continuity between sessions. The `.memory-bank/` contains detailed session diaries (what was done, why, what's next), while `memory/MEMORY.md` holds a compact index of stable facts.
+
+---
 
 ## Git Workflow
 

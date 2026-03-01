@@ -19,6 +19,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand CloseTemplatesTabCommand { get; private set; } = null!;
         public ICommand ShowSettingsTabCommand { get; private set; } = null!;
         public ICommand CloseSettingsTabCommand { get; private set; } = null!;
+        public ICommand ShowDataRegionsTabCommand { get; private set; } = null!;
+        public ICommand CloseDataRegionsTabCommand { get; private set; } = null!;
         public ICommand ShowSearchResultsCommand { get; private set; } = null!;
         public ICommand ShowAboutCommand { get; private set; } = null!;
         public ICommand ShowDocumentationCommand { get; private set; } = null!;
@@ -116,6 +118,24 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 IsSettingsTabVisible = false;
                 SwitchToNextVisibleTab("Settings");
+                return Task.CompletedTask;
+            });
+
+            ShowDataRegionsTabCommand = new RelayCommand(() =>
+            {
+                if (SelectedFile == null && LoadedFiles.Any())
+                {
+                    SelectedFile = LoadedFiles.First();
+                }
+                IsDataRegionsTabVisible = true;
+                SelectedTabIndex = GetTabIndex("DataRegions");
+                return Task.CompletedTask;
+            });
+
+            CloseDataRegionsTabCommand = new RelayCommand(() =>
+            {
+                IsDataRegionsTabVisible = false;
+                SwitchToNextVisibleTab("DataRegions");
                 return Task.CompletedTask;
             });
 

@@ -1,18 +1,20 @@
 # SheetAtlas - Claude Code Project Configuration
 
-## Quick Navigation
+This project uses Claude Code's official `.claude/rules/` pattern. All `.md` files in the `rules/` directory are automatically loaded as project instructions.
 
-See @overview.md for project overview, development methodology, and tech stack.
+## Project Rules
 
-See @critical-rules.md for critical architecture rules (auto-generated from ADRs).
+The following rules are automatically loaded from `.claude/rules/`:
 
-See @coding-standards.md for coding standards (auto-generated from .rules/).
+- **overview.md** - Project overview, development methodology, and tech stack
+- **coding-standards.md** - Coding standards and conventions
+- **principles.md** - General development principles
+- **preflight-checks.md** - Pre-flight checks before coding
+- **workflow.md** - Git workflow and release process
 
-See @principles.md for general development principles.
+## Critical Rules
 
-See @preflight-checks.md for pre-flight checks before coding.
-
-See @workflow.md for git workflow and release process.
+See **critical-rules.md** for critical architecture rules (auto-generated from ADRs).
 
 ## Documentation Structure
 
@@ -29,4 +31,4 @@ See @workflow.md for git workflow and release process.
 
 ---
 
-*Version: 2.0*
+*All rules are automatically loaded by Claude Code. No @includes needed.*

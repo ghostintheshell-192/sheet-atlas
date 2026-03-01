@@ -1,7 +1,7 @@
 # Architecture Reference
 
 Quick reference for navigating the SheetAtlas codebase.
-For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../docs/project/ARCHITECTURE.md).
+For detailed documentation, see [docs/project/ARCHITECTURE.md](../docs/project/ARCHITECTURE.md).
 
 ## Layer Overview
 
@@ -24,10 +24,14 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - [ADR-006: Git Workflow](reference/decisions/006-git-workflow.md)
 - [ADR-007: Unified Data Flow For Export](reference/decisions/007-unified-data-flow-for-export.md)
 - [ADR-008: Facade Pattern For Dependency Injection](reference/decisions/008-facade-pattern-for-dependency-injection.md)
+- [ADR-009: Dataregion Data Model](reference/decisions/009-dataregion-data-model.md)
+- [ADR-010: Dataregion Ui Pattern](reference/decisions/010-dataregion-ui-pattern.md)
+- [ADR-011: Dataregion Persistence](reference/decisions/011-dataregion-persistence.md)
+- [ADR-012: Dataregion Cross File Detection](reference/decisions/012-dataregion-cross-file-detection.md)
 
 ## Project Tree
 
-> Auto-generated from `/// <summary>` comments in source files.
+> Auto-generated from source code.
 > Run `.development/scripts/generate-architecture.sh` to update.
 
 
@@ -35,6 +39,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `ColumnAnalysisResult.cs` — Result of analyzing column characteristics. Extends ColumnMetadata record with detected information.
 - `ColumnValidationResult.cs` — Validation result for a single column. Combines expected column definition with actual column analysis.
 - `CsvReaderOptions.cs` — Configuration options for CSV file reading
+- `DataRegionFile.cs` — Root DTO for regions.json persistence. See ADR-011.
 - `ErrorSummary.cs` — Pre-calculated aggregations for UI performance
 - `ExportResult.cs` — Result of an export operation. Follows Result pattern - check IsSuccess before using output path.
 - `FileInfoDto.cs` — Information about the Excel file being logged
@@ -55,6 +60,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `IComparisonExportService.cs` — Service for exporting row comparison results to various formats. Includes metadata (search terms, files, timestamps) for context.
 - `ICurrencyDetector.cs` — Extracts currency information from Excel number format strings. Used during file load to enhance ColumnMetadata with currency awareness.
 - `IDataNormalizationService.cs` — Normalizes cell values: dates, numbers, text, booleans. Populates OriginalValue and CleanedValue in CellMetadata. Core to search accuracy (+40% improvement).
+- `IDataRegionPersistenceService.cs` — Persists DataRegion definitions to/from JSON files. Each Excel file gets its own regions.json in the DataRegions folder.
 - `IExcelWriterService.cs` — Service for exporting enriched sheet data to various formats. Uses CleanedValue from cell metadata to write typed cells.
 - `IExceptionHandler.cs` — Centralized exception handling service. Converts exceptions to user-friendly error messages and logs technical details.
 - `IFileFormatReader.cs` — Reader for specific Excel file formats
@@ -63,6 +69,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `IHeaderResolver.cs` — Resolves semantic names for column headers. Provides unified interface for different resolution sources (ColumnLink, Template, Dictionary).
 - `IMergedCellResolver.cs` — Resolves merged cells using configurable strategies. Handles horizontal/vertical merges, warns on complex patterns.
 - `IMergedRangeExtractor.cs` — Generic interface for extracting merged cell range information from various file formats. Each format (OpenXML, ODF, etc.) provides its own context type.
+- `IRegionDetectionService.cs` — Detects DataRegion boundaries in target sheets by matching headers from a source region. Used for cross-file region application (ADR-012 Phase 2).
 - `IRowComparisonService.cs` — Service for comparing rows from search results. Extracts row data and column headers.
 - `ISettingsService.cs` — Service for managing user preferences with persistent storage. Settings are stored as JSON in the user's application data folder.
 - `ISheetAnalysisOrchestrator.cs` — Orchestrates the analysis and enrichment pipeline for sheet data. Coordinates foundation services to analyze columns, resolve merged cells, and populate metadata.
@@ -76,10 +83,12 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `CellReferenceParser.cs` — Implementation of ICellReferenceParser. Parses Excel cell references using regex.
 - `CellValueReader.cs` — Reads and parses cell values from Excel with type preservation. Handles shared strings, numbers, dates, booleans. Uses string interning for memory efficiency.
 - `ColumnLinkingService.cs` — Input for column linking: column info from a loaded file.
+- `DataRegionPersistenceService.cs` — Persists DataRegion definitions as JSON files. Storage: {LocalApplicationData}/SheetAtlas/DataRegions/{folder}/regions.json Follows FileLogService pattern for folder naming and atomic writes.
 - `ExcelErrorJsonConverter.cs` — Custom JSON converter for ExcelError Handles serialization of Exception property by extracting only serializable info
 - `ExceptionHandler.cs` — Centralized exception handling implementation. Converts technical exceptions to user-friendly messages and logs details.
 - `FileLogService.cs` — Manages structured logging of Excel file load attempts to JSON files Each Excel file gets its own folder with chronological JSON logs
 - `HeaderGroupingService.cs` — Groups headers by semantic name, merging columns that map to the same name. Consolidates header grouping logic previously duplicated across ComparisonExportService and RowComparisonViewModel.
+- `RegionDetectionService.cs` — Detects DataRegion boundaries in target sheets using header-anchored matching. Phase 2 algorithm: case-insensitive header match, boundary = empty row or known header pattern. Fallback: source region r...
 - `RowComparisonService.cs` — Implementation of IRowComparisonService. Creates row comparisons from search results.
 - `SearchService.cs` — Service for searching within Excel files across sheets and cells.
 - `SettingsService.cs` — Manages user preferences with persistent JSON storage. Settings are stored in %AppData%/SheetAtlas/settings.json.
@@ -120,7 +129,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `CellAnomaly.cs` — Represents an anomaly detected in a cell during column analysis. Used by ColumnAnalysisService to report data quality issues with context.
 - `ColumnLink.cs` — Links multiple column names to a single semantic concept. Used for grouping semantically equivalent columns across files.
 - `CurrencyInfo.cs` — Immutable currency information extracted from Excel number format. Used for currency-aware comparison and normalization.
-- `DataRegion.cs` — Defines a data region within an Excel sheet. Supports both auto-detection and manual user selection (future UI).
+- `DataRegion.cs` — Defines a named rectangular data region within an Excel sheet. Used as interpretive lens for search, comparison, and normalization. Stored in SASheetData as Dictionary&lt;string, DataRegion&gt; keyed ...
 - `DataType.cs` — Detected data type for cell or column. Used by normalization and column analysis services.
 - `DateSystem.cs` — Indicates which date serial number system the Excel workbook uses. Affects how date serial numbers are converted to DateTime values.
 - `ExcelError.cs` — Indicates the overall outcome of a file load operation.
@@ -173,6 +182,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 ### SheetAtlas.UI.Avalonia/Controls
 - `CollapsibleSection.axaml.cs` — A reusable collapsible section control with customizable header and content. Provides consistent styling across SearchView and ComparisonView.
 - `MultiSidebar.axaml.cs` — A VSCode-style multi-sidebar control with icon bar and collapsible panels.
+- `SheetGridCanvas.cs` — Custom-rendered spreadsheet grid for visualizing sheet data and selecting regions. Uses DrawingContext for performance — no UI element per cell. Designed to sit inside a ScrollViewer; reports full log...
 
 ### SheetAtlas.UI.Avalonia/Converters
 - `BoolToTextConverter.cs`
@@ -213,9 +223,11 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 ### SheetAtlas.UI.Avalonia/Models
 - `CellComparisonResult.cs` — Represents the result of comparing a cell value with other values in the same column
 - `ComparisonType.cs` — Represents the type of difference found when comparing cells across rows
+- `CrossFileApplyViewModel.cs` — UI model for a single cross-file detection result. Displayed as a card in the detection results panel.
 - `FileDetailAction.cs`
 - `FileDetailProperty.cs`
 - `IToggleable.cs` — Interface for items that can be toggled (expanded/collapsed or selected/deselected)
+- `RegionTreeModels.cs` — Top-level group in the Regions sidebar: one per loaded file.
 - `SidebarItem.cs` — Represents a sidebar item in the MultiSidebar control. Each item has an icon, tooltip, content template, and open/close state.
 
 ### SheetAtlas.UI.Avalonia/Models/Search
@@ -251,6 +263,7 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 - `MainWindowViewModel.EventHandlers.cs`
 - `MainWindowViewModel.FileOperations.cs`
 - `MainWindowViewModel.HelpCommands.cs`
+- `RegionsSidebarViewModel.cs` — ViewModel for the Regions sidebar. Displays a File → Sheet → Region hierarchy and supports cross-file region detection (ADR-012 Phase 2).
 - `RowComparisonViewModel.cs` — Builds a mapping from original column names to their semantic names for export.
 - `SearchHistoryItem.cs`
 - `SearchResultItem.cs`
@@ -265,11 +278,13 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 ### SheetAtlas.UI.Avalonia/Views
 - `ClosableTabHeader.axaml.cs`
 - `ColumnsSidebarView.axaml.cs`
+- `DataRegionsView.axaml.cs`
 - `EmptyStateView.axaml.cs`
 - `FileDetailsView.axaml.cs`
 - `FileLoadResultView.axaml.cs`
 - `FilesSidebarView.axaml.cs`
 - `MainWindow.axaml.cs`
+- `RegionsSidebarView.axaml.cs`
 - `RowComparisonView.axaml.cs`
 - `SettingsView.axaml.cs`
 - `TemplateManagementView.axaml.cs`
@@ -277,4 +292,4 @@ For diagrams and detailed explanations, see [docs/project/ARCHITECTURE.md](../do
 
 ---
 
-*Auto-generated from source code comments by `.development/scripts/generate-architecture.sh`*
+*Auto-generated by `.development/scripts/generate-architecture.sh`*

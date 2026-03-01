@@ -46,6 +46,8 @@ namespace SheetAtlas.Core.Domain.Entities
 
         private Dictionary<string, MergedRange>? _mergedCells;
         private Dictionary<int, ColumnMetadata>? _columnMetadata;
+        private Dictionary<string, DataRegion>? _dataRegions;
+        private Dictionary<string, Dictionary<int, ColumnMetadata>>? _regionColumnMetadata;
 
         public SASheetData(string sheetName, string[] columnNames, int initialCapacity = DefaultInitialCapacity)
         {
@@ -293,11 +295,130 @@ namespace SheetAtlas.Core.Domain.Entities
             _mergedCells[cellRef] = range;
         }
 
-        // === Column Metadata Support (Future) ===
+        // === DataRegion Support ===
 
         /// <summary>
-        /// Get column metadata (width, hidden state).
+        /// All defined DataRegions for this sheet.
+        /// Lazy-loaded: empty dictionary returned until first region added.
+        /// Key = region Name.
+        /// </summary>
+        public IReadOnlyDictionary<string, DataRegion> DataRegions
+        {
+            get
+            {
+                if (_dataRegions == null)
+                    return new Dictionary<string, DataRegion>();
+                return _dataRegions;
+            }
+        }
+
+        /// <summary>
+        /// Add a DataRegion to this sheet.
+        /// Validates: Name required, no duplicate names, no overlapping regions.
+        /// </summary>
+        public void AddDataRegion(DataRegion region)
+        {
+            ArgumentNullException.ThrowIfNull(region);
+
+            if (string.IsNullOrWhiteSpace(region.Name))
+                throw new ArgumentException("Region must have a name", nameof(region));
+
+            _dataRegions ??= new Dictionary<string, DataRegion>();
+
+            if (_dataRegions.ContainsKey(region.Name))
+                throw new InvalidOperationException($"Region '{region.Name}' already exists");
+
+            foreach (var existing in _dataRegions.Values)
+            {
+                if (region.OverlapsWith(existing))
+                    throw new InvalidOperationException(
+                        $"Region '{region.Name}' overlaps with existing region '{existing.Name}'");
+            }
+
+            _dataRegions[region.Name] = region;
+        }
+
+        /// <summary>
+        /// Remove a DataRegion by name. Also clears its per-region ColumnMetadata.
+        /// No-op if region doesn't exist.
+        /// </summary>
+        public void RemoveDataRegion(string name)
+        {
+            _dataRegions?.Remove(name);
+            _regionColumnMetadata?.Remove(name);
+        }
+
+        /// <summary>
+        /// Get a DataRegion by name. Returns null if not found.
+        /// </summary>
+        public DataRegion? GetDataRegion(string name)
+        {
+            if (_dataRegions == null)
+                return null;
+
+            return _dataRegions.TryGetValue(name, out var region) ? region : null;
+        }
+
+        /// <summary>
+        /// Enumerate only data rows within a specific DataRegion (yields row by row, no allocation).
+        /// Respects the region's DataStartRow and DataEndRow bounds.
+        /// </summary>
+        public IEnumerable<RowView> EnumerateDataRows(DataRegion region)
+        {
+            int startRow = region.DataStartRow;
+            int endRow = region.DataEndRow ?? (_rowCount - 1);
+
+            // Clamp to actual sheet bounds
+            if (startRow >= _rowCount)
+                yield break;
+            if (endRow >= _rowCount)
+                endRow = _rowCount - 1;
+
+            for (int row = startRow; row <= endRow; row++)
+            {
+                yield return new RowView(this, row);
+            }
+        }
+
+        // === Per-Region Column Metadata ===
+
+        /// <summary>
+        /// Get column metadata for a specific region.
+        /// Returns null if no metadata set for this region/column.
+        /// </summary>
+        public ColumnMetadata? GetColumnMetadata(string regionName, int columnIndex)
+        {
+            if (_regionColumnMetadata == null)
+                return null;
+
+            if (!_regionColumnMetadata.TryGetValue(regionName, out var regionMeta))
+                return null;
+
+            return regionMeta.TryGetValue(columnIndex, out var metadata) ? metadata : null;
+        }
+
+        /// <summary>
+        /// Set column metadata for a specific region (lazy allocation).
+        /// </summary>
+        public void SetColumnMetadata(string regionName, int columnIndex, ColumnMetadata metadata)
+        {
+            _regionColumnMetadata ??= new Dictionary<string, Dictionary<int, ColumnMetadata>>();
+
+            if (!_regionColumnMetadata.TryGetValue(regionName, out var regionMeta))
+            {
+                regionMeta = new Dictionary<int, ColumnMetadata>();
+                _regionColumnMetadata[regionName] = regionMeta;
+            }
+
+            regionMeta[columnIndex] = metadata;
+        }
+
+        // === Column Metadata Support (Global — backward compatibility) ===
+
+        /// <summary>
+        /// Get global column metadata (width, hidden state).
         /// Returns null if no metadata set for column.
+        /// For per-region metadata, use GetColumnMetadata(string regionName, int columnIndex).
         /// </summary>
         public ColumnMetadata? GetColumnMetadata(int columnIndex)
         {
@@ -337,6 +458,8 @@ namespace SheetAtlas.Core.Domain.Entities
 
                 _mergedCells?.Clear();
                 _columnMetadata?.Clear();
+                _dataRegions?.Clear();
+                _regionColumnMetadata?.Clear();
             }
 
             _disposed = true;

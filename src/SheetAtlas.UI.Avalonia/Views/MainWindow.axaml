@@ -59,6 +59,9 @@
                           Command="{Binding ShowSearchTabCommand}"/>
                 <MenuItem Header="Show _Comparison"
                           Command="{Binding ShowComparisonTabCommand}"/>
+                <MenuItem Header="Show _Data Regions"
+                          Command="{Binding ShowDataRegionsTabCommand}"
+                          IsEnabled="{Binding HasLoadedFiles}"/>
                 <MenuItem Header="Show _Templates"
                           Command="{Binding ShowTemplatesTabCommand}"/>
                 <Separator/>
@@ -125,6 +128,18 @@
                             </DataTemplate>
                         </models:SidebarItem.ContentTemplate>
                     </models:SidebarItem>
+
+                    <!-- Regions Sidebar -->
+                    <models:SidebarItem IconData="{StaticResource RegionsIconData}"
+                                        Tooltip="Data Regions"
+                                        IsOpen="False"
+                                        Width="280">
+                        <models:SidebarItem.ContentTemplate>
+                            <DataTemplate x:DataType="vm:MainWindowViewModel">
+                                <views:RegionsSidebarView DataContext="{Binding RegionsSidebarViewModel}"/>
+                            </DataTemplate>
+                        </models:SidebarItem.ContentTemplate>
+                    </models:SidebarItem>
                 </controls:MultiSidebar.Items>
             </controls:MultiSidebar>
 
@@ -163,6 +178,7 @@
                         <!-- Search Tab Content -->
                         <Grid Margin="8">
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
@@ -247,8 +263,43 @@
                                 </StackPanel>
                             </Grid>
 
+                            <!-- Region Filter: active indicator -->
+                            <Border Grid.Row="2"
+                                    Background="{DynamicResource SuccessBackground}"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,0,0,8"
+                                    IsVisible="{Binding SearchViewModel.IsRegionFilterActive}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding SearchViewModel.ActiveRegionDisplayText}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SuccessColor}"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1"
+                                            Content="Clear"
+                                            Classes="ModernButton"
+                                            FontSize="10"
+                                            Padding="6,2"
+                                            Command="{Binding SearchViewModel.ClearRegionFilterCommand}"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Region Filter: hint when regions exist but none selected -->
+                            <Border Grid.Row="2"
+                                    Background="{DynamicResource InfoBackground}"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,0,0,8"
+                                    IsVisible="{Binding HasMultipleRegionsMessage}">
+                                <TextBlock Text="Select a data region from the Regions sidebar to focus search"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource InfoColor}"/>
+                            </Border>
+
                             <!-- Search Results Tree View -->
-                            <ContentControl Grid.Row="2" Content="{Binding TreeSearchResultsViewModel}">
+                            <ContentControl Grid.Row="3" Content="{Binding TreeSearchResultsViewModel}">
                                 <ContentControl.ContentTemplate>
                                     <DataTemplate>
                                         <views:TreeSearchResultsView/>
@@ -354,6 +405,21 @@
                             <ContentControl.ContentTemplate>
                                 <DataTemplate>
                                     <views:TemplateManagementView/>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
+                    </TabItem>
+
+                    <!-- Data Regions Tab -->
+                    <TabItem IsVisible="{Binding IsDataRegionsTabVisible}">
+                        <TabItem.Header>
+                            <views:ClosableTabHeader Title="Data Regions"
+                                                    CloseCommand="{Binding CloseDataRegionsTabCommand}"/>
+                        </TabItem.Header>
+                        <ContentControl Content="{Binding FileDetailsViewModel}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate>
+                                    <views:DataRegionsView/>
                                 </DataTemplate>
                             </ContentControl.ContentTemplate>
                         </ContentControl>

@@ -1,6 +1,6 @@
 # Data Region Selection
 
-**Status**: planned
+**Status**: in-progress
 **Release**: v0.5.x (Fase 2), v1.x+ (Fase 3)
 **Priority**: should-have
 **Depends on**: multi-row-headers.md, template-validation.md, settings-configuration.md
@@ -8,6 +8,7 @@
 ## Summary
 
 Allow users to define a rectangular data region within an Excel sheet, for cases where:
+
 - Sheets contain mixed content (tables + diagrams + empty areas)
 - Multiple tables are stacked vertically or horizontally
 - Only a portion of the sheet contains relevant data
@@ -17,11 +18,14 @@ This extends `multi-row-headers` (which only handles header row count) to full 2
 ## Problem Statement
 
 Real-world Excel files often contain:
-```
+
+```text
 | empty | empty | ASCII diagram | empty | DATA TABLE | empty |
 ```
+
 or:
-```
+
+```text
 | Table A headers |
 | Table A data    |
 | empty row       |
@@ -110,6 +114,7 @@ Desired behavior: User can select which rectangular area contains the data of in
 ### Principle: Filter, not Block
 
 DataRegion is a **filter** to focus operations, not a **block** that prevents access:
+
 - User can always toggle off "Use DataRegion" to search everywhere
 - Operations without DataRegion = full sheet (current behavior preserved)
 - No functionality is removed, only added
@@ -117,7 +122,7 @@ DataRegion is a **filter** to focus operations, not a **block** that prevents ac
 ### Edge Cases
 
 | Case | Handling |
-|------|----------|
+| ---- | -------- |
 | DataRegion larger than sheet | Use intersection (warn user) |
 | DataRegion has 0 data rows | Show warning, allow but flag |
 | File structure changed | Prompt to redefine region |
@@ -128,7 +133,8 @@ DataRegion is a **filter** to focus operations, not a **block** that prevents ac
 - `DataRegion` ValueObject already exists at `Domain/ValueObjects/DataRegion.cs`
 - Needs extension: add `StartColumn`, `EndColumn` properties
 - `SASheetData` already supports `HeaderRowCount`, extend to use full `DataRegion`
-- Consider: `SASheetData.ApplyDataRegion(DataRegion)` method for filtering
+- DataRegions stored as `Dictionary<string, DataRegion>` (see ADR-009)
+- Default region (no user selection) uses sheet name as key, covers entire sheet
 
 ### Existing Code to Modify
 
@@ -148,6 +154,7 @@ DataRegion is a **filter** to focus operations, not a **block** that prevents ac
 ## Acceptance Criteria
 
 ### Fase 2
+
 - [ ] User can select rectangular region via UI
 - [ ] Search respects DataRegion (with toggle)
 - [ ] Compare respects DataRegion
@@ -156,6 +163,7 @@ DataRegion is a **filter** to focus operations, not a **block** that prevents ac
 - [ ] Clear visual feedback of what's "active"
 
 ### Fase 3
+
 - [ ] Multiple named regions per sheet
 - [ ] Region selector in search/compare UI
 - [ ] Auto-detection of regions (optional)

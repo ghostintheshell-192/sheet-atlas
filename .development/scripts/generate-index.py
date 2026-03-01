@@ -108,7 +108,7 @@ def generate_index() -> str:
     # Development Documentation (.development/)
     lines.append("## Development Documentation (.development/)")
     lines.append("")
-    lines.append("*Not committed to git - specs, tech-debt, decisions*")
+    lines.append("*Specs, tech-debt, decisions*")
     lines.append("")
 
     dev_files = scan_directory(DEVELOPMENT_DIR, DEVELOPMENT_DIR)

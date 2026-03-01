@@ -116,6 +116,111 @@ namespace SheetAtlas.Core.Application.Services
             }
         }
 
+        public Task EnrichRegionAsync(SASheetData data, DataRegion region, List<ExcelError> errors)
+        {
+            ArgumentNullException.ThrowIfNull(data);
+            ArgumentNullException.ThrowIfNull(region);
+            ArgumentNullException.ThrowIfNull(errors);
+
+            EnrichRegionWithColumnAnalysis(data, region, errors);
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Enriches a specific DataRegion with column analysis.
+        /// Mirrors EnrichSheetWithColumnAnalysis but respects region bounds.
+        /// </summary>
+        private void EnrichRegionWithColumnAnalysis(SASheetData sheetData, DataRegion region, List<ExcelError> errors)
+        {
+            int startCol = region.StartColumn ?? 0;
+            int endCol = region.EndColumn ?? (sheetData.ColumnCount - 1);
+
+            // Collect data rows within region bounds
+            var regionRows = sheetData.EnumerateDataRows(region).ToList();
+            int maxSampleSize = Math.Min(100, regionRows.Count);
+
+            for (int colIndex = startCol; colIndex <= endCol; colIndex++)
+            {
+                var sampleCells = new List<SACellValue>();
+                var numberFormats = new List<string?>();
+                var absoluteRowIndices = new List<int>();
+                var normalizationResults = new List<NormalizationResult>();
+
+                for (int i = 0; i < maxSampleSize; i++)
+                {
+                    int absoluteRow = region.DataStartRow + i;
+                    var cellData = sheetData.GetCellData(absoluteRow, colIndex);
+
+                    var normResult = NormalizeCellValue(cellData.Value, cellData.Metadata?.NumberFormat);
+                    normalizationResults.Add(normResult);
+
+                    sampleCells.Add(cellData.Value);
+                    numberFormats.Add(cellData.Metadata?.NumberFormat);
+                    absoluteRowIndices.Add(absoluteRow);
+                }
+
+                if (sampleCells.All(c => c.IsEmpty))
+                    continue;
+
+                var analysisResult = _columnAnalysisService.AnalyzeColumn(
+                    colIndex,
+                    sheetData.ColumnNames[colIndex],
+                    sampleCells,
+                    numberFormats,
+                    customRegion: region
+                );
+
+                sheetData.SetColumnMetadata(region.Name, colIndex, analysisResult.ToMetadata());
+
+                // Update cell metadata with normalization results and RegionId
+                for (int i = 0; i < absoluteRowIndices.Count; i++)
+                {
+                    var absoluteRow = absoluteRowIndices[i];
+                    var normResult = normalizationResults[i];
+
+                    if (normResult.IsSuccess && normResult.CleanedValue.HasValue)
+                    {
+                        UpdateCellWithNormalizationResult(sheetData, absoluteRow, colIndex, normResult);
+                    }
+
+                    // Set RegionId on cell metadata
+                    var currentCell = sheetData.GetCellData(absoluteRow, colIndex);
+                    var metadata = currentCell.Metadata ?? new CellMetadata();
+                    if (metadata.RegionId != region.Name)
+                    {
+                        var newMetadata = new CellMetadata
+                        {
+                            NumberFormat = metadata.NumberFormat,
+                            Formula = metadata.Formula,
+                            Style = metadata.Style,
+                            Validation = metadata.Validation,
+                            Currency = metadata.Currency,
+                            CustomData = metadata.CustomData,
+                            OriginalValue = metadata.OriginalValue,
+                            CleanedValue = metadata.CleanedValue,
+                            DetectedType = metadata.DetectedType,
+                            QualityIssue = metadata.QualityIssue,
+                            RegionId = region.Name
+                        };
+                        sheetData.SetCellData(absoluteRow, colIndex, new SACellData(currentCell.Value, newMetadata));
+                    }
+                }
+
+                foreach (var anomaly in analysisResult.Anomalies)
+                {
+                    var error = CreateExcelErrorFromAnomaly(sheetData.SheetName, colIndex, anomaly, absoluteRowIndices);
+                    errors.Add(error);
+                }
+
+                _logger.LogInfo(
+                    $"[REGION ENRICHMENT] Region '{region.Name}' Column '{sheetData.ColumnNames[colIndex]}' (idx={colIndex}): " +
+                    $"Type={analysisResult.DetectedType}, Confidence={analysisResult.TypeConfidence:F2}, " +
+                    $"Samples={sampleCells.Count}, Anomalies={analysisResult.Anomalies.Count}",
+                    "SheetAnalysisOrchestrator");
+            }
+        }
+
         /// <summary>
         /// Enriches sheet data with column analysis using foundation services.
         /// Samples cells from each column, normalizes data, runs analysis, populates metadata, adds anomalies as ExcelErrors.
