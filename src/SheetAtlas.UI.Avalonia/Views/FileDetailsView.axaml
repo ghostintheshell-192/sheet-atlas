@@ -40,7 +40,7 @@
                         Padding="0"
                         Cursor="Hand">
                     <TextBlock FontSize="13"
-                               Foreground="{DynamicResource AccentColor}">
+                               Foreground="{DynamicResource LinkText}">
                         <Run Text="Data Regions"/>
                         <Run Text=" &#x2192;" Foreground="{DynamicResource SecondaryText}"/>
                     </TextBlock>
@@ -52,7 +52,7 @@
                         Padding="0"
                         Cursor="Hand">
                     <TextBlock FontSize="13"
-                               Foreground="{DynamicResource AccentColor}">
+                               Foreground="{DynamicResource LinkText}">
                         <Run Text="Search"/>
                         <Run Text=" &#x2192;" Foreground="{DynamicResource SecondaryText}"/>
                     </TextBlock>

@@ -21,6 +21,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand CloseSettingsTabCommand { get; private set; } = null!;
         public ICommand ShowDataRegionsTabCommand { get; private set; } = null!;
         public ICommand CloseDataRegionsTabCommand { get; private set; } = null!;
+        public ICommand ShowWelcomeTabCommand { get; private set; } = null!;
+        public ICommand CloseWelcomeTabCommand { get; private set; } = null!;
         public ICommand ShowSearchResultsCommand { get; private set; } = null!;
         public ICommand ShowAboutCommand { get; private set; } = null!;
         public ICommand ShowDocumentationCommand { get; private set; } = null!;
@@ -143,6 +145,20 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 IsSearchTabVisible = true;
                 SelectedTabIndex = GetTabIndex("Search");
+                return Task.CompletedTask;
+            });
+
+            ShowWelcomeTabCommand = new RelayCommand(() =>
+            {
+                IsWelcomeTabVisible = true;
+                SelectedTabIndex = GetTabIndex("Welcome");
+                return Task.CompletedTask;
+            });
+
+            CloseWelcomeTabCommand = new RelayCommand(() =>
+            {
+                IsWelcomeTabVisible = false;
+                SwitchToNextVisibleTab("Welcome");
                 return Task.CompletedTask;
             });
 

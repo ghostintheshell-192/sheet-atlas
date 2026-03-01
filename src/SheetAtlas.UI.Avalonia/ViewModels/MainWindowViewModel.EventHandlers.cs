@@ -715,12 +715,13 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             return tabName switch
             {
-                "FileDetails" => 0,   // First TabItem in XAML
-                "Search" => 1,        // Second TabItem in XAML
-                "Comparison" => 2,    // Third TabItem in XAML
-                "Templates" => 3,     // Fourth TabItem in XAML
-                "DataRegions" => 4,   // Fifth TabItem in XAML
-                "Settings" => 5,      // Sixth TabItem in XAML
+                "Welcome" => 0,       // First TabItem in XAML
+                "FileDetails" => 1,   // Second TabItem in XAML
+                "Search" => 2,        // Third TabItem in XAML
+                "Comparison" => 3,    // Fourth TabItem in XAML
+                "Templates" => 4,     // Fifth TabItem in XAML
+                "DataRegions" => 5,   // Sixth TabItem in XAML
+                "Settings" => 6,      // Seventh TabItem in XAML
                 _ => -1               // Invalid tab name
             };
         }
@@ -737,12 +738,13 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Each tab type has its preferred fallback sequence
             var tabPriorities = closedTabName switch
             {
-                "FileDetails" => new[] { "Search", "Comparison", "Templates", "DataRegions", "Settings" },
-                "Search" => new[] { "FileDetails", "Comparison", "Templates", "DataRegions", "Settings" },
-                "Comparison" => new[] { "Search", "FileDetails", "Templates", "DataRegions", "Settings" },
-                "Templates" => new[] { "Search", "FileDetails", "Comparison", "DataRegions", "Settings" },
-                "DataRegions" => new[] { "FileDetails", "Search", "Comparison", "Templates", "Settings" },
-                "Settings" => new[] { "Search", "FileDetails", "Comparison", "Templates", "DataRegions" },
+                "Welcome" => new[] { "FileDetails", "Search", "Comparison", "Templates", "DataRegions", "Settings" },
+                "FileDetails" => new[] { "Search", "Comparison", "Templates", "DataRegions", "Settings", "Welcome" },
+                "Search" => new[] { "FileDetails", "Comparison", "Templates", "DataRegions", "Settings", "Welcome" },
+                "Comparison" => new[] { "Search", "FileDetails", "Templates", "DataRegions", "Settings", "Welcome" },
+                "Templates" => new[] { "Search", "FileDetails", "Comparison", "DataRegions", "Settings", "Welcome" },
+                "DataRegions" => new[] { "FileDetails", "Search", "Comparison", "Templates", "Settings", "Welcome" },
+                "Settings" => new[] { "Search", "FileDetails", "Comparison", "Templates", "DataRegions", "Welcome" },
                 _ => Array.Empty<string>()
             };
 
@@ -750,6 +752,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 bool isVisible = tabName switch
                 {
+                    "Welcome" => IsWelcomeTabVisible,
                     "FileDetails" => IsFileDetailsTabVisible,
                     "Search" => IsSearchTabVisible,
                     "Comparison" => IsComparisonTabVisible,

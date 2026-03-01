@@ -289,6 +289,7 @@ For detailed documentation, see [docs/project/ARCHITECTURE.md](../docs/project/A
 - `SettingsView.axaml.cs`
 - `TemplateManagementView.axaml.cs`
 - `TreeSearchResultsView.axaml.cs`
+- `WelcomeView.axaml.cs`
 
 ---
 

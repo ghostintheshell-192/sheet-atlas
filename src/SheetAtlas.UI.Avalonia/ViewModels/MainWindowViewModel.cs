@@ -31,6 +31,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isTemplatesTabVisible;
     private bool _isSettingsTabVisible;
     private bool _isDataRegionsTabVisible;
+    private bool _isWelcomeTabVisible;
     private bool _isStatusBarVisible = true;
     private bool _disposed = false;
 
@@ -171,7 +172,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible || IsDataRegionsTabVisible;
+    public bool IsWelcomeTabVisible
+    {
+        get => _isWelcomeTabVisible;
+        set
+        {
+            if (SetField(ref _isWelcomeTabVisible, value))
+            {
+                OnPropertyChanged(nameof(HasAnyTabVisible));
+            }
+        }
+    }
+
+    public bool HasAnyTabVisible => IsWelcomeTabVisible || IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible || IsDataRegionsTabVisible;
 
     public bool IsStatusBarVisible
     {
@@ -229,9 +242,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         ThemeManager = themeManager;
 
-        _selectedTabIndex = -1;
-
+        _selectedTabIndex = 0; // Welcome tab is first and shown on startup
         _isSidebarExpanded = false;
+        _isWelcomeTabVisible = true;
         _isFileDetailsTabVisible = false;
         _isSearchTabVisible = false;
         _isComparisonTabVisible = false;

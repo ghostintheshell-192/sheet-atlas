@@ -48,4 +48,26 @@ public partial class FilesSidebarView : UserControl
             viewModel.UpdateSelectedFiles(selectedFiles);
         }
     }
+
+    private void OnFileDataRegionsClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem
+            && menuItem.DataContext is IFileLoadResultViewModel file
+            && DataContext is MainWindowViewModel vm)
+        {
+            vm.SelectedFile = file;
+            vm.ShowDataRegionsTabCommand.Execute(null);
+        }
+    }
+
+    private void OnFileTemplatesClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem
+            && menuItem.DataContext is IFileLoadResultViewModel file
+            && DataContext is MainWindowViewModel vm)
+        {
+            vm.UpdateSelectedFiles(new List<IFileLoadResultViewModel> { file });
+            vm.ShowTemplatesTabCommand.Execute(null);
+        }
+    }
 }
