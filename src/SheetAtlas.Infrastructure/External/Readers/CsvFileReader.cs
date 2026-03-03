@@ -194,6 +194,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
                     sheetData = new SASheetData(sheetName, columnNames.ToArray());
 
+                    // CSV files always start at origin (0, 0)
+                    sheetData.SetOrigin(0, 0);
+
                     // IMPORTANT: CsvHelper behavior differs from XLS/XLSX readers
                     // - XLS/XLSX: DataTable/Worksheet INCLUDE header row → we iterate from row 0
                     // - CSV: CsvHelper with HasHeaderRecord=true SKIPS header → GetRecords() returns only data

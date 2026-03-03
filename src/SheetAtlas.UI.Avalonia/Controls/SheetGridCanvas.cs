@@ -294,8 +294,8 @@ public class SheetGridCanvas : Control
             var rect = new Rect(x, 0, _columnWidths[c], ColumnHeaderHeight);
             context.DrawRectangle(headerBg, borderPen, rect);
 
-            // Column letter (A, B, C, ..., AA, AB, ...)
-            string label = GetColumnLetter(c);
+            // Column letter using original Excel position (ADR-013)
+            string label = GetColumnLetter(sheet.ToExcelColumn(c));
             var text = CreateFormattedText(label, 11, true);
             context.DrawText(text, new Point(
                 x + (_columnWidths[c] - text.Width) / 2,
@@ -314,8 +314,8 @@ public class SheetGridCanvas : Control
             var rect = new Rect(0, y, RowHeaderWidth, CellHeight);
             context.DrawRectangle(headerBg, borderPen, rect);
 
-            // 1-based row number for display
-            string label = (r + 1).ToString();
+            // 1-based row number using original Excel position (ADR-013)
+            string label = (sheet.ToExcelRow(r) + 1).ToString();
             var text = CreateFormattedText(label, 11, false);
             context.DrawText(text, new Point(
                 RowHeaderWidth - text.Width - CellTextPadding,

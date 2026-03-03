@@ -276,7 +276,13 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var columnNames = CreateColumnNamesArray(headerColumns);
             var sheetData = new SASheetData(sheetName, columnNames);
 
-            PopulateMergedCells(sheetData, mergedRanges, headerColumns.Keys.Min());
+            // Preserve original Excel coordinates (ADR-013)
+            int firstCol = headerColumns.Keys.Min();
+            var firstXmlRow = worksheetPart.Worksheet.Descendants<Row>().FirstOrDefault();
+            int firstRowOffset = firstXmlRow?.RowIndex != null ? (int)firstXmlRow.RowIndex.Value - 1 : 0;
+            sheetData.SetOrigin(firstRowOffset, firstCol);
+
+            PopulateMergedCells(sheetData, mergedRanges, firstCol);
 
             PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns);
 

@@ -1,0 +1,965 @@
+diff --git a/.development/archive/completed/analysis/2025-10-20_mainwindow-readability-analysis.md b/.development/archive/completed/analysis/2025-10-20_mainwindow-readability-analysis.md
+index 7e83a1c..5dd0f1d 100644
+--- a/.development/archive/completed/analysis/2025-10-20_mainwindow-readability-analysis.md
++++ b/.development/archive/completed/analysis/2025-10-20_mainwindow-readability-analysis.md
+@@ -18,7 +18,7 @@ MainWindowViewModel è complesso ma **ben strutturato**. La complessità deriva
+ 
+ ### Breakdown per Responsabilità
+ 
+-```
++```text
+ ┌─────────────────────────────────────────────────────────────┐
+ │ MainWindowViewModel (690 lines)                             │
+ ├─────────────────────────────────────────────────────────────┤
+@@ -461,7 +461,7 @@ private void UpdateFileDetailsTabVisibility(IFileLoadResultViewModel? file)
+ 
+ **Proposed Structure**:
+ 
+-```
++```text
+ MainWindowViewModel.cs                  (~250 lines)
+ ├── Dependencies, fields
+ ├── Core properties (SelectedFile, LoadedFiles, etc.)
+@@ -512,7 +512,7 @@ MainWindowViewModel.FileOperations.cs   (~50 lines)
+ 
+ ### Phase 3: File Organization (3-4 hours, medium effort)
+ 
+-2. ⚠️ **Split into partial classes** (Strategy 7)
++1. ⚠️ **Split into partial classes** (Strategy 7)
+    - MainWindowViewModel.Commands.cs
+    - MainWindowViewModel.EventHandlers.cs
+    - MainWindowViewModel.HelpCommands.cs
+diff --git a/src/SheetAtlas.Core/Application/Interfaces/IRowComparisonService.cs b/src/SheetAtlas.Core/Application/Interfaces/IRowComparisonService.cs
+index 3ef59a3..ee5056f 100644
+--- a/src/SheetAtlas.Core/Application/Interfaces/IRowComparisonService.cs
++++ b/src/SheetAtlas.Core/Application/Interfaces/IRowComparisonService.cs
+@@ -18,8 +18,8 @@ namespace SheetAtlas.Core.Application.Interfaces
+         ExcelRow ExtractRowFromSearchResult(SearchResult searchResult);
+ 
+         /// <summary>
+-        /// Get column headers for a specific sheet
++        /// Get column headers for a specific sheet, optionally filtered to a DataRegion's column bounds.
+         /// </summary>
+-        IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName);
++        IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName, string? regionName = null);
+     }
+ }
+diff --git a/src/SheetAtlas.Core/Application/Interfaces/ITemplateValidationService.cs b/src/SheetAtlas.Core/Application/Interfaces/ITemplateValidationService.cs
+index 7e85ad9..3b9161f 100644
+--- a/src/SheetAtlas.Core/Application/Interfaces/ITemplateValidationService.cs
++++ b/src/SheetAtlas.Core/Application/Interfaces/ITemplateValidationService.cs
+@@ -33,6 +33,7 @@ namespace SheetAtlas.Core.Application.Interfaces
+             ExcelFile file,
+             ExcelTemplate template,
+             string? sheetName = null,
++            string? regionName = null,
+             CancellationToken cancellationToken = default);
+ 
+         /// <summary>
+@@ -51,6 +52,7 @@ namespace SheetAtlas.Core.Application.Interfaces
+             ExcelFile file,
+             string templateName,
+             string? sheetName = null,
++            string? regionName = null,
+             CancellationToken cancellationToken = default);
+ 
+         /// <summary>
+@@ -66,6 +68,7 @@ namespace SheetAtlas.Core.Application.Interfaces
+             IEnumerable<ExcelFile> files,
+             ExcelTemplate template,
+             string? sheetName = null,
++            string? regionName = null,
+             CancellationToken cancellationToken = default);
+ 
+         /// <summary>
+@@ -79,6 +82,7 @@ namespace SheetAtlas.Core.Application.Interfaces
+         bool QuickStructureCheck(
+             ExcelFile file,
+             ExcelTemplate template,
+-            string? sheetName = null);
++            string? sheetName = null,
++            string? regionName = null);
+     }
+ }
+diff --git a/src/SheetAtlas.Core/Application/Services/Foundation/TemplateValidationService.cs b/src/SheetAtlas.Core/Application/Services/Foundation/TemplateValidationService.cs
+index 237b515..a62c649 100644
+--- a/src/SheetAtlas.Core/Application/Services/Foundation/TemplateValidationService.cs
++++ b/src/SheetAtlas.Core/Application/Services/Foundation/TemplateValidationService.cs
+@@ -34,6 +34,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             ExcelFile file,
+             ExcelTemplate template,
+             string? sheetName = null,
++            string? regionName = null,
+             CancellationToken cancellationToken = default)
+         {
+             var stopwatch = Stopwatch.StartNew();
+@@ -52,6 +53,9 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+                         stopwatch.Elapsed);
+                 }
+ 
++                // Resolve DataRegion when specified
++                DataRegion? region = regionName != null ? targetSheet.GetDataRegion(regionName) : null;
++
+                 // Validate template configuration first
+                 var templateErrors = template.Validate().ToList();
+                 if (templateErrors.Count > 0)
+@@ -87,15 +91,15 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+                         targetSheet.DataRowCount, template.MinDataRows, template.MaxDataRows));
+                 }
+ 
+-                // Build column name to index mapping
+-                var actualColumns = BuildColumnMapping(targetSheet);
++                // Build column name to index mapping (limited to region's column bounds when set)
++                var actualColumns = BuildColumnMapping(targetSheet, region);
+ 
+                 // Validate each expected column
+                 foreach (var expected in template.Columns)
+                 {
+                     cancellationToken.ThrowIfCancellationRequested();
+ 
+-                    var result = await ValidateColumnAsync(expected, targetSheet, actualColumns, cancellationToken);
++                    var result = await ValidateColumnAsync(expected, targetSheet, actualColumns, region, cancellationToken);
+                     columnResults.Add(result);
+                 }
+ 
+@@ -109,7 +113,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+ 
+                         if (template.FindColumn(columnName) == null)
+                         {
+-                            var analysis = AnalyzeColumn(targetSheet, columnIndex);
++                            var analysis = AnalyzeColumn(targetSheet, columnIndex, region);
+                             columnResults.Add(ColumnValidationResult.Extra(columnName, columnIndex, analysis));
+                         }
+                     }
+@@ -141,6 +145,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             ExcelFile file,
+             string templateName,
+             string? sheetName = null,
++            string? regionName = null,
+             CancellationToken cancellationToken = default)
+         {
+             // Determine which sheet to use
+@@ -155,18 +160,30 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+                     nameof(sheetName));
+             }
+ 
++            // Resolve DataRegion when specified
++            DataRegion? region = regionName != null ? targetSheet.GetDataRegion(regionName) : null;
++
+             var template = ExcelTemplate.Create(templateName);
+             template.SourceFilePath = file.FilePath;
+             template.ExpectedSheetName = targetSheet.SheetName;
+-            template.HeaderRowCount = targetSheet.HeaderRowCount;
++
++            // Use region's HeaderRowCount when region has explicit header bounds; otherwise use sheet default
++            template.HeaderRowCount = (region?.HeaderStartRow != null)
++                ? region.HeaderRowCount
++                : targetSheet.HeaderRowCount;
++
++            // Determine column range (region bounds when set, otherwise all columns)
++            int startCol = region?.StartColumn ?? 0;
++            int endCol = region?.EndColumn ?? (targetSheet.ColumnCount - 1);
++            endCol = Math.Min(endCol, targetSheet.ColumnCount - 1);
+ 
+             // Analyze each column and create ExpectedColumn
+-            for (int colIndex = 0; colIndex < targetSheet.ColumnCount; colIndex++)
++            for (int colIndex = startCol; colIndex <= endCol; colIndex++)
+             {
+                 cancellationToken.ThrowIfCancellationRequested();
+ 
+                 var columnName = targetSheet.ColumnNames[colIndex];
+-                var analysis = AnalyzeColumn(targetSheet, colIndex);
++                var analysis = AnalyzeColumn(targetSheet, colIndex, region);
+ 
+                 var expectedColumn = CreateExpectedColumnFromAnalysis(columnName, colIndex, analysis);
+                 template.AddColumn(expectedColumn);
+@@ -179,6 +196,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             IEnumerable<ExcelFile> files,
+             ExcelTemplate template,
+             string? sheetName = null,
++            string? regionName = null,
+             CancellationToken cancellationToken = default)
+         {
+             var reports = new List<ValidationReport>();
+@@ -187,7 +205,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             {
+                 cancellationToken.ThrowIfCancellationRequested();
+ 
+-                var report = await ValidateAsync(file, template, sheetName, cancellationToken);
++                var report = await ValidateAsync(file, template, sheetName, regionName, cancellationToken);
+                 reports.Add(report);
+             }
+ 
+@@ -197,13 +215,15 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+         public bool QuickStructureCheck(
+             ExcelFile file,
+             ExcelTemplate template,
+-            string? sheetName = null)
++            string? sheetName = null,
++            string? regionName = null)
+         {
+             var targetSheet = ResolveTargetSheet(file, template, sheetName);
+             if (targetSheet == null)
+                 return false;
+ 
+-            var actualColumns = BuildColumnMapping(targetSheet);
++            DataRegion? region = regionName != null ? targetSheet.GetDataRegion(regionName) : null;
++            var actualColumns = BuildColumnMapping(targetSheet, region);
+ 
+             // Check all required columns exist
+             foreach (var expected in template.RequiredColumns)
+@@ -240,11 +260,14 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             return file.Sheets.Values.FirstOrDefault();
+         }
+ 
+-        private Dictionary<string, int> BuildColumnMapping(SASheetData sheet)
++        private static Dictionary<string, int> BuildColumnMapping(SASheetData sheet, DataRegion? region = null)
+         {
+             var mapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+ 
+-            for (int i = 0; i < sheet.ColumnNames.Length; i++)
++            int startCol = region?.StartColumn ?? 0;
++            int endCol = Math.Min(region?.EndColumn ?? (sheet.ColumnNames.Length - 1), sheet.ColumnNames.Length - 1);
++
++            for (int i = startCol; i <= endCol; i++)
+             {
+                 var name = sheet.ColumnNames[i];
+                 if (!string.IsNullOrWhiteSpace(name) && !mapping.ContainsKey(name))
+@@ -260,6 +283,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             ExpectedColumn expected,
+             SASheetData sheet,
+             Dictionary<string, int> actualColumns,
++            DataRegion? region,
+             CancellationToken cancellationToken)
+         {
+             // Find matching column
+@@ -282,8 +306,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+                 return Task.FromResult(ColumnValidationResult.Missing(expected));
+             }
+ 
+-            // Analyze the column
+-            var analysis = AnalyzeColumn(sheet, columnIndex.Value);
++            // Analyze the column (scoped to region rows when applicable)
++            var analysis = AnalyzeColumn(sheet, columnIndex.Value, region);
+ 
+             // Collect issues
+             var issues = new List<ValidationIssue>();
+@@ -356,7 +380,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             // Check for empty column
+             if (expected.Rules.Any(r => r.Type == RuleType.NotEmpty))
+             {
+-                var hasData = HasNonEmptyData(sheet, columnIndex.Value);
++                var hasData = HasNonEmptyData(sheet, columnIndex.Value, region);
+                 if (!hasData)
+                 {
+                     issues.Add(ValidationIssue.EmptyColumn(expected.Name, columnIndex.Value));
+@@ -366,7 +390,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             // Check for unique values
+             if (expected.Rules.Any(r => r.Type == RuleType.Unique))
+             {
+-                var duplicates = FindDuplicateValues(sheet, columnIndex.Value);
++                var duplicates = FindDuplicateValues(sheet, columnIndex.Value, region);
+                 foreach (var dup in duplicates.Take(5)) // Limit to first 5
+                 {
+                     issues.Add(ValidationIssue.DuplicateValue(
+@@ -386,18 +410,19 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             return Task.FromResult(ColumnValidationResult.WithIssues(expected, columnIndex.Value, analysis, issues));
+         }
+ 
+-        private ColumnAnalysisResult AnalyzeColumn(SASheetData sheet, int columnIndex)
++        private ColumnAnalysisResult AnalyzeColumn(SASheetData sheet, int columnIndex, DataRegion? region = null)
+         {
+             var columnName = columnIndex < sheet.ColumnNames.Length
+                 ? sheet.ColumnNames[columnIndex]
+                 : $"Column{columnIndex + 1}";
+ 
+-            // Sample data cells (skip header rows)
++            // Sample data cells, scoped to region rows when available
+             var sampleCells = new List<SACellValue>();
+             var numberFormats = new List<string?>();
+ 
+             int sampleCount = 0;
+-            foreach (var row in sheet.EnumerateDataRows())
++            var rows = region != null ? sheet.EnumerateDataRows(region) : sheet.EnumerateDataRows();
++            foreach (var row in rows)
+             {
+                 if (sampleCount >= DefaultSampleSize)
+                     break;
+@@ -444,9 +469,10 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             return expectedColumn with { Rules = rules };
+         }
+ 
+-        private bool HasNonEmptyData(SASheetData sheet, int columnIndex)
++        private bool HasNonEmptyData(SASheetData sheet, int columnIndex, DataRegion? region = null)
+         {
+-            foreach (var row in sheet.EnumerateDataRows())
++            var rows = region != null ? sheet.EnumerateDataRows(region) : sheet.EnumerateDataRows();
++            foreach (var row in rows)
+             {
+                 var value = row[columnIndex].EffectiveValue;
+                 if (!value.IsEmpty)
+@@ -455,11 +481,12 @@ namespace SheetAtlas.Core.Application.Services.Foundation
+             return false;
+         }
+ 
+-        private IEnumerable<(string Value, int Count)> FindDuplicateValues(SASheetData sheet, int columnIndex)
++        private IEnumerable<(string Value, int Count)> FindDuplicateValues(SASheetData sheet, int columnIndex, DataRegion? region = null)
+         {
+             var valueCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+ 
+-            foreach (var row in sheet.EnumerateDataRows())
++            var rows = region != null ? sheet.EnumerateDataRows(region) : sheet.EnumerateDataRows();
++            foreach (var row in rows)
+             {
+                 var value = row[columnIndex].EffectiveValue;
+                 if (value.IsEmpty)
+diff --git a/src/SheetAtlas.Core/Application/Services/RowComparisonService.cs b/src/SheetAtlas.Core/Application/Services/RowComparisonService.cs
+index a5ce616..0023071 100644
+--- a/src/SheetAtlas.Core/Application/Services/RowComparisonService.cs
++++ b/src/SheetAtlas.Core/Application/Services/RowComparisonService.cs
+@@ -57,10 +57,18 @@ namespace SheetAtlas.Core.Application.Services
+             if (sheet == null)
+                 throw ComparisonException.MissingSheet(searchResult.SheetName, searchResult.FileName);
+ 
++            // Resolve DataRegion if the result was found within a named region
++            DataRegion? region = null;
++            if (!string.IsNullOrEmpty(searchResult.RegionName))
++                region = sheet.GetDataRegion(searchResult.RegionName);
++
+             // SearchResult.Row uses ABSOLUTE indexing (0-based, same as SASheetData)
+             // Row 0 = first row of sheet (usually header), Row 1 = second row, etc.
+             // Display to user = Row + 1 (1-based, like Excel)
+-            if (searchResult.Row < sheet.HeaderRowCount)
++            // When a region is set, use region.DataStartRow as the header boundary;
++            // otherwise fall back to the global sheet.HeaderRowCount.
++            int headerBoundary = region != null ? region.DataStartRow : sheet.HeaderRowCount;
++            if (searchResult.Row < headerBoundary)
+                 throw new ArgumentException($"Row {searchResult.Row + 1} is a header row and cannot be compared", nameof(searchResult));
+ 
+             if (searchResult.Row >= sheet.RowCount)
+@@ -69,13 +77,22 @@ namespace SheetAtlas.Core.Application.Services
+             // Row is already absolute - use directly for SASheetData access
+             int absoluteRow = searchResult.Row;
+ 
+-            // Extract complete row data
++            // Extract row data, optionally sliced to the region's column bounds
+             var rowCells = sheet.GetRow(absoluteRow);
++            IEnumerable<SACellData> selectedCells = rowCells;
++
++            if (region?.StartColumn != null || region?.EndColumn != null)
++            {
++                int startCol = region!.StartColumn ?? 0;
++                int endCol = Math.Min(region.EndColumn ?? (rowCells.Length - 1), rowCells.Length - 1);
++                selectedCells = rowCells[startCol..(endCol + 1)];
++            }
++
+             // Preserve type and format metadata using ExportCellValue
+-            var cells = rowCells.Select(cell => (object?)new ExportCellValue(cell)).ToArray();
++            var cells = selectedCells.Select(cell => (object?)new ExportCellValue(cell)).ToArray();
+ 
+-            // Get column headers
+-            var columnHeaders = GetColumnHeaders(searchResult.SourceFile, searchResult.SheetName);
++            // Get column headers (filtered to region's column bounds when applicable)
++            var columnHeaders = GetColumnHeaders(searchResult.SourceFile, searchResult.SheetName, searchResult.RegionName);
+ 
+             return new ExcelRow(
+                 searchResult.SourceFile,
+@@ -85,7 +102,7 @@ namespace SheetAtlas.Core.Application.Services
+                 columnHeaders);
+         }
+ 
+-        public IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName)
++        public IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName, string? regionName = null)
+         {
+             ArgumentNullException.ThrowIfNull(file);
+ 
+@@ -93,8 +110,17 @@ namespace SheetAtlas.Core.Application.Services
+             if (sheet == null)
+                 throw ComparisonException.MissingSheet(sheetName, file.FilePath);
+ 
+-            // SASheetData already has ColumnNames array
+-            return sheet.ColumnNames;
++            if (regionName == null)
++                return sheet.ColumnNames;
++
++            // Filter column headers to the region's column bounds
++            var region = sheet.GetDataRegion(regionName);
++            if (region == null || (region.StartColumn == null && region.EndColumn == null))
++                return sheet.ColumnNames;
++
++            int startCol = region.StartColumn ?? 0;
++            int endCol = Math.Min(region.EndColumn ?? (sheet.ColumnNames.Length - 1), sheet.ColumnNames.Length - 1);
++            return sheet.ColumnNames[startCol..(endCol + 1)];
+         }
+     }
+ }
+diff --git a/src/SheetAtlas.Infrastructure/External/Readers/OpenXmlFileReader.cs b/src/SheetAtlas.Infrastructure/External/Readers/OpenXmlFileReader.cs
+index 7f736bb..af9aac8 100644
+--- a/src/SheetAtlas.Infrastructure/External/Readers/OpenXmlFileReader.cs
++++ b/src/SheetAtlas.Infrastructure/External/Readers/OpenXmlFileReader.cs
+@@ -276,9 +276,16 @@ namespace SheetAtlas.Infrastructure.External.Readers
+             var columnNames = CreateColumnNamesArray(headerColumns);
+             var sheetData = new SASheetData(sheetName, columnNames);
+ 
+-            PopulateMergedCells(sheetData, mergedRanges, headerColumns.Keys.Min());
++            // Detect the 0-based Excel row index of the first XML row.
++            // SASheetData uses sequential indices (0, 1, 2 ...) starting from the first XML row,
++            // while MergedRange coordinates come from GetRowIndex which uses absolute 0-based Excel indices.
++            // The offset bridges this gap (e.g. if the first XML row is Excel row 2, offset = 1).
++            var firstXmlRow = worksheetPart.Worksheet.Descendants<Row>().FirstOrDefault();
++            int firstRowOffset = firstXmlRow?.RowIndex != null ? (int)firstXmlRow.RowIndex.Value - 1 : 0;
+ 
+-            PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns);
++            PopulateMergedCells(sheetData, mergedRanges, headerColumns.Keys.Min(), firstRowOffset);
++
++            PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns, firstRowOffset);
+ 
+             var headerRowCount = _context.Settings.Current.DataProcessing.DefaultHeaderRowCount;
+             sheetData.SetHeaderRowCount(headerRowCount);
+@@ -291,19 +298,27 @@ namespace SheetAtlas.Infrastructure.External.Readers
+ 
+         /// <summary>
+         /// Populates SASheetData.MergedCells collection from extracted ranges.
+-        /// Uses absolute row indices (row 0 = header, row 1+ = data).
+-        /// Only adjusts column indices relative to first column.
++        /// Adjusts both row indices (relative to first XML row) and column indices (relative to first column)
++        /// so that stored coordinates align with SASheetData's sequential 0-based indexing.
+         /// </summary>
+-        private static void PopulateMergedCells(SASheetData sheetData, MergedRange[] mergedRanges, int firstCol)
++        private static void PopulateMergedCells(SASheetData sheetData, MergedRange[] mergedRanges, int firstCol, int firstRowOffset)
+         {
+             foreach (var range in mergedRanges)
+             {
++                int adjustedStartRow = range.StartRow - firstRowOffset;
++                int adjustedEndRow = range.EndRow - firstRowOffset;
+                 int adjustedStartCol = range.StartCol - firstCol;
+                 int adjustedEndCol = range.EndCol - firstCol;
+ 
+-                var adjustedRange = new MergedRange(range.StartRow, adjustedStartCol, range.EndRow, adjustedEndCol);
++                // Skip ranges that fall entirely before the first data row (defensive guard)
++                if (adjustedEndRow < 0)
++                    continue;
++
++                adjustedStartRow = Math.Max(0, adjustedStartRow);
++
++                var adjustedRange = new MergedRange(adjustedStartRow, adjustedStartCol, adjustedEndRow, adjustedEndCol);
+ 
+-                string rangeKey = $"R{range.StartRow}C{adjustedStartCol}:R{range.EndRow}C{adjustedEndCol}";
++                string rangeKey = $"R{adjustedStartRow}C{adjustedStartCol}:R{adjustedEndRow}C{adjustedEndCol}";
+ 
+                 sheetData.AddMergedCell(rangeKey, adjustedRange);
+             }
+@@ -332,6 +347,24 @@ namespace SheetAtlas.Infrastructure.External.Readers
+                 headerValues[columnIndex] = cellValue;
+             }
+ 
++            // Propagate merged-cell values to secondary columns.
++            // In OpenXML, only the top-left cell of a merge carries the value;
++            // secondary cells are absent from the XML row and therefore never iterated above.
++            // Without this step, secondary columns get auto-generated names ("Column_N").
++            if (firstRow.RowIndex != null)
++            {
++                int headerRowIndex = (int)firstRow.RowIndex.Value - 1; // GetRowIndex-compatible 0-based index
++                foreach (var range in mergedRanges)
++                {
++                    if (headerRowIndex < range.StartRow || headerRowIndex > range.EndRow)
++                        continue;
++                    if (!headerValues.TryGetValue(range.StartCol, out var spanValue) || string.IsNullOrWhiteSpace(spanValue))
++                        continue;
++                    for (int col = range.StartCol + 1; col <= range.EndCol; col++)
++                        headerValues.TryAdd(col, spanValue);
++                }
++            }
++
+             return headerValues;
+         }
+ 
+@@ -373,20 +406,40 @@ namespace SheetAtlas.Infrastructure.External.Readers
+             return $"{baseName}_{value}";
+         }
+ 
+-        private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, MergedRange[] mergedRanges, Dictionary<int, string> headerColumns)
++        private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, MergedRange[] mergedRanges, Dictionary<int, string> headerColumns, int firstRowOffset)
+         {
+             int firstCol = headerColumns.Keys.Min();
++            int nextSARow = 0; // Next expected SASheetData sequential row index
+ 
+             foreach (var row in worksheetPart.Worksheet.Descendants<Row>())
+             {
+-                var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, firstCol);
+-                if (rowData != null)
++                // Compute the SASheetData index this row should occupy (relative to first XML row)
++                int targetSARow = row.RowIndex != null
++                    ? (int)row.RowIndex.Value - 1 - firstRowOffset
++                    : nextSARow;
++
++                // Fill any gap between last added row and this one with blank rows.
++                // This keeps SASheetData sequential indices aligned with the adjusted merge coordinates.
++                while (nextSARow < targetSARow)
+                 {
+-                    sheetData.AddRow(rowData);
++                    sheetData.AddRow(CreateEmptyRowData(sheetData.ColumnCount));
++                    nextSARow++;
+                 }
++
++                var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, firstCol);
++                sheetData.AddRow(rowData ?? CreateEmptyRowData(sheetData.ColumnCount));
++                nextSARow++;
+             }
+         }
+ 
++        private static SACellData[] CreateEmptyRowData(int columnCount)
++        {
++            var row = new SACellData[columnCount];
++            for (int i = 0; i < columnCount; i++)
++                row[i] = new SACellData(SACellValue.Empty);
++            return row;
++        }
++
+         private SACellData[]? CreateRowData(int columnCount, Row row, WorkbookPart workbookPart, SharedStringTable? sharedStringTable, int firstCol)
+         {
+             var rowData = new SACellData[columnCount];
+@@ -436,7 +489,8 @@ namespace SheetAtlas.Infrastructure.External.Readers
+             if (cellRef == null)
+                 return string.Empty;
+ 
+-            int row = _cellParser.GetRowIndex(cellRef) - 1;
++            // GetRowIndex already returns 0-based index; no further subtraction needed.
++            int row = _cellParser.GetRowIndex(cellRef);
+             int col = _cellParser.GetColumnIndex(cellRef);
+             var range = mergedRanges.FirstOrDefault(r =>
+                 row >= r.StartRow && row <= r.EndRow &&
+diff --git a/src/SheetAtlas.UI.Avalonia/ViewModels/FileDetailsViewModel.cs b/src/SheetAtlas.UI.Avalonia/ViewModels/FileDetailsViewModel.cs
+index 88b79c7..0ca3f52 100644
+--- a/src/SheetAtlas.UI.Avalonia/ViewModels/FileDetailsViewModel.cs
++++ b/src/SheetAtlas.UI.Avalonia/ViewModels/FileDetailsViewModel.cs
+@@ -40,6 +40,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
+     private DataRegion? _canvasSelectedRegion;
+     private DataRegion? _activeRegion;
+     private string _newRegionName = "";
++    private int _newRegionHeaderRowCount = 1;
+     private string? _regionErrorMessage;
+     private bool _isResizeSaved;
+     private bool _isEditingRegion;
+@@ -148,6 +149,16 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
+         set => SetField(ref _newRegionName, value);
+     }
+ 
++    /// <summary>
++    /// Number of header rows for the new region (1–10). Default is 1.
++    /// Used to split the drag selection into header and data portions.
++    /// </summary>
++    public int NewRegionHeaderRowCount
++    {
++        get => _newRegionHeaderRowCount;
++        set => SetField(ref _newRegionHeaderRowCount, Math.Clamp(value, 1, 10));
++    }
++
+     /// <summary>
+     /// Whether a canvas selection is active.
+     /// </summary>
+@@ -600,7 +611,28 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
+             ? $"Region {CurrentSheetData.DataRegions.Count + 1}"
+             : NewRegionName.Trim();
+ 
+-        var region = selection with { Name = name };
++        // Compute header/data split from the user-specified header row count
++        int headerStart = selection.HeaderStartRow ?? selection.DataStartRow;
++        int headerEnd = headerStart + NewRegionHeaderRowCount - 1;
++        int dataStart = headerEnd + 1;
++
++        // Selection's DataEndRow is the absolute last row of the drag
++        int? selectionEnd = selection.DataEndRow;
++        int totalRows = (selectionEnd ?? (CurrentSheetData.RowCount - 1)) - headerStart + 1;
++
++        if (NewRegionHeaderRowCount >= totalRows)
++        {
++            RegionErrorMessage = "Header rows must be fewer than total selected rows";
++            return;
++        }
++
++        var region = selection with
++        {
++            Name = name,
++            HeaderStartRow = headerStart,
++            HeaderEndRow = headerEnd,
++            DataStartRow = dataStart
++        };
+ 
+         try
+         {
+@@ -743,6 +775,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
+     {
+         CanvasSelectedRegion = null;
+         NewRegionName = "";
++        NewRegionHeaderRowCount = 1;
+         RegionErrorMessage = null;
+     }
+ 
+diff --git a/src/SheetAtlas.UI.Avalonia/Views/DataRegionsView.axaml b/src/SheetAtlas.UI.Avalonia/Views/DataRegionsView.axaml
+index 19010f9..409d8b2 100644
+--- a/src/SheetAtlas.UI.Avalonia/Views/DataRegionsView.axaml
++++ b/src/SheetAtlas.UI.Avalonia/Views/DataRegionsView.axaml
+@@ -104,6 +104,14 @@
+                                FontSize="11"
+                                Foreground="{DynamicResource SecondaryText}"
+                                VerticalAlignment="Center"/>
++                    <TextBlock Text="Header rows:"
++                               FontSize="11"
++                               Foreground="{DynamicResource SecondaryText}"
++                               VerticalAlignment="Center"/>
++                    <NumericUpDown Value="{Binding NewRegionHeaderRowCount}"
++                                   Minimum="1" Maximum="10" Increment="1"
++                                   Width="70" FontSize="11"
++                                   VerticalAlignment="Center"/>
+                     <TextBox Text="{Binding NewRegionName}"
+                              Watermark="Region name"
+                              MinWidth="140"
+diff --git a/tests/SheetAtlas.Tests/Foundation/Services/TemplateValidationServiceTests.cs b/tests/SheetAtlas.Tests/Foundation/Services/TemplateValidationServiceTests.cs
+index 908c656..abcd8e3 100644
+--- a/tests/SheetAtlas.Tests/Foundation/Services/TemplateValidationServiceTests.cs
++++ b/tests/SheetAtlas.Tests/Foundation/Services/TemplateValidationServiceTests.cs
+@@ -352,6 +352,132 @@ namespace SheetAtlas.Tests.Foundation.Services
+ 
+         #region Helper Methods
+ 
++        #region DataRegion Tests
++
++        [Fact]
++        public async Task CreateTemplateFromFileAsync_WithRegion_UsesRegionHeaderRowCount()
++        {
++            // Arrange: sheet has 1 header row globally, but region has 2 header rows
++            var columns = new[] { "ID", "Name", "Value" };
++            var sheet = new SASheetData("Sheet1", columns);
++            for (int i = 0; i < 12; i++) // rows 0-11
++                sheet.AddRow(columns.Select(_ => new SACellData(SACellValue.FromText($"R{i}"))).ToArray());
++
++            var region = new DataRegion
++            {
++                Name = "MultiHeader",
++                HeaderStartRow = 0,
++                HeaderEndRow = 1,  // 2-row header
++                DataStartRow = 2,
++                DataEndRow = 11
++            };
++            sheet.AddDataRegion(region);
++
++            var file = new ExcelFile("/test/test.xlsx", LoadStatus.Success,
++                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
++                new List<ExcelError>());
++
++            // Act
++            var template = await _service.CreateTemplateFromFileAsync(file, "T", "Sheet1", "MultiHeader");
++
++            // Assert: template HeaderRowCount should be 2 (region's HeaderRowCount)
++            template.HeaderRowCount.Should().Be(2);
++        }
++
++        [Fact]
++        public async Task CreateTemplateFromFileAsync_WithRegionColumnBounds_LimitsColumnsToRegion()
++        {
++            // Arrange: 5 columns, region covers columns 1-3
++            var columns = new[] { "Extra", "Name", "Age", "City", "Tail" };
++            var sheet = new SASheetData("Sheet1", columns);
++            for (int i = 0; i < 6; i++)
++                sheet.AddRow(columns.Select(_ => new SACellData(SACellValue.FromText($"V{i}"))).ToArray());
++
++            var region = new DataRegion
++            {
++                Name = "Core",
++                HeaderStartRow = 0,
++                HeaderEndRow = 0,
++                DataStartRow = 1,
++                StartColumn = 1,
++                EndColumn = 3
++            };
++            sheet.AddDataRegion(region);
++
++            var file = new ExcelFile("/test/test.xlsx", LoadStatus.Success,
++                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
++                new List<ExcelError>());
++
++            // Act
++            var template = await _service.CreateTemplateFromFileAsync(file, "T", "Sheet1", "Core");
++
++            // Assert: only columns 1-3
++            template.Columns.Should().HaveCount(3);
++            template.Columns.Should().Contain(c => c.Name == "Name");
++            template.Columns.Should().Contain(c => c.Name == "Age");
++            template.Columns.Should().Contain(c => c.Name == "City");
++            template.Columns.Should().NotContain(c => c.Name == "Extra");
++            template.Columns.Should().NotContain(c => c.Name == "Tail");
++        }
++
++        [Fact]
++        public async Task CreateTemplateFromFileAsync_WithNullRegion_UsesSheetHeaderRowCount()
++        {
++            // Arrange
++            var file = CreateSampleExcelFile("Test.xlsx", new[] { ("Amount", DataType.Number) });
++
++            // Act
++            var template = await _service.CreateTemplateFromFileAsync(file, "T", regionName: null);
++
++            // Assert: default sheet HeaderRowCount is 1
++            template.HeaderRowCount.Should().Be(1);
++        }
++
++        [Fact]
++        public async Task ValidateAsync_WithRegionColumnBounds_ValidatesOnlyRegionColumns()
++        {
++            // Arrange: 4 columns, region covers only columns 0-1
++            var columns = new[] { "ID", "Name", "HiddenA", "HiddenB" };
++            var sheet = new SASheetData("Sheet1", columns);
++            sheet.AddRow(columns.Select(n => new SACellData(SACellValue.FromText(n))).ToArray());
++            for (int i = 0; i < 5; i++)
++                sheet.AddRow(new[]
++                {
++                    new SACellData(SACellValue.FromInteger(i + 1)),
++                    new SACellData(SACellValue.FromText($"Name{i}")),
++                    new SACellData(SACellValue.FromText("hidden")),
++                    new SACellData(SACellValue.FromText("hidden"))
++                });
++
++            var region = new DataRegion
++            {
++                Name = "Visible",
++                HeaderStartRow = 0,
++                HeaderEndRow = 0,
++                DataStartRow = 1,
++                StartColumn = 0,
++                EndColumn = 1
++            };
++            sheet.AddDataRegion(region);
++
++            var file = new ExcelFile("/test/test.xlsx", LoadStatus.Success,
++                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
++                new List<ExcelError>());
++
++            // Template matches only the region's columns
++            var template = ExcelTemplate.Create("T")
++                .AddColumn(ExpectedColumn.Required("ID", DataType.Number))
++                .AddColumn(ExpectedColumn.Required("Name", DataType.Text));
++
++            // Act
++            var report = await _service.ValidateAsync(file, template, regionName: "Visible");
++
++            // Assert: validation passes — HiddenA/HiddenB are outside the region and not checked
++            report.Passed.Should().BeTrue();
++        }
++
++        #endregion
++
+         private static ExcelFile CreateSampleExcelFile(string fileName, (string Name, DataType Type)[] columns)
+         {
+             var sheet = CreateSampleSheet("Sheet1", columns);
+diff --git a/tests/SheetAtlas.Tests/Integration/ExcelReaderServiceIntegrationTests.cs b/tests/SheetAtlas.Tests/Integration/ExcelReaderServiceIntegrationTests.cs
+index 10b7bed..b7fbe67 100644
+--- a/tests/SheetAtlas.Tests/Integration/ExcelReaderServiceIntegrationTests.cs
++++ b/tests/SheetAtlas.Tests/Integration/ExcelReaderServiceIntegrationTests.cs
+@@ -384,6 +384,48 @@ namespace SheetAtlas.Tests.Integration
+             sheet.ColumnNames[0].Should().Be("Merged Title");
+         }
+ 
++        [Fact]
++        public async Task LoadFileAsync_MergedCellsWithOffsetRows_CorrectlyPositionsMergedContent()
++        {
++            // Regression test for the merged-cell coordinate bug.
++            //
++            // The file has Excel row 1 absent from XML (a blank row not written by the editor).
++            // This means firstRowOffset = 1: the first XML row is Excel row 2, which maps to
++            // SASheetData row 0. Before the fix, MergedRange used absolute 0-based Excel row
++            // indices (B2:G2 → startRow=1), but SASheetData was built sequentially starting at
++            // 0 from the first XML row. Result: merge was expanded to SASheetData row 1 instead
++            // of row 0, corrupting the header and losing the merged-cell content from view.
++            //
++            // After the fix, PopulateMergedCells subtracts firstRowOffset so that B2:G2 correctly
++            // targets SASheetData row 0, and the merged header "SWITCH LAYOUT" appears in
++            // ColumnNames (extracted from the header row).
++
++            // Arrange
++            var filePath = GetTestFilePath("EdgeCases", "merged-cells-offset-rows.xlsx");
++
++            // Act
++            var result = await _service.LoadFileAsync(filePath);
++
++            // Assert — file loads successfully
++            result.Should().NotBeNull();
++            result.Status.Should().BeOneOf(LoadStatus.Success, LoadStatus.PartialSuccess);
++            result.Sheets.Should().NotBeEmpty();
++
++            // The first sheet contains the multi-level merged header layout
++            var sheet = result.Sheets.Values.First();
++            sheet.DataRowCount.Should().BeGreaterThan(0);
++
++            // "SWITCH LAYOUT" is the merged header spanning B2:G2.
++            // With the fix it lands on SASheetData row 0 (the header row), so it must appear
++            // in ColumnNames. Before the fix it landed on row 1, leaving the header empty.
++            sheet.ColumnNames.Should().Contain("SWITCH LAYOUT",
++                "merged cell B2:G2 must expand into the header row (Excel row 2 = SASheetData row 0)");
++
++            // "Switch Connections" is the merged header spanning J2:L2 — same row, same fix.
++            sheet.ColumnNames.Should().Contain("Switch Connections",
++                "merged cell J2:L2 must also expand into the header row");
++        }
++
+         #endregion
+ 
+         #region Multiple Files Tests
+diff --git a/tests/SheetAtlas.Tests/Services/RowComparisonServiceTests.cs b/tests/SheetAtlas.Tests/Services/RowComparisonServiceTests.cs
+index 8ab7c1f..b99bb56 100644
+--- a/tests/SheetAtlas.Tests/Services/RowComparisonServiceTests.cs
++++ b/tests/SheetAtlas.Tests/Services/RowComparisonServiceTests.cs
+@@ -248,6 +248,153 @@ namespace SheetAtlas.Tests.Services
+ 
+         #endregion
+ 
++        #region DataRegion Tests
++
++        [Fact]
++        public void ExtractRowFromSearchResult_WithRegion_UsesRegionDataStartRowAsHeaderBoundary()
++        {
++            // Arrange: 4 rows — rows 0-1 are region headers, rows 2-3 are region data
++            var columns = new[] { "ID", "Name", "Value" };
++            var sheet = new SASheetData("Sheet1", columns);
++            for (int i = 0; i < 4; i++)
++                sheet.AddRow(columns.Select(_ => new SACellData(SACellValue.FromText($"R{i}"))).ToArray());
++
++            var region = new DataRegion
++            {
++                Name = "MyRegion",
++                HeaderStartRow = 0,
++                HeaderEndRow = 1,
++                DataStartRow = 2,
++                DataEndRow = 3
++            };
++            sheet.AddDataRegion(region);
++
++            var file = new ExcelFile("test.xlsx", LoadStatus.Success,
++                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
++                new List<ExcelError>());
++
++            // Row 1 is a header row in the region → should throw
++            var headerResult = new SearchResult(file, "Sheet1", 1, 0, "R1") { RegionName = "MyRegion" };
++            _service.Invoking(s => s.ExtractRowFromSearchResult(headerResult))
++                .Should().Throw<ArgumentException>().WithMessage("*header row*");
++
++            // Row 2 is the first data row → should succeed
++            var dataResult = new SearchResult(file, "Sheet1", 2, 0, "R2") { RegionName = "MyRegion" };
++            var extracted = _service.ExtractRowFromSearchResult(dataResult);
++            extracted.Should().NotBeNull();
++            extracted.RowIndex.Should().Be(2);
++        }
++
++        [Fact]
++        public void ExtractRowFromSearchResult_WithUnknownRegionName_FallsBackToSheetHeaderRowCount()
++        {
++            // Arrange: sheet has 1 header row (default), search result references non-existent region
++            var columns = new[] { "ID", "Name" };
++            var sheet = new SASheetData("Sheet1", columns);
++            sheet.AddRow(columns.Select(n => new SACellData(SACellValue.FromText(n))).ToArray()); // header row 0
++            sheet.AddRow(columns.Select(_ => new SACellData(SACellValue.FromText("data"))).ToArray()); // data row 1
++
++            var file = new ExcelFile("test.xlsx", LoadStatus.Success,
++                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
++                new List<ExcelError>());
++
++            // Unknown region → falls back to sheet.HeaderRowCount=1, so row 0 is a header
++            var result = new SearchResult(file, "Sheet1", 0, 0, "ID") { RegionName = "NoSuchRegion" };
++            _service.Invoking(s => s.ExtractRowFromSearchResult(result))
++                .Should().Throw<ArgumentException>().WithMessage("*header row*");
++
++            // Row 1 should succeed
++            var dataResult = new SearchResult(file, "Sheet1", 1, 0, "data") { RegionName = "NoSuchRegion" };
++            var extracted = _service.ExtractRowFromSearchResult(dataResult);
++            extracted.Should().NotBeNull();
++        }
++
++        [Fact]
++        public void ExtractRowFromSearchResult_WithRegionColumnBounds_FiltersToRegionColumns()
++        {
++            // Arrange: 5 columns, region covers columns 1-3 (Name, Age, City)
++            var columns = new[] { "Extra", "Name", "Age", "City", "Tail" };
++            var sheet = new SASheetData("Sheet1", columns);
++            sheet.AddRow(columns.Select(n => new SACellData(SACellValue.FromText(n))).ToArray()); // row 0 = header
++            sheet.AddRow(new[] // row 1 = data
++            {
++                new SACellData(SACellValue.FromText("x")),
++                new SACellData(SACellValue.FromText("Alice")),
++                new SACellData(SACellValue.FromInteger(30)),
++                new SACellData(SACellValue.FromText("Rome")),
++                new SACellData(SACellValue.FromText("y"))
++            });
++
++            var region = new DataRegion
++            {
++                Name = "Core",
++                HeaderStartRow = 0,
++                HeaderEndRow = 0,
++                DataStartRow = 1,
++                DataEndRow = 1,
++                StartColumn = 1,
++                EndColumn = 3
++            };
++            sheet.AddDataRegion(region);
++
++            var file = new ExcelFile("test.xlsx", LoadStatus.Success,
++                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
++                new List<ExcelError>());
++
++            var searchResult = new SearchResult(file, "Sheet1", 1, 1, "Alice") { RegionName = "Core" };
++            var extracted = _service.ExtractRowFromSearchResult(searchResult);
++
++            // Should have 3 cells (cols 1-3) and 3 matching headers
++            extracted.Cells.Should().HaveCount(3);
++            extracted.ColumnHeaders.Should().HaveCount(3);
++            extracted.ColumnHeaders[0].Should().Be("Name");
++            extracted.ColumnHeaders[1].Should().Be("Age");
++            extracted.ColumnHeaders[2].Should().Be("City");
++        }
++
++        [Fact]
++        public void GetColumnHeaders_WithRegionName_FiltersToRegionColumnBounds()
++        {
++            // Arrange: 5 columns, region covers columns 2-4
++            var columns = new[] { "A", "B", "C", "D", "E" };
++            var sheet = new SASheetData("Sheet1", columns);
++            sheet.AddRow(columns.Select(n => new SACellData(SACellValue.FromText(n))).ToArray());
++
++            var region = new DataRegion
++            {
++                Name = "Right",
++                DataStartRow = 1,
++                StartColumn = 2,
++                EndColumn = 4
++            };
++            sheet.AddDataRegion(region);
++
++            var file = new ExcelFile("test.xlsx", LoadStatus.Success,
++                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
++                new List<ExcelError>());
++
++            var headers = _service.GetColumnHeaders(file, "Sheet1", "Right");
++
++            headers.Should().HaveCount(3);
++            headers[0].Should().Be("C");
++            headers[1].Should().Be("D");
++            headers[2].Should().Be("E");
++        }
++
++        [Fact]
++        public void GetColumnHeaders_WithNullRegionName_ReturnsAllColumns()
++        {
++            // Arrange
++            var columns = new[] { "A", "B", "C" };
++            var file = CreateExcelFileWithSheet("Sheet1", columns);
++
++            var headers = _service.GetColumnHeaders(file, "Sheet1", null);
++
++            headers.Should().HaveCount(3);
++        }
++
++        #endregion
++
+         #region Helper Methods
+ 
+         private static ExcelFile CreateExcelFileWithSheet(string sheetName, string[]? columnNames = null)

@@ -28,6 +28,7 @@ For detailed documentation, see [docs/project/ARCHITECTURE.md](../docs/project/A
 - [ADR-010: Dataregion Ui Pattern](reference/decisions/010-dataregion-ui-pattern.md)
 - [ADR-011: Dataregion Persistence](reference/decisions/011-dataregion-persistence.md)
 - [ADR-012: Dataregion Cross File Detection](reference/decisions/012-dataregion-cross-file-detection.md)
+- [ADR-013: Coordinate Preserving Storage](reference/decisions/013-coordinate-preserving-storage.md)
 
 ## Project Tree
 
