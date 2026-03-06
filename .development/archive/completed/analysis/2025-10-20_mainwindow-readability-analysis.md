@@ -18,7 +18,7 @@ MainWindowViewModel è complesso ma **ben strutturato**. La complessità deriva 
 
 ### Breakdown per Responsabilità
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ MainWindowViewModel (690 lines)                             │
 ├─────────────────────────────────────────────────────────────┤
@@ -461,7 +461,7 @@ private void UpdateFileDetailsTabVisibility(IFileLoadResultViewModel? file)
 
 **Proposed Structure**:
 
-```
+```text
 MainWindowViewModel.cs                  (~250 lines)
 ├── Dependencies, fields
 ├── Core properties (SelectedFile, LoadedFiles, etc.)
@@ -512,7 +512,7 @@ MainWindowViewModel.FileOperations.cs   (~50 lines)
 
 ### Phase 3: File Organization (3-4 hours, medium effort)
 
-2. ⚠️ **Split into partial classes** (Strategy 7)
+1. ⚠️ **Split into partial classes** (Strategy 7)
    - MainWindowViewModel.Commands.cs
    - MainWindowViewModel.EventHandlers.cs
    - MainWindowViewModel.HelpCommands.cs
