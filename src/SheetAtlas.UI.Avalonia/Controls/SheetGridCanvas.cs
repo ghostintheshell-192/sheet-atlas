@@ -72,10 +72,6 @@ public class SheetGridCanvas : Control
         AvaloniaProperty.Register<SheetGridCanvas, bool>(nameof(IsEditMode),
             defaultBindingMode: BindingMode.TwoWay);
 
-    public static readonly StyledProperty<bool> IsSelectingHeaderProperty =
-        AvaloniaProperty.Register<SheetGridCanvas, bool>(nameof(IsSelectingHeader),
-            defaultBindingMode: BindingMode.TwoWay);
-
     public SASheetData? SheetData
     {
         get => GetValue(SheetDataProperty);
@@ -124,20 +120,11 @@ public class SheetGridCanvas : Control
         set => SetValue(IsEditModeProperty, value);
     }
 
-    /// <summary>
-    /// When true, drag selects header rows within the existing selection instead of a new area.
-    /// </summary>
-    public bool IsSelectingHeader
-    {
-        get => GetValue(IsSelectingHeaderProperty);
-        set => SetValue(IsSelectingHeaderProperty, value);
-    }
-
     #endregion
 
     static SheetGridCanvas()
     {
-        AffectsRender<SheetGridCanvas>(SheetDataProperty, RegionsProperty, SelectionRegionProperty, ActiveRegionProperty, IsSelectingHeaderProperty);
+        AffectsRender<SheetGridCanvas>(SheetDataProperty, RegionsProperty, SelectionRegionProperty, ActiveRegionProperty);
         AffectsMeasure<SheetGridCanvas>(SheetDataProperty);
     }
 
@@ -594,13 +581,47 @@ public class SheetGridCanvas : Control
         int endCol = (activeRegion.EndColumn ?? (sheet.ColumnCount - 1)) + sheet.OriginColumn;
 
         double x = GetColumnX(startCol);
-        double y = ColumnHeaderHeight + startRow * CellHeight;
         double width = GetColumnX(endCol) + (endCol < _columnWidths.Length ? _columnWidths[endCol] : 0) - x;
-        double height = (endRow - startRow + 1) * CellHeight;
 
-        var overlayBrush = new SolidColorBrush(Color.FromArgb(40, 255, 107, 53));
-        var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(180, 255, 107, 53)), 2);
-        context.DrawRectangle(overlayBrush, borderPen, new Rect(x, y, width, height));
+        if (activeRegion.HeaderStartRow != null)
+        {
+            // Two-zone: header (blue) + data (orange) + divider
+            int headerStart = activeRegion.HeaderStartRow.Value + sheet.OriginRow;
+            int headerEnd = (activeRegion.HeaderEndRow ?? activeRegion.HeaderStartRow.Value) + sheet.OriginRow;
+            int dataStart = activeRegion.DataStartRow + sheet.OriginRow;
+
+            // Header zone (blue)
+            double headerY = ColumnHeaderHeight + headerStart * CellHeight;
+            double headerHeight = (headerEnd - headerStart + 1) * CellHeight;
+            var headerFill = new SolidColorBrush(Color.FromArgb(40, 66, 133, 244));
+            var headerBorder = new Pen(new SolidColorBrush(Color.FromArgb(180, 66, 133, 244)), 2);
+            context.DrawRectangle(headerFill, headerBorder, new Rect(x, headerY, width, headerHeight));
+
+            // Data zone (orange)
+            if (dataStart <= endRow)
+            {
+                double dataY = ColumnHeaderHeight + dataStart * CellHeight;
+                double dataHeight = (endRow - dataStart + 1) * CellHeight;
+                var dataFill = new SolidColorBrush(Color.FromArgb(40, 255, 107, 53));
+                var dataBorder = new Pen(new SolidColorBrush(Color.FromArgb(180, 255, 107, 53)), 2);
+                context.DrawRectangle(dataFill, dataBorder, new Rect(x, dataY, width, dataHeight));
+            }
+
+            // Divider line between header and data
+            double dividerY = ColumnHeaderHeight + (headerEnd + 1) * CellHeight;
+            var dividerPen = new Pen(new SolidColorBrush(Color.FromArgb(220, 66, 133, 244)), 2);
+            context.DrawLine(dividerPen, new Point(x, dividerY), new Point(x + width, dividerY));
+        }
+        else
+        {
+            // Single zone: whole region in orange
+            double y = ColumnHeaderHeight + startRow * CellHeight;
+            double height = (endRow - startRow + 1) * CellHeight;
+
+            var overlayBrush = new SolidColorBrush(Color.FromArgb(40, 255, 107, 53));
+            var borderPen = new Pen(new SolidColorBrush(Color.FromArgb(180, 255, 107, 53)), 2);
+            context.DrawRectangle(overlayBrush, borderPen, new Rect(x, y, width, height));
+        }
     }
 
     /// <summary>
@@ -689,20 +710,9 @@ public class SheetGridCanvas : Control
         double width = GetColumnX(maxCol) + (maxCol < _columnWidths.Length ? _columnWidths[maxCol] : 0) - x;
         double height = (maxRow - minRow + 1) * CellHeight;
 
-        IBrush selectionFill;
-        Pen selectionBorder;
-        if (IsSelectingHeader)
-        {
-            selectionFill = new SolidColorBrush(Color.FromArgb(50, 66, 133, 244));
-            selectionBorder = new Pen(new SolidColorBrush(Color.FromArgb(220, 66, 133, 244)), 2,
-                new DashStyle(new[] { 4.0, 2.0 }, 0));
-        }
-        else
-        {
-            selectionFill = new SolidColorBrush(Color.FromArgb(50, 255, 107, 53));
-            selectionBorder = new Pen(new SolidColorBrush(Color.FromArgb(220, 255, 107, 53)), 2,
-                new DashStyle(new[] { 4.0, 2.0 }, 0));
-        }
+        var selectionFill = new SolidColorBrush(Color.FromArgb(50, 255, 107, 53));
+        var selectionBorder = new Pen(new SolidColorBrush(Color.FromArgb(220, 255, 107, 53)), 2,
+            new DashStyle(new[] { 4.0, 2.0 }, 0));
 
         context.DrawRectangle(selectionFill, selectionBorder, new Rect(x, y, width, height));
     }
@@ -730,11 +740,8 @@ public class SheetGridCanvas : Control
 
         if (!HitTestCell(pos, out int row, out int col)) return;
 
-        // In header-selection mode, require an existing selection area
-        if (IsSelectingHeader && SelectionRegion == null) return;
-
         // Starting a new area drag clears the active region
-        if (!IsSelectingHeader && ActiveRegion != null)
+        if (ActiveRegion != null)
         {
             ActiveRegion = null;
             InvalidateVisual();
@@ -837,37 +844,18 @@ public class SheetGridCanvas : Control
         int minCol = minDisplayCol - sheet.OriginColumn;
         int maxCol = maxDisplayCol - sheet.OriginColumn;
 
-        if (IsSelectingHeader && SelectionRegion != null)
+        // Area-selection mode: whole drag is the region area, no header yet
+        SelectionRegion = new DataRegion
         {
-            // Header-selection mode: clamp drag within existing selection bounds
-            var sel = SelectionRegion;
-            int areaStart = sel.HeaderStartRow ?? sel.DataStartRow;
-            int areaEnd = sel.DataEndRow ?? areaStart;
-            int clampedMin = Math.Clamp(minRow, areaStart, areaEnd);
-            int clampedMax = Math.Clamp(maxRow, areaStart, areaEnd);
-
-            SelectionRegion = sel with
-            {
-                HeaderStartRow = clampedMin,
-                HeaderEndRow = clampedMax,
-                DataStartRow = clampedMax + 1
-            };
-        }
-        else
-        {
-            // Area-selection mode: whole drag is the region area, no header yet
-            SelectionRegion = new DataRegion
-            {
-                Name = "",
-                HeaderStartRow = null,
-                HeaderEndRow = null,
-                DataStartRow = minRow,
-                DataEndRow = maxRow,
-                StartColumn = minCol,
-                EndColumn = maxCol,
-                IsAutoDetected = false
-            };
-        }
+            Name = "",
+            HeaderStartRow = null,
+            HeaderEndRow = null,
+            DataStartRow = minRow,
+            DataEndRow = maxRow,
+            StartColumn = minCol,
+            EndColumn = maxCol,
+            IsAutoDetected = false
+        };
 
         InvalidateVisual();
     }

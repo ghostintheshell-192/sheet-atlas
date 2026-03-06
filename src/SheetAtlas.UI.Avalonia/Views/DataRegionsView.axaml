@@ -58,7 +58,8 @@
                                               Regions="{Binding CurrentRegions}"
                                               SelectionRegion="{Binding CanvasSelectedRegion}"
                                               ActiveRegion="{Binding ActiveRegion}"
-                                              IsEditMode="{Binding IsEditingRegion}"/>
+                                              IsEditMode="{Binding IsEditingRegion}"
+                                              />
                 </ScrollViewer>
             </Border>
 
@@ -104,6 +105,16 @@
                                FontSize="11"
                                Foreground="{DynamicResource SecondaryText}"
                                VerticalAlignment="Center"/>
+                    <CheckBox IsChecked="{Binding FirstRowIsHeader}"
+                              Content="First row is header"
+                              FontSize="11"
+                              VerticalAlignment="Center"/>
+                    <NumericUpDown Value="{Binding HeaderRowCount}"
+                                   Minimum="1" Maximum="10" Increment="1"
+                                   FormatString="0"
+                                   Width="50" Height="26" FontSize="11"
+                                   IsVisible="{Binding FirstRowIsHeader}"
+                                   VerticalAlignment="Center"/>
                     <TextBox Text="{Binding NewRegionName}"
                              Watermark="Region name"
                              MinWidth="140"
@@ -170,11 +181,16 @@
                                FontSize="11"
                                Foreground="{DynamicResource PrimaryText}"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="Drag bottom edge to resize"
-                               FontSize="10"
-                               FontStyle="Italic"
-                               Foreground="{DynamicResource SecondaryText}"
-                               VerticalAlignment="Center"/>
+                    <CheckBox IsChecked="{Binding EditHasHeader}"
+                              Content="Has header"
+                              FontSize="11"
+                              VerticalAlignment="Center"/>
+                    <NumericUpDown Value="{Binding EditHeaderRowCount}"
+                                   Minimum="1" Maximum="10" Increment="1"
+                                   FormatString="0"
+                                   Width="50" Height="26" FontSize="11"
+                                   IsVisible="{Binding EditHasHeader}"
+                                   VerticalAlignment="Center"/>
                     <Border Background="{DynamicResource SuccessBackground}"
                             CornerRadius="10"
                             Padding="6,2"
