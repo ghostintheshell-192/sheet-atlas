@@ -34,6 +34,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             ExcelFile file,
             ExcelTemplate template,
             string? sheetName = null,
+            string? regionName = null,
             CancellationToken cancellationToken = default)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -51,6 +52,9 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                         $"Sheet not found: {sheetName ?? template.ExpectedSheetName ?? "first sheet"}",
                         stopwatch.Elapsed);
                 }
+
+                // Resolve DataRegion when specified
+                DataRegion? region = regionName != null ? targetSheet.GetDataRegion(regionName) : null;
 
                 // Validate template configuration first
                 var templateErrors = template.Validate().ToList();
@@ -87,15 +91,15 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                         targetSheet.DataRowCount, template.MinDataRows, template.MaxDataRows));
                 }
 
-                // Build column name to index mapping
-                var actualColumns = BuildColumnMapping(targetSheet);
+                // Build column name to index mapping (limited to region's column bounds when set)
+                var actualColumns = BuildColumnMapping(targetSheet, region);
 
                 // Validate each expected column
                 foreach (var expected in template.Columns)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var result = await ValidateColumnAsync(expected, targetSheet, actualColumns, cancellationToken);
+                    var result = await ValidateColumnAsync(expected, targetSheet, actualColumns, region, cancellationToken);
                     columnResults.Add(result);
                 }
 
@@ -109,7 +113,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
                         if (template.FindColumn(columnName) == null)
                         {
-                            var analysis = AnalyzeColumn(targetSheet, columnIndex);
+                            var analysis = AnalyzeColumn(targetSheet, columnIndex, region);
                             columnResults.Add(ColumnValidationResult.Extra(columnName, columnIndex, analysis));
                         }
                     }
@@ -141,6 +145,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             ExcelFile file,
             string templateName,
             string? sheetName = null,
+            string? regionName = null,
             CancellationToken cancellationToken = default)
         {
             // Determine which sheet to use
@@ -155,18 +160,30 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                     nameof(sheetName));
             }
 
+            // Resolve DataRegion when specified
+            DataRegion? region = regionName != null ? targetSheet.GetDataRegion(regionName) : null;
+
             var template = ExcelTemplate.Create(templateName);
             template.SourceFilePath = file.FilePath;
             template.ExpectedSheetName = targetSheet.SheetName;
-            template.HeaderRowCount = targetSheet.HeaderRowCount;
+
+            // Use region's HeaderRowCount when region has explicit header bounds; otherwise use sheet default
+            template.HeaderRowCount = (region?.HeaderStartRow != null)
+                ? region.HeaderRowCount
+                : targetSheet.HeaderRowCount;
+
+            // Determine column range (region bounds when set, otherwise all columns)
+            int startCol = region?.StartColumn ?? 0;
+            int endCol = region?.EndColumn ?? (targetSheet.ColumnCount - 1);
+            endCol = Math.Min(endCol, targetSheet.ColumnCount - 1);
 
             // Analyze each column and create ExpectedColumn
-            for (int colIndex = 0; colIndex < targetSheet.ColumnCount; colIndex++)
+            for (int colIndex = startCol; colIndex <= endCol; colIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var columnName = targetSheet.ColumnNames[colIndex];
-                var analysis = AnalyzeColumn(targetSheet, colIndex);
+                var analysis = AnalyzeColumn(targetSheet, colIndex, region);
 
                 var expectedColumn = CreateExpectedColumnFromAnalysis(columnName, colIndex, analysis);
                 template.AddColumn(expectedColumn);
@@ -179,6 +196,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             IEnumerable<ExcelFile> files,
             ExcelTemplate template,
             string? sheetName = null,
+            string? regionName = null,
             CancellationToken cancellationToken = default)
         {
             var reports = new List<ValidationReport>();
@@ -187,7 +205,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var report = await ValidateAsync(file, template, sheetName, cancellationToken);
+                var report = await ValidateAsync(file, template, sheetName, regionName, cancellationToken);
                 reports.Add(report);
             }
 
@@ -197,13 +215,15 @@ namespace SheetAtlas.Core.Application.Services.Foundation
         public bool QuickStructureCheck(
             ExcelFile file,
             ExcelTemplate template,
-            string? sheetName = null)
+            string? sheetName = null,
+            string? regionName = null)
         {
             var targetSheet = ResolveTargetSheet(file, template, sheetName);
             if (targetSheet == null)
                 return false;
 
-            var actualColumns = BuildColumnMapping(targetSheet);
+            DataRegion? region = regionName != null ? targetSheet.GetDataRegion(regionName) : null;
+            var actualColumns = BuildColumnMapping(targetSheet, region);
 
             // Check all required columns exist
             foreach (var expected in template.RequiredColumns)
@@ -240,11 +260,14 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return file.Sheets.Values.FirstOrDefault();
         }
 
-        private Dictionary<string, int> BuildColumnMapping(SASheetData sheet)
+        private static Dictionary<string, int> BuildColumnMapping(SASheetData sheet, DataRegion? region = null)
         {
             var mapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-            for (int i = 0; i < sheet.ColumnNames.Length; i++)
+            int startCol = region?.StartColumn ?? 0;
+            int endCol = Math.Min(region?.EndColumn ?? (sheet.ColumnNames.Length - 1), sheet.ColumnNames.Length - 1);
+
+            for (int i = startCol; i <= endCol; i++)
             {
                 var name = sheet.ColumnNames[i];
                 if (!string.IsNullOrWhiteSpace(name) && !mapping.ContainsKey(name))
@@ -260,6 +283,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             ExpectedColumn expected,
             SASheetData sheet,
             Dictionary<string, int> actualColumns,
+            DataRegion? region,
             CancellationToken cancellationToken)
         {
             // Find matching column
@@ -282,8 +306,8 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 return Task.FromResult(ColumnValidationResult.Missing(expected));
             }
 
-            // Analyze the column
-            var analysis = AnalyzeColumn(sheet, columnIndex.Value);
+            // Analyze the column (scoped to region rows when applicable)
+            var analysis = AnalyzeColumn(sheet, columnIndex.Value, region);
 
             // Collect issues
             var issues = new List<ValidationIssue>();
@@ -356,7 +380,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             // Check for empty column
             if (expected.Rules.Any(r => r.Type == RuleType.NotEmpty))
             {
-                var hasData = HasNonEmptyData(sheet, columnIndex.Value);
+                var hasData = HasNonEmptyData(sheet, columnIndex.Value, region);
                 if (!hasData)
                 {
                     issues.Add(ValidationIssue.EmptyColumn(expected.Name, columnIndex.Value));
@@ -366,7 +390,7 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             // Check for unique values
             if (expected.Rules.Any(r => r.Type == RuleType.Unique))
             {
-                var duplicates = FindDuplicateValues(sheet, columnIndex.Value);
+                var duplicates = FindDuplicateValues(sheet, columnIndex.Value, region);
                 foreach (var dup in duplicates.Take(5)) // Limit to first 5
                 {
                     issues.Add(ValidationIssue.DuplicateValue(
@@ -386,18 +410,19 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return Task.FromResult(ColumnValidationResult.WithIssues(expected, columnIndex.Value, analysis, issues));
         }
 
-        private ColumnAnalysisResult AnalyzeColumn(SASheetData sheet, int columnIndex)
+        private ColumnAnalysisResult AnalyzeColumn(SASheetData sheet, int columnIndex, DataRegion? region = null)
         {
             var columnName = columnIndex < sheet.ColumnNames.Length
                 ? sheet.ColumnNames[columnIndex]
                 : $"Column{columnIndex + 1}";
 
-            // Sample data cells (skip header rows)
+            // Sample data cells, scoped to region rows when available
             var sampleCells = new List<SACellValue>();
             var numberFormats = new List<string?>();
 
             int sampleCount = 0;
-            foreach (var row in sheet.EnumerateDataRows())
+            var rows = region != null ? sheet.EnumerateDataRows(region) : sheet.EnumerateDataRows();
+            foreach (var row in rows)
             {
                 if (sampleCount >= DefaultSampleSize)
                     break;
@@ -444,9 +469,10 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return expectedColumn with { Rules = rules };
         }
 
-        private bool HasNonEmptyData(SASheetData sheet, int columnIndex)
+        private bool HasNonEmptyData(SASheetData sheet, int columnIndex, DataRegion? region = null)
         {
-            foreach (var row in sheet.EnumerateDataRows())
+            var rows = region != null ? sheet.EnumerateDataRows(region) : sheet.EnumerateDataRows();
+            foreach (var row in rows)
             {
                 var value = row[columnIndex].EffectiveValue;
                 if (!value.IsEmpty)
@@ -455,11 +481,12 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             return false;
         }
 
-        private IEnumerable<(string Value, int Count)> FindDuplicateValues(SASheetData sheet, int columnIndex)
+        private IEnumerable<(string Value, int Count)> FindDuplicateValues(SASheetData sheet, int columnIndex, DataRegion? region = null)
         {
             var valueCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var row in sheet.EnumerateDataRows())
+            var rows = region != null ? sheet.EnumerateDataRows(region) : sheet.EnumerateDataRows();
+            foreach (var row in rows)
             {
                 var value = row[columnIndex].EffectiveValue;
                 if (value.IsEmpty)

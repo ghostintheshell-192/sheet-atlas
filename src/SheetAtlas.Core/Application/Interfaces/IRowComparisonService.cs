@@ -18,8 +18,8 @@ namespace SheetAtlas.Core.Application.Interfaces
         ExcelRow ExtractRowFromSearchResult(SearchResult searchResult);
 
         /// <summary>
-        /// Get column headers for a specific sheet
+        /// Get column headers for a specific sheet, optionally filtered to a DataRegion's column bounds.
         /// </summary>
-        IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName);
+        IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName, string? regionName = null);
     }
 }
