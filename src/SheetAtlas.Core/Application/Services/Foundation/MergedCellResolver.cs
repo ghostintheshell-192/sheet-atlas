@@ -162,6 +162,10 @@ namespace SheetAtlas.Core.Application.Services.Foundation
                 resolved.AddRow(rowData);
             }
 
+            // Preserve merged cell structural info for rendering
+            foreach (var kvp in original.MergedCells)
+                resolved.AddMergedCell(kvp.Key, kvp.Value);
+
             return resolved;
         }
 

@@ -457,6 +457,12 @@ namespace SheetAtlas.Tests.Integration
             var firstCell = firstRow.Elements<Cell>().FirstOrDefault();
             firstCell.Should().NotBeNull();
             firstCell!.CellReference!.Value.Should().Be("B2");
+
+            // Check if MergeCells element exists in the XML
+            var mergeCells = wsPart.Worksheet.Elements<MergeCells>().FirstOrDefault();
+            mergeCells.Should().NotBeNull("the test file should contain merged cells");
+            var merges = mergeCells!.Elements<MergeCell>().Select(m => m.Reference?.Value).ToList();
+            merges.Should().Contain("B2:G2");
         }
 
         [Fact]
@@ -495,6 +501,15 @@ namespace SheetAtlas.Tests.Integration
 
             sheet.GetCellReference(0, 0).Should().Be("B2");
             sheet.ColumnCount.Should().Be(11);
+
+            // Verify merged cells are preserved
+            sheet.MergedCells.Should().NotBeEmpty(
+                "the file contains merged cells (B2:G2 'SWITCH LAYOUT', J2:L2 'Switch Connections')");
+
+            // Log what we got for diagnostics
+            var mergeInfo = string.Join("; ", sheet.MergedCells.Select(kv =>
+                $"{kv.Key} → R{kv.Value.StartRow}C{kv.Value.StartCol}:R{kv.Value.EndRow}C{kv.Value.EndCol}"));
+            mergeInfo.Should().NotBeEmpty($"Merged cells: {mergeInfo}");
         }
 
         #endregion
