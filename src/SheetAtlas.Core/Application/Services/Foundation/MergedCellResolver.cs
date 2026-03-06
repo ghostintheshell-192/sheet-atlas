@@ -131,8 +131,9 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             MergeStrategy strategy,
             Action<MergeWarning>? warningCallback)
         {
-            // Create new SASheetData with same structure
+            // Create new SASheetData with same structure, preserving origin coordinates (ADR-013)
             SASheetData resolved = new(original.SheetName, original.ColumnNames, original.RowCount);
+            resolved.SetOrigin(original.OriginRow, original.OriginColumn);
 
             // Build lookup for merged cells (row,col) -> MergedRange
             var mergeMap = BuildMergeMap(original.MergedCells);

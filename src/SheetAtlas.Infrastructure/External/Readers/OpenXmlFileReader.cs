@@ -276,15 +276,16 @@ namespace SheetAtlas.Infrastructure.External.Readers
             var columnNames = CreateColumnNamesArray(headerColumns);
             var sheetData = new SASheetData(sheetName, columnNames);
 
-            // Preserve original Excel coordinates (ADR-013)
+            // Preserve original Excel coordinates (ADR-013) and compute row offset
+            // for aligning merged cell coordinates with SASheetData's sequential indexing.
             int firstCol = headerColumns.Keys.Min();
             var firstXmlRow = worksheetPart.Worksheet.Descendants<Row>().FirstOrDefault();
             int firstRowOffset = firstXmlRow?.RowIndex != null ? (int)firstXmlRow.RowIndex.Value - 1 : 0;
             sheetData.SetOrigin(firstRowOffset, firstCol);
 
-            PopulateMergedCells(sheetData, mergedRanges, firstCol);
+            PopulateMergedCells(sheetData, mergedRanges, firstCol, firstRowOffset);
 
-            PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns);
+            PopulateSheetRows(sheetData, workbookPart, worksheetPart, sharedStringTable, mergedRanges, headerColumns, firstRowOffset);
 
             var headerRowCount = _context.Settings.Current.DataProcessing.DefaultHeaderRowCount;
             sheetData.SetHeaderRowCount(headerRowCount);
@@ -297,19 +298,27 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
         /// <summary>
         /// Populates SASheetData.MergedCells collection from extracted ranges.
-        /// Uses absolute row indices (row 0 = header, row 1+ = data).
-        /// Only adjusts column indices relative to first column.
+        /// Adjusts both row indices (relative to first XML row) and column indices (relative to first column)
+        /// so that stored coordinates align with SASheetData's sequential 0-based indexing.
         /// </summary>
-        private static void PopulateMergedCells(SASheetData sheetData, MergedRange[] mergedRanges, int firstCol)
+        private static void PopulateMergedCells(SASheetData sheetData, MergedRange[] mergedRanges, int firstCol, int firstRowOffset)
         {
             foreach (var range in mergedRanges)
             {
+                int adjustedStartRow = range.StartRow - firstRowOffset;
+                int adjustedEndRow = range.EndRow - firstRowOffset;
                 int adjustedStartCol = range.StartCol - firstCol;
                 int adjustedEndCol = range.EndCol - firstCol;
 
-                var adjustedRange = new MergedRange(range.StartRow, adjustedStartCol, range.EndRow, adjustedEndCol);
+                // Skip ranges that fall entirely before the first data row (defensive guard)
+                if (adjustedEndRow < 0)
+                    continue;
 
-                string rangeKey = $"R{range.StartRow}C{adjustedStartCol}:R{range.EndRow}C{adjustedEndCol}";
+                adjustedStartRow = Math.Max(0, adjustedStartRow);
+
+                var adjustedRange = new MergedRange(adjustedStartRow, adjustedStartCol, adjustedEndRow, adjustedEndCol);
+
+                string rangeKey = $"R{adjustedStartRow}C{adjustedStartCol}:R{adjustedEndRow}C{adjustedEndCol}";
 
                 sheetData.AddMergedCell(rangeKey, adjustedRange);
             }
@@ -336,6 +345,24 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
                 string cellValue = GetHeaderCellValue(cell, cellsByRef, sharedStringTable, mergedRanges);
                 headerValues[columnIndex] = cellValue;
+            }
+
+            // Propagate merged-cell values to secondary columns.
+            // In OpenXML, only the top-left cell of a merge carries the value;
+            // secondary cells are absent from the XML row and therefore never iterated above.
+            // Without this step, secondary columns get auto-generated names ("Column_N").
+            if (firstRow.RowIndex != null)
+            {
+                int headerRowIndex = (int)firstRow.RowIndex.Value - 1; // GetRowIndex-compatible 0-based index
+                foreach (var range in mergedRanges)
+                {
+                    if (headerRowIndex < range.StartRow || headerRowIndex > range.EndRow)
+                        continue;
+                    if (!headerValues.TryGetValue(range.StartCol, out var spanValue) || string.IsNullOrWhiteSpace(spanValue))
+                        continue;
+                    for (int col = range.StartCol + 1; col <= range.EndCol; col++)
+                        headerValues.TryAdd(col, spanValue);
+                }
             }
 
             return headerValues;
@@ -379,18 +406,38 @@ namespace SheetAtlas.Infrastructure.External.Readers
             return $"{baseName}_{value}";
         }
 
-        private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, MergedRange[] mergedRanges, Dictionary<int, string> headerColumns)
+        private void PopulateSheetRows(SASheetData sheetData, WorkbookPart workbookPart, WorksheetPart worksheetPart, SharedStringTable? sharedStringTable, MergedRange[] mergedRanges, Dictionary<int, string> headerColumns, int firstRowOffset)
         {
             int firstCol = headerColumns.Keys.Min();
+            int nextSARow = 0; // Next expected SASheetData sequential row index
 
             foreach (var row in worksheetPart.Worksheet.Descendants<Row>())
             {
-                var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, firstCol);
-                if (rowData != null)
+                // Compute the SASheetData index this row should occupy (relative to first XML row)
+                int targetSARow = row.RowIndex != null
+                    ? (int)row.RowIndex.Value - 1 - firstRowOffset
+                    : nextSARow;
+
+                // Fill any gap between last added row and this one with blank rows.
+                // This keeps SASheetData sequential indices aligned with the adjusted merge coordinates.
+                while (nextSARow < targetSARow)
                 {
-                    sheetData.AddRow(rowData);
+                    sheetData.AddRow(CreateEmptyRowData(sheetData.ColumnCount));
+                    nextSARow++;
                 }
+
+                var rowData = CreateRowData(sheetData.ColumnCount, row, workbookPart, sharedStringTable, firstCol);
+                sheetData.AddRow(rowData ?? CreateEmptyRowData(sheetData.ColumnCount));
+                nextSARow++;
             }
+        }
+
+        private static SACellData[] CreateEmptyRowData(int columnCount)
+        {
+            var row = new SACellData[columnCount];
+            for (int i = 0; i < columnCount; i++)
+                row[i] = new SACellData(SACellValue.Empty);
+            return row;
         }
 
         private SACellData[]? CreateRowData(int columnCount, Row row, WorkbookPart workbookPart, SharedStringTable? sharedStringTable, int firstCol)
@@ -442,7 +489,8 @@ namespace SheetAtlas.Infrastructure.External.Readers
             if (cellRef == null)
                 return string.Empty;
 
-            int row = _cellParser.GetRowIndex(cellRef) - 1;
+            // GetRowIndex already returns 0-based index; no further subtraction needed.
+            int row = _cellParser.GetRowIndex(cellRef);
             int col = _cellParser.GetColumnIndex(cellRef);
             var range = mergedRanges.FirstOrDefault(r =>
                 row >= r.StartRow && row <= r.EndRow &&
