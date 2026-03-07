@@ -1,4 +1,5 @@
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Core.Application.DTOs;
 
 namespace SheetAtlas.Core.Application.Interfaces
@@ -51,6 +52,23 @@ namespace SheetAtlas.Core.Application.Interfaces
             string outputPath,
             CsvExportOptions? options = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Copies the original Excel file and normalizes cell values in-place.
+        /// Preserves all formatting, merged cells, and sheet structure.
+        /// When regions are provided, only cells within region bounds are normalized.
+        /// When no regions are provided, all data cells are normalized.
+        /// </summary>
+        /// <param name="sourcePath">Path to the original .xlsx file</param>
+        /// <param name="sheetsData">Enriched sheet data with CleanedValues (keyed by sheet name)</param>
+        /// <param name="outputPath">Output file path (.xlsx)</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Export result with success/failure status and statistics</returns>
+        Task<ExportResult> NormalizeToExcelAsync(
+            string sourcePath,
+            IReadOnlyDictionary<string, SASheetData> sheetsData,
+            string outputPath,
+            CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -91,6 +109,12 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// When null, all columns are exported.
         /// </summary>
         public IReadOnlyCollection<string>? IncludedColumns { get; init; }
+
+        /// <summary>
+        /// Optional DataRegion to scope export. When set, only the region's rows and columns
+        /// are exported, using the region's header rows instead of the sheet's global ColumnNames.
+        /// </summary>
+        public DataRegion? Region { get; init; }
     }
 
     /// <summary>
@@ -141,5 +165,11 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// When null, all columns are exported.
         /// </summary>
         public IReadOnlyCollection<string>? IncludedColumns { get; init; }
+
+        /// <summary>
+        /// Optional DataRegion to scope export. When set, only the region's rows and columns
+        /// are exported, using the region's header rows instead of the sheet's global ColumnNames.
+        /// </summary>
+        public DataRegion? Region { get; init; }
     }
 }

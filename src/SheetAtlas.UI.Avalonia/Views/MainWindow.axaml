@@ -25,9 +25,10 @@
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>  <!-- Menu Bar -->
+            <RowDefinition Height="Auto"/>  <!-- Quick Bar -->
+            <RowDefinition Height="*"/>     <!-- Main Content -->
+            <RowDefinition Height="Auto"/>  <!-- Status Bar -->
         </Grid.RowDefinitions>
 
         <!-- Professional Menu Bar -->
@@ -65,13 +66,18 @@
                 <MenuItem Header="Show _Templates"
                           Command="{Binding ShowTemplatesTabCommand}"/>
                 <Separator/>
+                <MenuItem Header="{Binding IsQuickBarVisible, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Hide Quick Bar|Show Quick Bar'}"
+                          Command="{Binding ToggleQuickBarCommand}"/>
                 <MenuItem Header="{Binding IsStatusBarVisible, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Hide Status Bar|Show Status Bar'}"
                           Command="{Binding ToggleStatusBarCommand}"/>
             </MenuItem>
 
             <!-- Tools Menu -->
             <MenuItem Header="_Tools">
-                <MenuItem Header="_Export Results" IsEnabled="False"/>
+                <MenuItem Header="_Normalize &amp; Export"
+                          Command="{Binding NormalizeExportCommand}"
+                          IsEnabled="{Binding HasSelectedFile}"
+                          InputGesture="Ctrl+E"/>
                 <Separator/>
                 <MenuItem Header="_Settings"
                           Command="{Binding ShowSettingsTabCommand}"/>
@@ -95,8 +101,26 @@
 
         </Menu>
 
+        <!-- Quick Bar -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource SecondaryBackground}"
+                BorderBrush="{DynamicResource SubtleBorder}"
+                BorderThickness="0,0,0,1"
+                Padding="8,4"
+                IsVisible="{Binding IsQuickBarVisible}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Normalize &amp; Export"
+                        Classes="ModernButton"
+                        Command="{Binding NormalizeExportCommand}"
+                        IsEnabled="{Binding HasSelectedFile}"
+                        FontSize="11"
+                        Padding="10,4"
+                        ToolTip.Tip="Export normalized data (Ctrl+E)"/>
+            </StackPanel>
+        </Border>
+
         <!-- Main Content -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -452,7 +476,7 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Background="{DynamicResource SecondaryBackground}"
                 BorderBrush="{DynamicResource BorderColor}"
                 BorderThickness="0,1,0,0"

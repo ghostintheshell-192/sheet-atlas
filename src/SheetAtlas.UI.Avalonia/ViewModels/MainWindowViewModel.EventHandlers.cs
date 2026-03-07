@@ -13,6 +13,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ReadOnlyObservableCollection<IFileLoadResultViewModel> LoadedFiles => _filesManager.LoadedFiles;
         public ReadOnlyObservableCollection<RowComparisonViewModel> RowComparisons => _comparisonCoordinator.RowComparisons;
         public bool HasLoadedFiles => LoadedFiles.Count > 0;
+        public bool HasSelectedFile => SelectedFile != null;
 
         public void SubscribeToEvents()
         {
@@ -306,6 +307,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             RegionsSidebarViewModel.ClearAllRegionsRequested += OnClearAllRegionsRequested;
             RegionsSidebarViewModel.ClearFileRegionsRequested += OnClearFileRegionsRequested;
             RegionsSidebarViewModel.EditRegionRequested += OnEditRegionRequested;
+            RegionsSidebarViewModel.FileSelectRequested += OnFileSelectFromSidebar;
 
             // Connect region selection to search filtering
             RegionsSidebarViewModel.PropertyChanged += OnRegionsSidebarPropertyChanged;
@@ -397,6 +399,14 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         private void OnEditRegionRequested(object? sender, RegionEventArgs e)
         {
             NavigateToDataRegion(e.FilePath, e.SheetName, e.Region.Name);
+        }
+
+        private void OnFileSelectFromSidebar(object? sender, FileSelectRequestedEventArgs e)
+        {
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm != null)
+                SelectedFile = fileVm;
         }
 
         private void OnRegionClearRequested(object? sender, RegionEventArgs e)

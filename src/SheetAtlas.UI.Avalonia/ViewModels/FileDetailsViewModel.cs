@@ -1023,7 +1023,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             var options = new ExcelExportOptions
             {
                 SemanticNames = semanticNames,
-                IncludedColumns = includedColumns
+                IncludedColumns = includedColumns,
             };
 
             var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath, options);
@@ -1085,7 +1085,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             var options = new CsvExportOptions
             {
                 SemanticNames = semanticNames,
-                IncludedColumns = includedColumns
+                IncludedColumns = includedColumns,
             };
 
             var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath, options);

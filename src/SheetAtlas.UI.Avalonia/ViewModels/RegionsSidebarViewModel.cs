@@ -136,6 +136,9 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
     /// <summary>Raised when user confirms applying detected regions to selected files.</summary>
     public event EventHandler<ApplyDetectedRegionsEventArgs>? ApplyDetectedRegionsRequested;
 
+    /// <summary>Raised when user selects a file node in the regions tree, requesting file selection.</summary>
+    public event EventHandler<FileSelectRequestedEventArgs>? FileSelectRequested;
+
     public RegionsSidebarViewModel(ILogService logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -496,6 +499,14 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
     /// Called from code-behind when the user commits a rename (Enter key or LostFocus).
     /// Validates, fires RenameRegionRequested, then exits editing mode.
     /// </summary>
+    /// <summary>
+    /// Requests file selection when user clicks a file node in the tree.
+    /// </summary>
+    public void RequestFileSelect(string filePath)
+    {
+        FileSelectRequested?.Invoke(this, new FileSelectRequestedEventArgs(filePath));
+    }
+
     public void CommitRegionRename(RegionItem item)
     {
         var newName = item.EditName?.Trim();
@@ -517,6 +528,7 @@ public class RegionsSidebarViewModel : ViewModelBase, IDisposable
         ClearFileRegionsRequested = null;
         EditRegionRequested = null;
         ApplyDetectedRegionsRequested = null;
+        FileSelectRequested = null;
         FileGroups.Clear();
         RegionNameGroups.Clear();
         DetectionResults.Clear();

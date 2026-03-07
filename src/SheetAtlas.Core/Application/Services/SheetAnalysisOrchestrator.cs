@@ -207,6 +207,13 @@ namespace SheetAtlas.Core.Application.Services
                     }
                 }
 
+                // Step 3: Re-normalize anomalous cells using dominant column type
+                if (analysisResult.Anomalies.Count > 0 && analysisResult.TypeConfidence >= 0.5)
+                {
+                    ReNormalizeAnomalousCells(
+                        sheetData, colIndex, analysisResult, absoluteRowIndices, sampleCells, numberFormats);
+                }
+
                 foreach (var anomaly in analysisResult.Anomalies)
                 {
                     var error = CreateExcelErrorFromAnomaly(sheetData.SheetName, colIndex, anomaly, absoluteRowIndices);
@@ -300,6 +307,15 @@ namespace SheetAtlas.Core.Application.Services
                     }
                 }
 
+                // Step 3: Re-normalize anomalous cells using dominant column type
+                // Cells whose type doesn't match the column's dominant type are re-normalized
+                // with the column type as context (e.g., integer 36837 in a Date column → DateTime)
+                if (analysisResult.Anomalies.Count > 0 && analysisResult.TypeConfidence >= 0.5)
+                {
+                    ReNormalizeAnomalousCells(
+                        sheetData, colIndex, analysisResult, absoluteRowIndices, sampleCells, numberFormats);
+                }
+
                 // Add anomalies to errors list (will be saved in structured JSON log)
                 // Map sample row index to absolute row index
                 foreach (var anomaly in analysisResult.Anomalies)
@@ -323,6 +339,142 @@ namespace SheetAtlas.Core.Application.Services
                         "SheetAnalysisOrchestrator");
                 }
             }
+        }
+
+        /// <summary>
+        /// Re-normalizes cells flagged as anomalies using the column's dominant type as context.
+        /// For example: an integer 36837 in a Date column gets converted to a DateTime.
+        /// Only re-normalizes when the conversion produces a meaningful result.
+        /// </summary>
+        private void ReNormalizeAnomalousCells(
+            SASheetData sheetData,
+            int colIndex,
+            ColumnAnalysisResult analysisResult,
+            List<int> absoluteRowIndices,
+            List<SACellValue> sampleCells,
+            List<string?> numberFormats)
+        {
+            var dominantType = analysisResult.DetectedType;
+            int reNormalizedCount = 0;
+
+            foreach (var anomaly in analysisResult.Anomalies)
+            {
+                // Map sample-relative index to absolute row
+                if (anomaly.RowIndex < 0 || anomaly.RowIndex >= absoluteRowIndices.Count)
+                    continue;
+
+                int absoluteRow = absoluteRowIndices[anomaly.RowIndex];
+                var cellValue = sampleCells[anomaly.RowIndex];
+                var format = anomaly.RowIndex < numberFormats.Count ? numberFormats[anomaly.RowIndex] : null;
+
+                // Attempt re-normalization based on dominant type
+                var reNormResult = TryReNormalize(cellValue, format, dominantType);
+                if (reNormResult == null)
+                    continue;
+
+                UpdateCellWithNormalizationResult(sheetData, absoluteRow, colIndex, reNormResult);
+                reNormalizedCount++;
+            }
+
+            if (reNormalizedCount > 0)
+            {
+                _logger.LogInfo(
+                    $"[RE-NORMALIZATION] Column '{sheetData.ColumnNames[colIndex]}': " +
+                    $"re-normalized {reNormalizedCount} anomalous cells to {dominantType}",
+                    "SheetAnalysisOrchestrator");
+            }
+        }
+
+        /// <summary>
+        /// Attempts to re-normalize a cell value to match the column's dominant type.
+        /// Returns null if conversion is not possible or not meaningful.
+        /// </summary>
+        private NormalizationResult? TryReNormalize(
+            SACellValue cellValue, string? numberFormat, DataType dominantType)
+        {
+            if (cellValue.IsEmpty)
+                return null;
+
+            switch (dominantType)
+            {
+                case DataType.Date:
+                    return TryReNormalizeToDate(cellValue);
+
+                case DataType.Number:
+                case DataType.Currency:
+                    return TryReNormalizeToNumber(cellValue, numberFormat);
+
+                default:
+                    // For other dominant types (Text, Boolean, etc.) the per-cell
+                    // normalization from step 1 is sufficient
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Converts a numeric value to DateTime (Excel serial date).
+        /// Handles integers and floats that are date serial numbers without date format.
+        /// </summary>
+        private NormalizationResult? TryReNormalizeToDate(SACellValue cellValue)
+        {
+            double? serial = null;
+
+            if (cellValue.IsInteger)
+                serial = cellValue.AsInteger();
+            else if (cellValue.IsFloatingPoint)
+                serial = cellValue.AsFloatingPoint();
+            else if (cellValue.IsText)
+            {
+                // Text that could be a date string (e.g., "10/07/2000")
+                var text = cellValue.AsText();
+                if (DateTime.TryParse(text, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var parsedDate))
+                {
+                    var cleaned = SACellValue.FromDateTime(parsedDate);
+                    return NormalizationResult.SuccessWithWarning(
+                        cellValue, cleaned, DataType.Date, DataQualityIssue.TypeMismatch);
+                }
+                return null;
+            }
+
+            if (serial == null)
+                return null;
+
+            // Validate serial date range (1 = Jan 1, 1900 ... 2958465 = Dec 31, 9999)
+            if (serial < 1 || serial > 2958465)
+                return null;
+
+            // Use the normalization service to convert serial → DateTime
+            // Pass a synthetic date format so Normalize recognizes it as a date
+            var floatValue = SACellValue.FromFloatingPoint(serial.Value);
+            var result = _normalizationService.Normalize(serial.Value, "yyyy-MM-dd");
+            if (result.IsSuccess && result.CleanedValue.HasValue)
+            {
+                return NormalizationResult.SuccessWithWarning(
+                    cellValue, result.CleanedValue.Value, DataType.Date, DataQualityIssue.TypeMismatch);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Converts a text value to a number when the column is numeric.
+        /// </summary>
+        private NormalizationResult? TryReNormalizeToNumber(SACellValue cellValue, string? numberFormat)
+        {
+            if (!cellValue.IsText)
+                return null;
+
+            // Already handled by step 1 NormalizeText, but re-try with explicit number context
+            var result = _normalizationService.Normalize(cellValue.AsText(), numberFormat);
+            if (result.IsSuccess && result.CleanedValue.HasValue &&
+                (result.DetectedType == DataType.Number || result.DetectedType == DataType.Currency))
+            {
+                return NormalizationResult.SuccessWithWarning(
+                    cellValue, result.CleanedValue.Value, result.DetectedType, DataQualityIssue.TypeMismatch);
+            }
+
+            return null;
         }
 
         /// <summary>
