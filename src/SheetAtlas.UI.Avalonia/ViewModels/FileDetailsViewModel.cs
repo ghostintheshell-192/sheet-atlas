@@ -40,6 +40,11 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private DataRegion? _canvasSelectedRegion;
     private DataRegion? _activeRegion;
     private string _newRegionName = "";
+    private bool _firstRowIsHeader = true;
+    private decimal _headerRowCount = 1;
+    private bool _editHasHeader;
+    private decimal _editHeaderRowCount = 1;
+    private int? _selectionAreaStartRow;
     private string? _regionErrorMessage;
     private bool _isResizeSaved;
     private bool _isEditingRegion;
@@ -133,8 +138,16 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
         {
             if (SetField(ref _canvasSelectedRegion, value))
             {
+                // Track the original area start row before header split
+                if (value != null && value.HeaderStartRow == null)
+                    _selectionAreaStartRow = value.DataStartRow;
+
                 OnPropertyChanged(nameof(HasCanvasSelection));
                 OnPropertyChanged(nameof(SelectionBoundsText));
+
+                // Apply header settings to new selections from canvas drag
+                if (value != null && value.HeaderStartRow == null)
+                    ApplyHeaderSettingsToSelection();
             }
         }
     }
@@ -146,6 +159,58 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     {
         get => _newRegionName;
         set => SetField(ref _newRegionName, value);
+    }
+
+    /// <summary>
+    /// Whether the first row(s) of the selection should be treated as header (creation mode).
+    /// </summary>
+    public bool FirstRowIsHeader
+    {
+        get => _firstRowIsHeader;
+        set
+        {
+            if (SetField(ref _firstRowIsHeader, value))
+                ApplyHeaderSettingsToSelection();
+        }
+    }
+
+    /// <summary>
+    /// Number of header rows in the selection (creation mode). Type is decimal for NumericUpDown compatibility.
+    /// </summary>
+    public decimal HeaderRowCount
+    {
+        get => _headerRowCount;
+        set
+        {
+            if (SetField(ref _headerRowCount, value))
+                ApplyHeaderSettingsToSelection();
+        }
+    }
+
+    /// <summary>
+    /// Whether the active region has a header (edit mode).
+    /// </summary>
+    public bool EditHasHeader
+    {
+        get => _editHasHeader;
+        set
+        {
+            if (SetField(ref _editHasHeader, value))
+                ApplyHeaderSettingsToActiveRegion();
+        }
+    }
+
+    /// <summary>
+    /// Number of header rows in the active region (edit mode). Type is decimal for NumericUpDown compatibility.
+    /// </summary>
+    public decimal EditHeaderRowCount
+    {
+        get => _editHeaderRowCount;
+        set
+        {
+            if (SetField(ref _editHeaderRowCount, value))
+                ApplyHeaderSettingsToActiveRegion();
+        }
     }
 
     /// <summary>
@@ -254,15 +319,34 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             var region = CanvasSelectedRegion;
             if (region == null) return "";
 
-            int startRow = region.HeaderStartRow ?? region.DataStartRow;
-            int endRow = region.DataEndRow ?? startRow;
             int startCol = region.StartColumn ?? 0;
             int endCol = region.EndColumn ?? startCol;
-
-            string startCell = $"{GetColumnLetter(startCol)}{startRow + 1}";
-            string endCell = $"{GetColumnLetter(endCol)}{endRow + 1}";
-            int rows = endRow - startRow + 1;
             int cols = endCol - startCol + 1;
+
+            if (region.HeaderStartRow != null)
+            {
+                // Header/data split view
+                int hStart = region.HeaderStartRow.Value;
+                int hEnd = region.HeaderEndRow ?? hStart;
+                int dStart = region.DataStartRow;
+                int dEnd = region.DataEndRow ?? dStart;
+                int headerRows = hEnd - hStart + 1;
+                int dataRows = Math.Max(0, dEnd - dStart + 1);
+
+                string hStartCell = $"{GetColumnLetter(startCol)}{hStart + 1}";
+                string hEndCell = $"{GetColumnLetter(endCol)}{hEnd + 1}";
+                string dStartCell = $"{GetColumnLetter(startCol)}{dStart + 1}";
+                string dEndCell = $"{GetColumnLetter(endCol)}{dEnd + 1}";
+
+                return $"Header: {hStartCell}:{hEndCell} ({headerRows} rows) — Data: {dStartCell}:{dEndCell} ({dataRows} rows)";
+            }
+
+            // Area-only view (no header selected yet)
+            int areaStart = region.DataStartRow;
+            int areaEnd = region.DataEndRow ?? areaStart;
+            string startCell = $"{GetColumnLetter(startCol)}{areaStart + 1}";
+            string endCell = $"{GetColumnLetter(endCol)}{areaEnd + 1}";
+            int rows = areaEnd - areaStart + 1;
 
             return $"{startCell}:{endCell} ({rows} rows x {cols} cols)";
         }
@@ -588,6 +672,83 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
 
     #region Region Creation
 
+    private void ApplyHeaderSettingsToSelection()
+    {
+        var selection = CanvasSelectedRegion;
+        if (selection == null || _selectionAreaStartRow == null) return;
+
+        int areaStart = _selectionAreaStartRow.Value;
+        int areaEnd = selection.DataEndRow ?? areaStart;
+
+        if (FirstRowIsHeader)
+        {
+            int headerCount = (int)HeaderRowCount;
+            int headerStart = areaStart;
+            int headerEnd = headerStart + headerCount - 1;
+            // Clamp: need at least 1 data row
+            if (headerEnd >= areaEnd)
+                headerEnd = areaEnd - 1;
+            if (headerEnd < headerStart)
+                headerEnd = headerStart;
+
+            _canvasSelectedRegion = selection with
+            {
+                HeaderStartRow = headerStart,
+                HeaderEndRow = headerEnd,
+                DataStartRow = headerEnd + 1
+            };
+        }
+        else
+        {
+            _canvasSelectedRegion = selection with
+            {
+                HeaderStartRow = null,
+                HeaderEndRow = null,
+                DataStartRow = areaStart
+            };
+        }
+
+        OnPropertyChanged(nameof(CanvasSelectedRegion));
+        OnPropertyChanged(nameof(HasCanvasSelection));
+        OnPropertyChanged(nameof(SelectionBoundsText));
+    }
+
+    private void ApplyHeaderSettingsToActiveRegion()
+    {
+        if (ActiveRegion == null || !IsEditingRegion || _originalRegionBeforeEdit == null) return;
+
+        int regionStart = _originalRegionBeforeEdit.HeaderStartRow
+            ?? _originalRegionBeforeEdit.DataStartRow;
+        int regionEnd = _originalRegionBeforeEdit.DataEndRow ?? regionStart;
+
+        if (EditHasHeader)
+        {
+            int headerCount = (int)EditHeaderRowCount;
+            int headerStart = regionStart;
+            int headerEnd = headerStart + headerCount - 1;
+            if (headerEnd >= regionEnd)
+                headerEnd = regionEnd - 1;
+            if (headerEnd < headerStart)
+                headerEnd = headerStart;
+
+            ActiveRegion = ActiveRegion with
+            {
+                HeaderStartRow = headerStart,
+                HeaderEndRow = headerEnd,
+                DataStartRow = headerEnd + 1
+            };
+        }
+        else
+        {
+            ActiveRegion = ActiveRegion with
+            {
+                HeaderStartRow = null,
+                HeaderEndRow = null,
+                DataStartRow = regionStart
+            };
+        }
+    }
+
     private async Task ExecuteCreateRegionAsync()
     {
         var selection = CanvasSelectedRegion;
@@ -600,6 +761,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             ? $"Region {CurrentSheetData.DataRegions.Count + 1}"
             : NewRegionName.Trim();
 
+        // Header settings are already applied reactively via ApplyHeaderSettingsToSelection
         var region = selection with { Name = name };
 
         try
@@ -704,6 +866,19 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     {
         if (ActiveRegion == null) return;
         _originalRegionBeforeEdit = ActiveRegion;
+
+        // Initialize edit header controls from current region state
+        bool hasHeader = ActiveRegion.HeaderStartRow != null;
+        int headerCount = hasHeader
+            ? (ActiveRegion.HeaderEndRow ?? ActiveRegion.HeaderStartRow!.Value) - ActiveRegion.HeaderStartRow!.Value + 1
+            : 1;
+
+        // Set fields directly to avoid triggering ApplyHeaderSettingsToActiveRegion before IsEditingRegion is set
+        _editHasHeader = hasHeader;
+        _editHeaderRowCount = headerCount;
+        OnPropertyChanged(nameof(EditHasHeader));
+        OnPropertyChanged(nameof(EditHeaderRowCount));
+
         IsEditingRegion = true;
     }
 
@@ -742,7 +917,12 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
     private void ClearCanvasSelection()
     {
         CanvasSelectedRegion = null;
+        _selectionAreaStartRow = null;
         NewRegionName = "";
+        _firstRowIsHeader = true;
+        _headerRowCount = 1;
+        OnPropertyChanged(nameof(FirstRowIsHeader));
+        OnPropertyChanged(nameof(HeaderRowCount));
         RegionErrorMessage = null;
     }
 
@@ -843,7 +1023,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             var options = new ExcelExportOptions
             {
                 SemanticNames = semanticNames,
-                IncludedColumns = includedColumns
+                IncludedColumns = includedColumns,
             };
 
             var result = await _excelWriterService.WriteToExcelAsync(sheet, savedPath, options);
@@ -905,7 +1085,7 @@ public class FileDetailsViewModel : ViewModelBase, IDisposable
             var options = new CsvExportOptions
             {
                 SemanticNames = semanticNames,
-                IncludedColumns = includedColumns
+                IncludedColumns = includedColumns,
             };
 
             var result = await _excelWriterService.WriteToCsvAsync(sheet, savedPath, options);

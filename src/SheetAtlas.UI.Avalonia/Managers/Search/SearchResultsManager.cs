@@ -274,7 +274,12 @@ public class SearchResultsManager : ISearchResultsManager
                     if (!r.SheetName.Equals(entry.SheetName, StringComparison.OrdinalIgnoreCase))
                         return false;
 
-                    return IsWithinRegionBounds(r, entry.Region);
+                    if (!IsWithinRegionBounds(r, entry.Region))
+                        return false;
+
+                    // Propagate region name so RowComparisonService can scope columns
+                    r.RegionName = entry.Region.Name;
+                    return true;
                 });
             }).ToList();
         }
@@ -291,7 +296,11 @@ public class SearchResultsManager : ISearchResultsManager
             if (sheetName != null && !r.SheetName.Equals(sheetName, StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            return IsWithinRegionBounds(r, region);
+            if (!IsWithinRegionBounds(r, region))
+                return false;
+
+            r.RegionName = region.Name;
+            return true;
         }).ToList();
     }
 

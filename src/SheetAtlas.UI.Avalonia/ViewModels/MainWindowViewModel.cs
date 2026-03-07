@@ -20,6 +20,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IDialogService _dialogService;
     private readonly IRegionDetectionService _regionDetectionService;
     private readonly IDataRegionPersistenceService _dataRegionPersistenceService;
+    private readonly IExcelWriterService _excelWriterService;
+    private readonly ISettingsService _settingsService;
 
     private IFileLoadResultViewModel? _selectedFile;
     private object? _currentView;
@@ -32,6 +34,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isSettingsTabVisible;
     private bool _isDataRegionsTabVisible;
     private bool _isWelcomeTabVisible;
+    private bool _isQuickBarVisible = true;
     private bool _isStatusBarVisible = true;
     private bool _disposed = false;
 
@@ -62,6 +65,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 if (FileDetailsViewModel != null)
                     FileDetailsViewModel.SelectedFile = value;
+
+                OnPropertyChanged(nameof(HasSelectedFile));
 
                 // Note: TemplateManagementViewModel is updated via UpdateSelectedFiles()
                 // which is called by the SelectionChanged event handler in MainWindow.
@@ -182,6 +187,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool HasAnyTabVisible => IsWelcomeTabVisible || IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible || IsDataRegionsTabVisible;
 
+    public bool IsQuickBarVisible
+    {
+        get => _isQuickBarVisible;
+        set => SetField(ref _isQuickBarVisible, value);
+    }
+
     public bool IsStatusBarVisible
     {
         get => _isStatusBarVisible;
@@ -224,7 +235,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IActivityLogService activityLog,
         IDialogService dialogService,
         IRegionDetectionService regionDetectionService,
-        IDataRegionPersistenceService dataRegionPersistenceService)
+        IDataRegionPersistenceService dataRegionPersistenceService,
+        IExcelWriterService excelWriterService,
+        ISettingsService settingsService)
     {
         _filesManager = filesManager ?? throw new ArgumentNullException(nameof(filesManager));
         _comparisonCoordinator = comparisonCoordinator ?? throw new ArgumentNullException(nameof(comparisonCoordinator));
@@ -235,6 +248,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         _regionDetectionService = regionDetectionService ?? throw new ArgumentNullException(nameof(regionDetectionService));
         _dataRegionPersistenceService = dataRegionPersistenceService ?? throw new ArgumentNullException(nameof(dataRegionPersistenceService));
+        _excelWriterService = excelWriterService ?? throw new ArgumentNullException(nameof(excelWriterService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
         ThemeManager = themeManager;
 

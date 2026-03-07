@@ -8,6 +8,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand LoadFileCommand { get; private set; } = null!;
         public ICommand UnloadAllFilesCommand { get; private set; } = null!;
         public ICommand ToggleSidebarCommand { get; private set; } = null!;
+        public ICommand ToggleQuickBarCommand { get; private set; } = null!;
         public ICommand ToggleStatusBarCommand { get; private set; } = null!;
         public ICommand ShowFileDetailsTabCommand { get; private set; } = null!;
         public ICommand ShowSearchTabCommand { get; private set; } = null!;
@@ -24,6 +25,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand ShowWelcomeTabCommand { get; private set; } = null!;
         public ICommand CloseWelcomeTabCommand { get; private set; } = null!;
         public ICommand ShowSearchResultsCommand { get; private set; } = null!;
+        public ICommand NormalizeExportCommand { get; private set; } = null!;
         public ICommand ShowAboutCommand { get; private set; } = null!;
         public ICommand ShowDocumentationCommand { get; private set; } = null!;
         public ICommand ViewErrorLogCommand { get; private set; } = null!;
@@ -40,6 +42,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             ToggleSidebarCommand = new RelayCommand(() =>
             {
                 IsSidebarExpanded = !IsSidebarExpanded;
+                return Task.CompletedTask;
+            });
+
+            ToggleQuickBarCommand = new RelayCommand(() =>
+            {
+                IsQuickBarVisible = !IsQuickBarVisible;
                 return Task.CompletedTask;
             });
 
@@ -161,6 +169,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 SwitchToNextVisibleTab("Welcome");
                 return Task.CompletedTask;
             });
+
+            NormalizeExportCommand = new RelayCommand(async () => await ExecuteNormalizeExportAsync());
 
             ShowAboutCommand = new RelayCommand(async () => await ShowAboutDialogAsync());
             ShowDocumentationCommand = new RelayCommand(async () => await OpenDocumentationAsync());

@@ -33,6 +33,7 @@ namespace SheetAtlas.Core.Application.Interfaces
             ExcelFile file,
             ExcelTemplate template,
             string? sheetName = null,
+            string? regionName = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -51,6 +52,7 @@ namespace SheetAtlas.Core.Application.Interfaces
             ExcelFile file,
             string templateName,
             string? sheetName = null,
+            string? regionName = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -66,6 +68,7 @@ namespace SheetAtlas.Core.Application.Interfaces
             IEnumerable<ExcelFile> files,
             ExcelTemplate template,
             string? sheetName = null,
+            string? regionName = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -79,6 +82,7 @@ namespace SheetAtlas.Core.Application.Interfaces
         bool QuickStructureCheck(
             ExcelFile file,
             ExcelTemplate template,
-            string? sheetName = null);
+            string? sheetName = null,
+            string? regionName = null);
     }
 }

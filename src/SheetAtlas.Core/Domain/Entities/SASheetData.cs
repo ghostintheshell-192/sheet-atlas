@@ -28,6 +28,20 @@ namespace SheetAtlas.Core.Domain.Entities
         public int HeaderRowCount { get; private set; } = 1;
 
         /// <summary>
+        /// Excel row index (0-based) corresponding to local row 0 in the flat array.
+        /// Set by readers to preserve original Excel coordinates.
+        /// Example: if data starts at Excel row 3 (0-based), OriginRow = 3.
+        /// </summary>
+        public int OriginRow { get; private set; }
+
+        /// <summary>
+        /// Excel column index (0-based) corresponding to local column 0 in the flat array.
+        /// Set by readers to preserve original Excel coordinates.
+        /// Example: if data starts at Excel column B, OriginColumn = 1.
+        /// </summary>
+        public int OriginColumn { get; private set; }
+
+        /// <summary>
         /// Flat array of all cells: cells[row * ColumnCount + col].
         /// Single contiguous allocation = zero fragmentation, excellent cache locality.
         /// INCLUDES header rows (rows 0 to HeaderRowCount-1) AND data rows.
@@ -74,6 +88,69 @@ namespace SheetAtlas.Core.Domain.Entities
                 throw new ArgumentException($"Header row count ({headerRowCount}) cannot exceed total row count ({_rowCount})", nameof(headerRowCount));
 
             HeaderRowCount = headerRowCount;
+        }
+
+        /// <summary>
+        /// Set the Excel origin coordinates for this sheet.
+        /// Called by readers during construction to preserve original Excel positions.
+        /// </summary>
+        public void SetOrigin(int originRow, int originColumn)
+        {
+            if (originRow < 0)
+                throw new ArgumentOutOfRangeException(nameof(originRow), "Origin row cannot be negative");
+            if (originColumn < 0)
+                throw new ArgumentOutOfRangeException(nameof(originColumn), "Origin column cannot be negative");
+
+            OriginRow = originRow;
+            OriginColumn = originColumn;
+        }
+
+        /// <summary>
+        /// Convert a local row index (0-based, flat array) to an Excel row index (0-based).
+        /// </summary>
+        public int ToExcelRow(int localRow) => localRow + OriginRow;
+
+        /// <summary>
+        /// Convert a local column index (0-based, flat array) to an Excel column index (0-based).
+        /// </summary>
+        public int ToExcelColumn(int localCol) => localCol + OriginColumn;
+
+        /// <summary>
+        /// Convert an Excel row index (0-based) to a local row index (0-based, flat array).
+        /// </summary>
+        public int ToLocalRow(int excelRow) => excelRow - OriginRow;
+
+        /// <summary>
+        /// Convert an Excel column index (0-based) to a local column index (0-based, flat array).
+        /// </summary>
+        public int ToLocalColumn(int excelCol) => excelCol - OriginColumn;
+
+        /// <summary>
+        /// Get Excel cell reference string (e.g. "B5") for a local row/column position.
+        /// Row is converted to 1-based Excel row number, column to Excel letter(s).
+        /// </summary>
+        public string GetCellReference(int localRow, int localCol)
+        {
+            int excelRow = ToExcelRow(localRow) + 1; // Excel rows are 1-based for display
+            int excelCol = ToExcelColumn(localCol);
+            return $"{GetColumnLetter(excelCol)}{excelRow}";
+        }
+
+        /// <summary>
+        /// Convert a 0-based column index to Excel column letter(s). 0=A, 1=B, ..., 25=Z, 26=AA.
+        /// </summary>
+        private static string GetColumnLetter(int columnIndex)
+        {
+            var result = string.Empty;
+            int remaining = columnIndex;
+
+            do
+            {
+                result = (char)('A' + remaining % 26) + result;
+                remaining = remaining / 26 - 1;
+            } while (remaining >= 0);
+
+            return result;
         }
 
         /// <summary>

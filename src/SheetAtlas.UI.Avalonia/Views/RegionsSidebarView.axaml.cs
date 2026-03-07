@@ -23,6 +23,22 @@ public partial class RegionsSidebarView : UserControl
 
         var selectedItem = (sender as TreeView)?.SelectedItem;
         vm.SelectedRegion = selectedItem as RegionItem;
+
+        // When user clicks a file node, request file selection for normalize/export
+        if (selectedItem is FileRegionGroup fileGroup)
+            vm.RequestFileSelect(fileGroup.FilePath);
+        else if (selectedItem is SheetRegionGroup sheetGroup)
+        {
+            // Walk up to find the parent file group
+            var parentFile = vm.FileGroups.FirstOrDefault(fg =>
+                fg.Sheets.Contains(sheetGroup));
+            if (parentFile != null)
+                vm.RequestFileSelect(parentFile.FilePath);
+        }
+        else if (selectedItem is RegionItem regionItem)
+        {
+            vm.RequestFileSelect(regionItem.FilePath);
+        }
     }
 
     private void OnRegionGroupCardPressed(object? sender, PointerPressedEventArgs e)

@@ -352,6 +352,132 @@ namespace SheetAtlas.Tests.Foundation.Services
 
         #region Helper Methods
 
+        #region DataRegion Tests
+
+        [Fact]
+        public async Task CreateTemplateFromFileAsync_WithRegion_UsesRegionHeaderRowCount()
+        {
+            // Arrange: sheet has 1 header row globally, but region has 2 header rows
+            var columns = new[] { "ID", "Name", "Value" };
+            var sheet = new SASheetData("Sheet1", columns);
+            for (int i = 0; i < 12; i++) // rows 0-11
+                sheet.AddRow(columns.Select(_ => new SACellData(SACellValue.FromText($"R{i}"))).ToArray());
+
+            var region = new DataRegion
+            {
+                Name = "MultiHeader",
+                HeaderStartRow = 0,
+                HeaderEndRow = 1,  // 2-row header
+                DataStartRow = 2,
+                DataEndRow = 11
+            };
+            sheet.AddDataRegion(region);
+
+            var file = new ExcelFile("/test/test.xlsx", LoadStatus.Success,
+                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
+                new List<ExcelError>());
+
+            // Act
+            var template = await _service.CreateTemplateFromFileAsync(file, "T", "Sheet1", "MultiHeader");
+
+            // Assert: template HeaderRowCount should be 2 (region's HeaderRowCount)
+            template.HeaderRowCount.Should().Be(2);
+        }
+
+        [Fact]
+        public async Task CreateTemplateFromFileAsync_WithRegionColumnBounds_LimitsColumnsToRegion()
+        {
+            // Arrange: 5 columns, region covers columns 1-3
+            var columns = new[] { "Extra", "Name", "Age", "City", "Tail" };
+            var sheet = new SASheetData("Sheet1", columns);
+            for (int i = 0; i < 6; i++)
+                sheet.AddRow(columns.Select(_ => new SACellData(SACellValue.FromText($"V{i}"))).ToArray());
+
+            var region = new DataRegion
+            {
+                Name = "Core",
+                HeaderStartRow = 0,
+                HeaderEndRow = 0,
+                DataStartRow = 1,
+                StartColumn = 1,
+                EndColumn = 3
+            };
+            sheet.AddDataRegion(region);
+
+            var file = new ExcelFile("/test/test.xlsx", LoadStatus.Success,
+                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
+                new List<ExcelError>());
+
+            // Act
+            var template = await _service.CreateTemplateFromFileAsync(file, "T", "Sheet1", "Core");
+
+            // Assert: only columns 1-3
+            template.Columns.Should().HaveCount(3);
+            template.Columns.Should().Contain(c => c.Name == "Name");
+            template.Columns.Should().Contain(c => c.Name == "Age");
+            template.Columns.Should().Contain(c => c.Name == "City");
+            template.Columns.Should().NotContain(c => c.Name == "Extra");
+            template.Columns.Should().NotContain(c => c.Name == "Tail");
+        }
+
+        [Fact]
+        public async Task CreateTemplateFromFileAsync_WithNullRegion_UsesSheetHeaderRowCount()
+        {
+            // Arrange
+            var file = CreateSampleExcelFile("Test.xlsx", new[] { ("Amount", DataType.Number) });
+
+            // Act
+            var template = await _service.CreateTemplateFromFileAsync(file, "T", regionName: null);
+
+            // Assert: default sheet HeaderRowCount is 1
+            template.HeaderRowCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task ValidateAsync_WithRegionColumnBounds_ValidatesOnlyRegionColumns()
+        {
+            // Arrange: 4 columns, region covers only columns 0-1
+            var columns = new[] { "ID", "Name", "HiddenA", "HiddenB" };
+            var sheet = new SASheetData("Sheet1", columns);
+            sheet.AddRow(columns.Select(n => new SACellData(SACellValue.FromText(n))).ToArray());
+            for (int i = 0; i < 5; i++)
+                sheet.AddRow(new[]
+                {
+                    new SACellData(SACellValue.FromInteger(i + 1)),
+                    new SACellData(SACellValue.FromText($"Name{i}")),
+                    new SACellData(SACellValue.FromText("hidden")),
+                    new SACellData(SACellValue.FromText("hidden"))
+                });
+
+            var region = new DataRegion
+            {
+                Name = "Visible",
+                HeaderStartRow = 0,
+                HeaderEndRow = 0,
+                DataStartRow = 1,
+                StartColumn = 0,
+                EndColumn = 1
+            };
+            sheet.AddDataRegion(region);
+
+            var file = new ExcelFile("/test/test.xlsx", LoadStatus.Success,
+                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
+                new List<ExcelError>());
+
+            // Template matches only the region's columns
+            var template = ExcelTemplate.Create("T")
+                .AddColumn(ExpectedColumn.Required("ID", DataType.Number))
+                .AddColumn(ExpectedColumn.Required("Name", DataType.Text));
+
+            // Act
+            var report = await _service.ValidateAsync(file, template, regionName: "Visible");
+
+            // Assert: validation passes — HiddenA/HiddenB are outside the region and not checked
+            report.Passed.Should().BeTrue();
+        }
+
+        #endregion
+
         private static ExcelFile CreateSampleExcelFile(string fileName, (string Name, DataType Type)[] columns)
         {
             var sheet = CreateSampleSheet("Sheet1", columns);

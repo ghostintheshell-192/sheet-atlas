@@ -148,3 +148,16 @@ public class RegionEventArgs : EventArgs
         Region = region;
     }
 }
+
+/// <summary>
+/// Event arguments for requesting file selection from the regions sidebar.
+/// </summary>
+public class FileSelectRequestedEventArgs : EventArgs
+{
+    public string FilePath { get; }
+
+    public FileSelectRequestedEventArgs(string filePath)
+    {
+        FilePath = filePath;
+    }
+}

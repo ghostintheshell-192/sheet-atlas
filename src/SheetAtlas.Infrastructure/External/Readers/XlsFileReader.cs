@@ -181,6 +181,9 @@ namespace SheetAtlas.Infrastructure.External.Readers
 
             var sheetData = new SASheetData(sheetName, columnNames.ToArray());
 
+            // ExcelDataReader normalizes coordinates to 0-based; origin is always (0, 0)
+            sheetData.SetOrigin(0, 0);
+
             // Populate ALL rows (including header row at index 0)
             // NOTE: ExcelDataReader returns DataTable with ALL rows (header included at index 0)
             // This is simpler than CSV where CsvHelper skips the header when HasHeaderRecord=true
