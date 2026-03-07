@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-07
+
+### Added
+
+- **DataRegion system** — define named data regions within sheets for scoped operations (ADR-009/010/011)
+  - Core domain model with header/data row boundaries and column bounds
+  - Service integration and JSON persistence (Phase 2)
+  - Full UI: SheetGridCanvas with drag selection, TreeView sidebar, dedicated Data Regions tab (Phase 3)
+  - Cross-file region detection with header-anchored matching (ADR-012)
+  - Dual-mode sidebar: by-file and by-region-name views
+  - Inline rename, ⋮ context menus, Clear All actions
+- **Normalize & Export** — in-place normalization that copies original Excel and corrects cell values/formats
+  - Column-level type correction: re-normalizes anomalous cells to match dominant column type (Step 3 pipeline)
+  - StyleIndex updated to match normalized type (date ↔ general)
+  - Region-scoped normalization: only cells within DataRegion bounds are processed
+- **QuickBar toolbar** — contextual toolbar below menu bar with "Normalize & Export" button
+  - Toggle visibility from View menu
+  - Context-sensitive enable/disable based on selected file
+- **Coordinate-preserving sheet storage** (ADR-013) — SASheetData preserves original Excel row/column positions
+- **Merged cell rendering** in SheetGridCanvas
+- **Welcome tab** with getting-started guidance
+- **Reusable UI components**: ClosableTabHeader, EmptyStateView
+- **RegionsSidebarViewModel unit tests** (27b1b66)
+
+### Changed
+
+- Deliberate tab navigation with ⋮ menu on File Details
+- Replace two-phase header toggle with CheckBox + spinner
+- Template validation and row comparison scoped to DataRegion bounds
+- DataRegion propagated to search filtering and row comparison column slicing
+- Window title updated from legacy "Excel Cross Reference Viewer" to "SheetAtlas"
+- Migrated .claude/ config to rules/ pattern for self-contained project configuration
+
+### Fixed
+
+- Integer serial dates not recognized as dates in normalization (IsInteger check)
+- ConvertSerial1900 off-by-one error for serial numbers > 60
+- Row/column offset alignment in OpenXML reader and merged cell resolver
+- RegionName propagation from search filter to RowComparisonService for correct column scoping
+- Inline rename UX: auto-focus TextBox, preserve tree expansion, guard LostFocus
+- Git hooks moved to project-level, fixed grep regex bug
+
+### Documentation
+
+- DataRegion architecture decisions (ADR-009, 010, 011, 012, 013, 014)
+- Auto-generated architecture reference from source comments
+- Restructured .development/ folder for spec-driven development
+
 ## [0.5.3] - 2026-01-31
 
 ### Added

@@ -1,11 +1,27 @@
 # Sheet Atlas - Current Status
 
-*Last updated: 2026-01-31*
+*Last updated: 2026-03-07*
 
 ## Project Phase
 
-**Current release**: v0.5.3 (alpha)
-**Next release**: v0.6.0 - Data Regions
+**Current release**: v0.6.0 (alpha)
+**Next release**: v0.7.0 - TBD
+
+## Completed in v0.6.0
+
+**v0.6.0** (2026-03-07):
+- **DataRegion System** - Named data regions for scoped operations (ADR-009/010/011/012)
+  - Core domain model, service integration, JSON persistence
+  - Full UI: SheetGridCanvas with drag selection, TreeView sidebar, dedicated tab
+  - Cross-file detection with header-anchored matching
+- **Normalize & Export** - In-place normalization with column-level type correction
+  - Copies original file, corrects values/formats based on dominant column type
+  - Region-scoped normalization
+- **QuickBar Toolbar** - Contextual toolbar with toggle from View menu
+- **Coordinate-Preserving Storage** (ADR-013) - SASheetData preserves original Excel positions
+- **Template Validation Scoped to DataRegion** (ADR-014)
+- **Welcome Tab** - Getting-started guidance for new users
+- **Reusable Components** - ClosableTabHeader, EmptyStateView
 
 ## Completed in v0.5.x
 
@@ -33,8 +49,8 @@ See: `specs/implemented/` for completed specifications.
 
 ## In Progress / Next Steps
 
-1. **Data Region Selection** - Handle complex sheets with mixed content
-2. **Multi-row Headers** - Support for multi-row headers common in financial reports
+1. **Performance profiling** - Loading time increased with new enrichment steps
+2. **Website screenshots** - UI changed significantly since v0.5.x
 
 ## Quick Links
 

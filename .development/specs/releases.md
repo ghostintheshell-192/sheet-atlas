@@ -54,14 +54,17 @@
 
 ---
 
-## v0.6.0 (planned)
+## v0.6.0 (released 2026-03-07)
 
-**Focus**: Data Region & Headers
+**Focus**: Data Regions, Normalize & Export
 
-| Spec | Status |
-|------|--------|
-| `data-region-selection.md` | planned |
-| `multi-row-headers.md` | planned |
+| Spec | Status | Notes |
+|------|--------|-------|
+| `data-region-selection.md` | ✅ implemented | Full system: domain, persistence, UI, cross-file detection |
+| `multi-row-headers.md` | ✅ implemented | HeaderStartRow/HeaderEndRow in DataRegion model |
+| Normalize & Export | ✅ implemented | In-place normalization with column-level type correction |
+| QuickBar toolbar | ✅ implemented | Contextual toolbar for quick actions |
+| Coordinate-preserving storage | ✅ implemented | ADR-013 |
 
 ---
 
@@ -127,8 +130,8 @@ column-grouping.md              → v0.5 ✅
 export-results.md               → v0.5.1 ✅
 settings-configuration.md       → v0.5 ✅
 column-filtering.md             → v0.5 ✅
-data-region-selection.md        → v0.6
-multi-row-headers.md            → v0.6
+data-region-selection.md        → v0.6 ✅
+multi-row-headers.md            → v0.6 ✅
 template-application.md         → v0.7
 telemetry.md                    → v0.8
 ods-support.md                  → v0.8
