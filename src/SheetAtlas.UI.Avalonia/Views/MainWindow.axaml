@@ -10,7 +10,7 @@
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="SheetAtlas.UI.Avalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="Excel Cross Reference Viewer"
+        Title="SheetAtlas"
         MinWidth="800" MinHeight="600"
         Background="{DynamicResource MainBackground}">
 
