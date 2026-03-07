@@ -2,6 +2,8 @@
 
 **Date**: October 2025
 **Status**: Active
+**Impact**: important
+**Summary**: Two-branch model: main (releases only), develop (default for development), feature/* branches. Never work on main directly. Create feature branch per task, merge to develop when complete, merge develop to main for releases only.
 
 ## Context
 

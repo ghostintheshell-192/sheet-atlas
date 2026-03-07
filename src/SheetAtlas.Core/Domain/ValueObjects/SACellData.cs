@@ -123,6 +123,14 @@ namespace SheetAtlas.Core.Domain.ValueObjects
         /// </summary>
         public string? NumberFormat { get; set; }
 
+        // === Region Tracking ===
+
+        /// <summary>
+        /// Name of the DataRegion that normalized this cell.
+        /// Used to track which region's normalization rules were applied.
+        /// </summary>
+        public string? RegionId { get; set; }
+
         // === Extensibility ===
 
         /// <summary>

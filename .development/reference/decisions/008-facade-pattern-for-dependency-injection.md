@@ -2,6 +2,8 @@
 
 **Status**: Active
 **Date**: 2026-01-31
+**Impact**: reference
+**Summary**: FileReaderContext facade groups 4 common reader dependencies (Logger, AnalysisOrchestrator, Settings, SecuritySettings). Reduces constructor parameters by 57%. Type-safe alternative to Service Locator anti-pattern.
 
 ## Context
 

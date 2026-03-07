@@ -32,5 +32,15 @@ namespace SheetAtlas.Core.Application.Interfaces
         /// - Normalize data values
         /// </remarks>
         Task<SASheetData> EnrichAsync(SASheetData rawData, List<ExcelError> errors);
+
+        /// <summary>
+        /// Enriches a specific DataRegion with column analysis.
+        /// Samples cells within region bounds, runs analysis, stores per-region metadata.
+        /// Call AFTER EnrichAsync (merge resolution must already be done).
+        /// </summary>
+        /// <param name="data">Sheet data (already enriched globally via EnrichAsync)</param>
+        /// <param name="region">DataRegion to analyze</param>
+        /// <param name="errors">Error list to append detected anomalies</param>
+        Task EnrichRegionAsync(SASheetData data, DataRegion region, List<ExcelError> errors);
     }
 }

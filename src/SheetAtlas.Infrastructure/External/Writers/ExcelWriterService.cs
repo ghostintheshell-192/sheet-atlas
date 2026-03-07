@@ -14,9 +14,7 @@ using SheetAtlas.Logging.Services;
 namespace SheetAtlas.Infrastructure.External.Writers
 {
     /// <summary>
-    /// Service for exporting enriched sheet data to Excel and CSV formats.
-    /// Uses CleanedValue from cell metadata for proper type preservation.
-    /// Preserves number formats (currency, percentage, dates) from source files.
+    /// Service for exporting sheet data to Excel and CSV. Preserves types and number formats from source files.
     /// </summary>
     public class ExcelWriterService : IExcelWriterService
     {
@@ -80,8 +78,9 @@ namespace SheetAtlas.Infrastructure.External.Writers
                             : sheetData.SheetName
                     });
 
-                    // Build list of column indices to include
-                    var columnIndicesToInclude = BuildIncludedColumnIndices(sheetData, options.IncludedColumns);
+                    // Build list of column indices to include (scoped to region when set)
+                    var region = options.Region;
+                    var columnIndicesToInclude = BuildIncludedColumnIndices(sheetData, options.IncludedColumns, region);
 
                     uint rowIndex = 1;
 
@@ -96,7 +95,20 @@ namespace SheetAtlas.Infrastructure.External.Writers
                                 continue;
 
                             cancellationToken.ThrowIfCancellationRequested();
-                            var originalName = sheetData.ColumnNames[col];
+
+                            // When region has explicit header rows, read header from the region's
+                            // first header row instead of the sheet's global ColumnNames.
+                            string originalName;
+                            if (region?.HeaderStartRow != null)
+                            {
+                                var cellValue = sheetData.GetCellValue(region.HeaderStartRow.Value, col);
+                                originalName = cellValue.IsEmpty ? sheetData.ColumnNames[col] : cellValue.ToString();
+                            }
+                            else
+                            {
+                                originalName = sheetData.ColumnNames[col];
+                            }
+
                             var headerName = options.SemanticNames?.TryGetValue(originalName, out var semantic) == true
                                 ? semantic
                                 : originalName;
@@ -108,8 +120,11 @@ namespace SheetAtlas.Infrastructure.External.Writers
                         rowIndex++;
                     }
 
-                    // Write data rows
-                    foreach (var row in sheetData.EnumerateDataRows())
+                    // Write data rows (scoped to region when set)
+                    var dataRows = region != null
+                        ? sheetData.EnumerateDataRows(region)
+                        : sheetData.EnumerateDataRows();
+                    foreach (var row in dataRows)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
@@ -194,6 +209,240 @@ namespace SheetAtlas.Infrastructure.External.Writers
             }
         }
 
+        public async Task<ExportResult> NormalizeToExcelAsync(
+            string sourcePath,
+            IReadOnlyDictionary<string, SASheetData> sheetsData,
+            string outputPath,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath))
+                throw new ArgumentNullException(nameof(sourcePath));
+            ArgumentNullException.ThrowIfNull(sheetsData);
+            if (string.IsNullOrWhiteSpace(outputPath))
+                throw new ArgumentNullException(nameof(outputPath));
+
+            var stopwatch = Stopwatch.StartNew();
+            int normalizedCellCount = 0;
+
+            try
+            {
+                _logger.LogInfo($"Starting normalize-in-place export from {sourcePath} to {outputPath}", "ExcelWriterService");
+
+                // Copy original file to preserve all formatting, merged cells, styles
+                File.Copy(sourcePath, outputPath, overwrite: true);
+
+                await Task.Run(() =>
+                {
+                    using var document = SpreadsheetDocument.Open(outputPath, isEditable: true);
+                    var workbookPart = document.WorkbookPart;
+                    if (workbookPart == null) return;
+
+                    // Get or create stylesheet for format updates
+                    var stylesPart = workbookPart.WorkbookStylesPart
+                        ?? workbookPart.AddNewPart<WorkbookStylesPart>();
+                    stylesPart.Stylesheet ??= CreateStylesheet();
+
+                    // Build a date style index in the existing stylesheet
+                    uint dateStyleIndex = GetOrCreateDateStyleIndex(stylesPart.Stylesheet);
+
+                    var sheets = workbookPart.Workbook.Sheets?.Elements<Sheet>() ?? Enumerable.Empty<Sheet>();
+
+                    foreach (var sheet in sheets)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var sheetName = sheet.Name?.Value;
+                        if (sheetName == null) continue;
+
+                        // Find matching enriched data for this sheet
+                        if (!sheetsData.TryGetValue(sheetName, out var saSheet)) continue;
+
+                        var worksheetPart = (WorksheetPart)workbookPart.GetPartById(sheet.Id!);
+                        var sheetDataElement = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+                        if (sheetDataElement == null) continue;
+
+                        // Determine which cells to normalize: region-scoped or all
+                        // Scope is in EXCEL 0-based coordinates (absolute position in spreadsheet)
+                        var regions = saSheet.DataRegions.Values.ToList();
+                        var cellsToNormalize = BuildNormalizationScope(saSheet, regions);
+
+                        // Update cells in-place
+                        foreach (var row in sheetDataElement.Elements<Row>())
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            // OpenXml RowIndex is 1-based; convert to 0-based Excel coordinate
+                            var excelRow = (int)row.RowIndex!.Value - 1;
+
+                            foreach (var cell in row.Elements<Cell>())
+                            {
+                                var excelCol = ParseColumnIndex(cell.CellReference!);
+                                if (!cellsToNormalize.Contains((excelRow, excelCol))) continue;
+
+                                // Convert Excel coordinates to SASheetData local indices
+                                var localRow = saSheet.ToLocalRow(excelRow);
+                                var localCol = saSheet.ToLocalColumn(excelCol);
+
+                                // Skip if outside SASheetData bounds
+                                if (localRow < 0 || localRow >= saSheet.RowCount) continue;
+                                if (localCol < 0 || localCol >= saSheet.ColumnCount) continue;
+
+                                var cellData = saSheet.GetCellData(localRow, localCol);
+                                if (cellData.Metadata?.CleanedValue == null) continue;
+
+                                // Update cell value and style when type changed
+                                var cleanedValue = cellData.Metadata.CleanedValue.Value;
+                                UpdateCellValue(cell, cleanedValue, dateStyleIndex);
+                                normalizedCellCount++;
+                            }
+                        }
+
+                        worksheetPart.Worksheet.Save();
+                    }
+
+                    stylesPart.Stylesheet.Save();
+                    workbookPart.Workbook.Save();
+                }, cancellationToken);
+
+                stopwatch.Stop();
+                var fileInfo = new FileInfo(outputPath);
+
+                _logger.LogInfo(
+                    $"Normalize export completed: {normalizedCellCount} cells normalized, {fileInfo.Length} bytes",
+                    "ExcelWriterService");
+
+                return ExportResult.Success(
+                    outputPath,
+                    0, // row count not meaningful for in-place normalization
+                    0,
+                    normalizedCellCount,
+                    fileInfo.Length,
+                    stopwatch.Elapsed);
+            }
+            catch (OperationCanceledException)
+            {
+                stopwatch.Stop();
+                _logger.LogWarning("Normalize export cancelled", "ExcelWriterService");
+                if (File.Exists(outputPath))
+                    File.Delete(outputPath);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError($"Normalize export failed: {ex.Message}", ex, "ExcelWriterService");
+                if (File.Exists(outputPath))
+                    File.Delete(outputPath);
+                return ExportResult.Failure(ex.Message, stopwatch.Elapsed);
+            }
+        }
+
+        /// <summary>
+        /// Builds the set of (row, col) positions that should be normalized.
+        /// All coordinates are in EXCEL 0-based space (absolute spreadsheet position).
+        /// When regions exist, only data cells within regions are included.
+        /// When no regions exist, all rows are included.
+        /// </summary>
+        private static HashSet<(int row, int col)> BuildNormalizationScope(
+            SASheetData saSheet, IReadOnlyList<DataRegion> regions)
+        {
+            var scope = new HashSet<(int row, int col)>();
+
+            if (regions.Count == 0)
+            {
+                // No regions: normalize all cells (convert local to Excel coordinates)
+                for (int localRow = 0; localRow < saSheet.RowCount; localRow++)
+                    for (int localCol = 0; localCol < saSheet.ColumnCount; localCol++)
+                        scope.Add((saSheet.ToExcelRow(localRow), saSheet.ToExcelColumn(localCol)));
+            }
+            else
+            {
+                // Regions store LOCAL coordinates; convert to Excel coordinates
+                foreach (var region in regions)
+                {
+                    int startRow = region.DataStartRow;
+                    int endRow = region.DataEndRow ?? saSheet.RowCount - 1;
+                    int startCol = region.StartColumn ?? 0;
+                    int endCol = region.EndColumn ?? saSheet.ColumnCount - 1;
+
+                    for (int localRow = startRow; localRow <= endRow; localRow++)
+                        for (int localCol = startCol; localCol <= endCol; localCol++)
+                            scope.Add((saSheet.ToExcelRow(localRow), saSheet.ToExcelColumn(localCol)));
+                }
+            }
+
+            return scope;
+        }
+
+        /// <summary>
+        /// Updates an OpenXml cell's value and style to match the normalized type.
+        /// DateTime → dateStyleIndex (so Excel shows a date, not a serial number).
+        /// Other types → StyleIndex 0 (General) to clear any stale format.
+        /// </summary>
+        private static void UpdateCellValue(Cell cell, SACellValue cleanedValue, uint dateStyleIndex)
+        {
+            // Remove existing inline string if present
+            cell.InlineString = null;
+
+            switch (cleanedValue.Type)
+            {
+                case SACellType.FloatingPoint:
+                    cell.DataType = CellValues.Number;
+                    cell.CellValue = new CellValue(cleanedValue.AsFloatingPoint().ToString(CultureInfo.InvariantCulture));
+                    cell.StyleIndex = 0; // General — clear stale date/currency format
+                    break;
+
+                case SACellType.Integer:
+                    cell.DataType = CellValues.Number;
+                    cell.CellValue = new CellValue(cleanedValue.AsInteger().ToString(CultureInfo.InvariantCulture));
+                    cell.StyleIndex = 0;
+                    break;
+
+                case SACellType.DateTime:
+                    cell.DataType = CellValues.Number;
+                    cell.CellValue = new CellValue(cleanedValue.AsDateTime().ToOADate().ToString(CultureInfo.InvariantCulture));
+                    cell.StyleIndex = dateStyleIndex;
+                    break;
+
+                case SACellType.Boolean:
+                    cell.DataType = CellValues.Boolean;
+                    cell.CellValue = new CellValue(cleanedValue.AsBoolean());
+                    cell.StyleIndex = 0;
+                    break;
+
+                case SACellType.Text:
+                    cell.DataType = CellValues.InlineString;
+                    cell.CellValue = null;
+                    cell.InlineString = new InlineString { Text = new Text(cleanedValue.AsText()) };
+                    cell.StyleIndex = 0;
+                    break;
+
+                case SACellType.Empty:
+                    break;
+
+                default:
+                    cell.DataType = CellValues.InlineString;
+                    cell.CellValue = null;
+                    cell.InlineString = new InlineString { Text = new Text(cleanedValue.ToString()) };
+                    cell.StyleIndex = 0;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Parses the column index from an Excel cell reference (e.g., "B3" → 1, "AA1" → 26).
+        /// </summary>
+        private static int ParseColumnIndex(string cellReference)
+        {
+            int col = 0;
+            foreach (char c in cellReference)
+            {
+                if (!char.IsLetter(c)) break;
+                col = col * 26 + (char.ToUpper(c) - 'A' + 1);
+            }
+            return col - 1; // 0-based
+        }
+
         public async Task<ExportResult> WriteToCsvAsync(
             SASheetData sheetData,
             string outputPath,
@@ -224,25 +473,45 @@ namespace SheetAtlas.Infrastructure.External.Writers
                         // So we need to write it manually if using new UTF8Encoding(false)
                     }
 
-                    // Build list of column indices to include
-                    var columnIndicesToInclude = BuildIncludedColumnIndices(sheetData, options.IncludedColumns);
+                    // Build list of column indices to include (scoped to region when set)
+                    var region = options.Region;
+                    var columnIndicesToInclude = BuildIncludedColumnIndices(sheetData, options.IncludedColumns, region);
 
                     // Write header row if requested
                     if (options.IncludeHeaders)
                     {
-                        var headerNames = sheetData.ColumnNames
-                            .Where((name, index) => columnIndicesToInclude.Contains(index))
-                            .Select(originalName =>
-                                options.SemanticNames?.TryGetValue(originalName, out var semantic) == true
-                                    ? semantic
-                                    : originalName);
+                        var headerNames = new List<string>();
+                        for (int col = 0; col < sheetData.ColumnCount; col++)
+                        {
+                            if (!columnIndicesToInclude.Contains(col))
+                                continue;
+
+                            string originalName;
+                            if (region?.HeaderStartRow != null)
+                            {
+                                var cellValue = sheetData.GetCellValue(region.HeaderStartRow.Value, col);
+                                originalName = cellValue.IsEmpty ? sheetData.ColumnNames[col] : cellValue.ToString();
+                            }
+                            else
+                            {
+                                originalName = sheetData.ColumnNames[col];
+                            }
+
+                            var headerName = options.SemanticNames?.TryGetValue(originalName, out var semantic) == true
+                                ? semantic
+                                : originalName;
+                            headerNames.Add(headerName);
+                        }
                         var headerLine = string.Join(options.Delimiter,
                             headerNames.Select(name => EscapeCsvField(name, options.Delimiter)));
                         writer.WriteLine(headerLine);
                     }
 
-                    // Write data rows
-                    foreach (var row in sheetData.EnumerateDataRows())
+                    // Write data rows (scoped to region when set)
+                    var dataRows = region != null
+                        ? sheetData.EnumerateDataRows(region)
+                        : sheetData.EnumerateDataRows();
+                    foreach (var row in dataRows)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
@@ -297,21 +566,26 @@ namespace SheetAtlas.Infrastructure.External.Writers
         /// Builds a set of column indices to include in export.
         /// If includedColumns is null, all columns are included.
         /// </summary>
-        private static HashSet<int> BuildIncludedColumnIndices(SASheetData sheetData, IReadOnlyCollection<string>? includedColumns)
+        private static HashSet<int> BuildIncludedColumnIndices(
+            SASheetData sheetData,
+            IReadOnlyCollection<string>? includedColumns,
+            DataRegion? region = null)
         {
             var result = new HashSet<int>();
 
+            // Determine column range (region bounds when set, otherwise all columns)
+            int startCol = region?.StartColumn ?? 0;
+            int endCol = Math.Min(region?.EndColumn ?? (sheetData.ColumnCount - 1), sheetData.ColumnCount - 1);
+
             if (includedColumns == null)
             {
-                // Include all columns
-                for (int i = 0; i < sheetData.ColumnCount; i++)
+                for (int i = startCol; i <= endCol; i++)
                     result.Add(i);
             }
             else
             {
-                // Only include columns whose names are in the set
                 var includedSet = new HashSet<string>(includedColumns, StringComparer.OrdinalIgnoreCase);
-                for (int i = 0; i < sheetData.ColumnCount; i++)
+                for (int i = startCol; i <= endCol; i++)
                 {
                     if (includedSet.Contains(sheetData.ColumnNames[i]))
                         result.Add(i);
@@ -546,6 +820,102 @@ namespace SheetAtlas.Infrastructure.External.Writers
 
             // Escape double quotes by doubling them, then wrap in quotes
             return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+
+        /// <summary>
+        /// Finds or creates a date style index in an existing stylesheet.
+        /// Searches for an existing CellFormat with a date NumberFormatId;
+        /// if none found, appends a new "yyyy-mm-dd" format.
+        /// </summary>
+        private static uint GetOrCreateDateStyleIndex(Stylesheet stylesheet)
+        {
+            // Well-known built-in date format IDs (Excel reserves 0-163)
+            var builtInDateFormatIds = new HashSet<uint> { 14, 15, 16, 17, 22 };
+
+            var cellFormats = stylesheet.CellFormats;
+            if (cellFormats != null)
+            {
+                // Check existing CellFormats for one that references a date NumberFormatId
+                uint index = 0;
+                foreach (var cf in cellFormats.Elements<CellFormat>())
+                {
+                    if (cf.NumberFormatId != null && builtInDateFormatIds.Contains(cf.NumberFormatId.Value))
+                        return index;
+                    index++;
+                }
+
+                // Also check custom formats in NumberingFormats
+                var customDateFormatIds = new HashSet<uint>();
+                var numberingFormats = stylesheet.NumberingFormats;
+                if (numberingFormats != null)
+                {
+                    foreach (var nf in numberingFormats.Elements<NumberingFormat>())
+                    {
+                        if (nf.FormatCode?.Value != null &&
+                            NumberFormatLooksLikeDate(nf.FormatCode.Value))
+                        {
+                            customDateFormatIds.Add(nf.NumberFormatId!.Value);
+                        }
+                    }
+                }
+
+                if (customDateFormatIds.Count > 0)
+                {
+                    index = 0;
+                    foreach (var cf in cellFormats.Elements<CellFormat>())
+                    {
+                        if (cf.NumberFormatId != null && customDateFormatIds.Contains(cf.NumberFormatId.Value))
+                            return index;
+                        index++;
+                    }
+                }
+            }
+
+            // No existing date format found — create one
+            var numFormats = stylesheet.NumberingFormats;
+            if (numFormats == null)
+            {
+                numFormats = new NumberingFormats { Count = 0 };
+                stylesheet.InsertAt(numFormats, 0);
+            }
+
+            uint newFormatId = 164 + (uint)numFormats.Elements<NumberingFormat>().Count();
+            numFormats.Append(new NumberingFormat
+            {
+                NumberFormatId = newFormatId,
+                FormatCode = "yyyy-mm-dd"
+            });
+            numFormats.Count = (uint)numFormats.Elements<NumberingFormat>().Count();
+
+            if (cellFormats == null)
+            {
+                cellFormats = new CellFormats(new CellFormat { FontId = 0, FillId = 0, BorderId = 0 }) { Count = 1 };
+                stylesheet.Append(cellFormats);
+            }
+
+            uint dateStyleIndex = (uint)cellFormats.Elements<CellFormat>().Count();
+            cellFormats.Append(new CellFormat
+            {
+                NumberFormatId = newFormatId,
+                ApplyNumberFormat = true,
+                FontId = 0,
+                FillId = 0,
+                BorderId = 0
+            });
+            cellFormats.Count = (uint)cellFormats.Elements<CellFormat>().Count();
+
+            return dateStyleIndex;
+        }
+
+        /// <summary>
+        /// Quick check if a number format code looks like a date format.
+        /// </summary>
+        private static bool NumberFormatLooksLikeDate(string formatCode)
+        {
+            var lower = formatCode.ToLowerInvariant();
+            return lower.Contains("mm") || lower.Contains("dd") ||
+                   lower.Contains("yyyy") || lower.Contains("yy") ||
+                   lower.Contains("m/d") || lower.Contains("d/m");
         }
 
         /// <summary>

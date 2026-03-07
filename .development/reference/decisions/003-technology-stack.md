@@ -2,6 +2,8 @@
 
 **Date**: November 2025
 **Status**: Active
+**Impact**: reference
+**Summary**: Keep C# + .NET 8 + Avalonia unless proven performance bottleneck. Current implementation handles target file sizes (<2s for 10MB). Reconsider if profiling shows >50% time in parsing or users report issues.
 
 ## Context
 

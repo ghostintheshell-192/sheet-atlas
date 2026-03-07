@@ -6,6 +6,9 @@ using SheetAtlas.Logging.Services;
 
 namespace SheetAtlas.Core.Application.Services
 {
+    /// <summary>
+    /// Implementation of IRowComparisonService. Creates row comparisons from search results.
+    /// </summary>
     public class RowComparisonService : IRowComparisonService
     {
         private readonly ILogService _logger;
@@ -54,10 +57,18 @@ namespace SheetAtlas.Core.Application.Services
             if (sheet == null)
                 throw ComparisonException.MissingSheet(searchResult.SheetName, searchResult.FileName);
 
+            // Resolve DataRegion if the result was found within a named region
+            DataRegion? region = null;
+            if (!string.IsNullOrEmpty(searchResult.RegionName))
+                region = sheet.GetDataRegion(searchResult.RegionName);
+
             // SearchResult.Row uses ABSOLUTE indexing (0-based, same as SASheetData)
             // Row 0 = first row of sheet (usually header), Row 1 = second row, etc.
             // Display to user = Row + 1 (1-based, like Excel)
-            if (searchResult.Row < sheet.HeaderRowCount)
+            // When a region is set, use region.DataStartRow as the header boundary;
+            // otherwise fall back to the global sheet.HeaderRowCount.
+            int headerBoundary = region != null ? region.DataStartRow : sheet.HeaderRowCount;
+            if (searchResult.Row < headerBoundary)
                 throw new ArgumentException($"Row {searchResult.Row + 1} is a header row and cannot be compared", nameof(searchResult));
 
             if (searchResult.Row >= sheet.RowCount)
@@ -66,13 +77,22 @@ namespace SheetAtlas.Core.Application.Services
             // Row is already absolute - use directly for SASheetData access
             int absoluteRow = searchResult.Row;
 
-            // Extract complete row data
+            // Extract row data, optionally sliced to the region's column bounds
             var rowCells = sheet.GetRow(absoluteRow);
-            // Preserve type and format metadata using ExportCellValue
-            var cells = rowCells.Select(cell => (object?)new ExportCellValue(cell)).ToArray();
+            IEnumerable<SACellData> selectedCells = rowCells;
 
-            // Get column headers
-            var columnHeaders = GetColumnHeaders(searchResult.SourceFile, searchResult.SheetName);
+            if (region?.StartColumn != null || region?.EndColumn != null)
+            {
+                int startCol = region!.StartColumn ?? 0;
+                int endCol = Math.Min(region.EndColumn ?? (rowCells.Length - 1), rowCells.Length - 1);
+                selectedCells = rowCells[startCol..(endCol + 1)];
+            }
+
+            // Preserve type and format metadata using ExportCellValue
+            var cells = selectedCells.Select(cell => (object?)new ExportCellValue(cell)).ToArray();
+
+            // Get column headers (filtered to region's column bounds when applicable)
+            var columnHeaders = GetColumnHeaders(searchResult.SourceFile, searchResult.SheetName, searchResult.RegionName);
 
             return new ExcelRow(
                 searchResult.SourceFile,
@@ -82,7 +102,7 @@ namespace SheetAtlas.Core.Application.Services
                 columnHeaders);
         }
 
-        public IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName)
+        public IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName, string? regionName = null)
         {
             ArgumentNullException.ThrowIfNull(file);
 
@@ -90,8 +110,17 @@ namespace SheetAtlas.Core.Application.Services
             if (sheet == null)
                 throw ComparisonException.MissingSheet(sheetName, file.FilePath);
 
-            // SASheetData already has ColumnNames array
-            return sheet.ColumnNames;
+            if (regionName == null)
+                return sheet.ColumnNames;
+
+            // Filter column headers to the region's column bounds
+            var region = sheet.GetDataRegion(regionName);
+            if (region == null || (region.StartColumn == null && region.EndColumn == null))
+                return sheet.ColumnNames;
+
+            int startCol = region.StartColumn ?? 0;
+            int endCol = Math.Min(region.EndColumn ?? (sheet.ColumnNames.Length - 1), sheet.ColumnNames.Length - 1);
+            return sheet.ColumnNames[startCol..(endCol + 1)];
         }
     }
 }

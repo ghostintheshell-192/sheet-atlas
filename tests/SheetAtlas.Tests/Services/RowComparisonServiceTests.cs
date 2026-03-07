@@ -248,6 +248,153 @@ namespace SheetAtlas.Tests.Services
 
         #endregion
 
+        #region DataRegion Tests
+
+        [Fact]
+        public void ExtractRowFromSearchResult_WithRegion_UsesRegionDataStartRowAsHeaderBoundary()
+        {
+            // Arrange: 4 rows — rows 0-1 are region headers, rows 2-3 are region data
+            var columns = new[] { "ID", "Name", "Value" };
+            var sheet = new SASheetData("Sheet1", columns);
+            for (int i = 0; i < 4; i++)
+                sheet.AddRow(columns.Select(_ => new SACellData(SACellValue.FromText($"R{i}"))).ToArray());
+
+            var region = new DataRegion
+            {
+                Name = "MyRegion",
+                HeaderStartRow = 0,
+                HeaderEndRow = 1,
+                DataStartRow = 2,
+                DataEndRow = 3
+            };
+            sheet.AddDataRegion(region);
+
+            var file = new ExcelFile("test.xlsx", LoadStatus.Success,
+                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
+                new List<ExcelError>());
+
+            // Row 1 is a header row in the region → should throw
+            var headerResult = new SearchResult(file, "Sheet1", 1, 0, "R1") { RegionName = "MyRegion" };
+            _service.Invoking(s => s.ExtractRowFromSearchResult(headerResult))
+                .Should().Throw<ArgumentException>().WithMessage("*header row*");
+
+            // Row 2 is the first data row → should succeed
+            var dataResult = new SearchResult(file, "Sheet1", 2, 0, "R2") { RegionName = "MyRegion" };
+            var extracted = _service.ExtractRowFromSearchResult(dataResult);
+            extracted.Should().NotBeNull();
+            extracted.RowIndex.Should().Be(2);
+        }
+
+        [Fact]
+        public void ExtractRowFromSearchResult_WithUnknownRegionName_FallsBackToSheetHeaderRowCount()
+        {
+            // Arrange: sheet has 1 header row (default), search result references non-existent region
+            var columns = new[] { "ID", "Name" };
+            var sheet = new SASheetData("Sheet1", columns);
+            sheet.AddRow(columns.Select(n => new SACellData(SACellValue.FromText(n))).ToArray()); // header row 0
+            sheet.AddRow(columns.Select(_ => new SACellData(SACellValue.FromText("data"))).ToArray()); // data row 1
+
+            var file = new ExcelFile("test.xlsx", LoadStatus.Success,
+                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
+                new List<ExcelError>());
+
+            // Unknown region → falls back to sheet.HeaderRowCount=1, so row 0 is a header
+            var result = new SearchResult(file, "Sheet1", 0, 0, "ID") { RegionName = "NoSuchRegion" };
+            _service.Invoking(s => s.ExtractRowFromSearchResult(result))
+                .Should().Throw<ArgumentException>().WithMessage("*header row*");
+
+            // Row 1 should succeed
+            var dataResult = new SearchResult(file, "Sheet1", 1, 0, "data") { RegionName = "NoSuchRegion" };
+            var extracted = _service.ExtractRowFromSearchResult(dataResult);
+            extracted.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void ExtractRowFromSearchResult_WithRegionColumnBounds_FiltersToRegionColumns()
+        {
+            // Arrange: 5 columns, region covers columns 1-3 (Name, Age, City)
+            var columns = new[] { "Extra", "Name", "Age", "City", "Tail" };
+            var sheet = new SASheetData("Sheet1", columns);
+            sheet.AddRow(columns.Select(n => new SACellData(SACellValue.FromText(n))).ToArray()); // row 0 = header
+            sheet.AddRow(new[] // row 1 = data
+            {
+                new SACellData(SACellValue.FromText("x")),
+                new SACellData(SACellValue.FromText("Alice")),
+                new SACellData(SACellValue.FromInteger(30)),
+                new SACellData(SACellValue.FromText("Rome")),
+                new SACellData(SACellValue.FromText("y"))
+            });
+
+            var region = new DataRegion
+            {
+                Name = "Core",
+                HeaderStartRow = 0,
+                HeaderEndRow = 0,
+                DataStartRow = 1,
+                DataEndRow = 1,
+                StartColumn = 1,
+                EndColumn = 3
+            };
+            sheet.AddDataRegion(region);
+
+            var file = new ExcelFile("test.xlsx", LoadStatus.Success,
+                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
+                new List<ExcelError>());
+
+            var searchResult = new SearchResult(file, "Sheet1", 1, 1, "Alice") { RegionName = "Core" };
+            var extracted = _service.ExtractRowFromSearchResult(searchResult);
+
+            // Should have 3 cells (cols 1-3) and 3 matching headers
+            extracted.Cells.Should().HaveCount(3);
+            extracted.ColumnHeaders.Should().HaveCount(3);
+            extracted.ColumnHeaders[0].Should().Be("Name");
+            extracted.ColumnHeaders[1].Should().Be("Age");
+            extracted.ColumnHeaders[2].Should().Be("City");
+        }
+
+        [Fact]
+        public void GetColumnHeaders_WithRegionName_FiltersToRegionColumnBounds()
+        {
+            // Arrange: 5 columns, region covers columns 2-4
+            var columns = new[] { "A", "B", "C", "D", "E" };
+            var sheet = new SASheetData("Sheet1", columns);
+            sheet.AddRow(columns.Select(n => new SACellData(SACellValue.FromText(n))).ToArray());
+
+            var region = new DataRegion
+            {
+                Name = "Right",
+                DataStartRow = 1,
+                StartColumn = 2,
+                EndColumn = 4
+            };
+            sheet.AddDataRegion(region);
+
+            var file = new ExcelFile("test.xlsx", LoadStatus.Success,
+                new Dictionary<string, SASheetData> { { "Sheet1", sheet } },
+                new List<ExcelError>());
+
+            var headers = _service.GetColumnHeaders(file, "Sheet1", "Right");
+
+            headers.Should().HaveCount(3);
+            headers[0].Should().Be("C");
+            headers[1].Should().Be("D");
+            headers[2].Should().Be("E");
+        }
+
+        [Fact]
+        public void GetColumnHeaders_WithNullRegionName_ReturnsAllColumns()
+        {
+            // Arrange
+            var columns = new[] { "A", "B", "C" };
+            var file = CreateExcelFileWithSheet("Sheet1", columns);
+
+            var headers = _service.GetColumnHeaders(file, "Sheet1", null);
+
+            headers.Should().HaveCount(3);
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private static ExcelFile CreateExcelFileWithSheet(string sheetName, string[]? columnNames = null)

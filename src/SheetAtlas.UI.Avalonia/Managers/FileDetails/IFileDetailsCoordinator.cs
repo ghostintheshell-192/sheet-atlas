@@ -3,9 +3,7 @@ using SheetAtlas.UI.Avalonia.ViewModels;
 namespace SheetAtlas.UI.Avalonia.Managers.FileDetails;
 
 /// <summary>
-/// Coordinates file detail operations such as file removal, retry, and cleanup.
-/// Handles the orchestration between FilesManager, SearchViewModels, and ComparisonCoordinator
-/// when file-related actions are requested from the FileDetails view.
+/// Coordinates file detail operations: removal, retry, cleanup. Orchestrates FilesManager, SearchViewModels, and ComparisonCoordinator.
 /// </summary>
 public interface IFileDetailsCoordinator
 {

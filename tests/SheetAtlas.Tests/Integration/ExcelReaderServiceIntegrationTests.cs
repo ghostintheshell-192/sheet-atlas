@@ -13,6 +13,7 @@ using SheetAtlas.Logging.Services;
 using SheetAtlas.Core.Configuration;
 using Microsoft.Extensions.Options;
 using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace SheetAtlas.Tests.Integration
 {
@@ -384,6 +385,133 @@ namespace SheetAtlas.Tests.Integration
             sheet.ColumnNames[0].Should().Be("Merged Title");
         }
 
+        [Fact]
+        public async Task LoadFileAsync_MergedCellsWithOffsetRows_CorrectlyPositionsMergedContent()
+        {
+            // Regression test for the merged-cell coordinate bug.
+            //
+            // The file has Excel row 1 absent from XML (a blank row not written by the editor).
+            // This means firstRowOffset = 1: the first XML row is Excel row 2, which maps to
+            // SASheetData row 0. Before the fix, MergedRange used absolute 0-based Excel row
+            // indices (B2:G2 → startRow=1), but SASheetData was built sequentially starting at
+            // 0 from the first XML row. Result: merge was expanded to SASheetData row 1 instead
+            // of row 0, corrupting the header and losing the merged-cell content from view.
+            //
+            // After the fix, PopulateMergedCells subtracts firstRowOffset so that B2:G2 correctly
+            // targets SASheetData row 0, and the merged header "SWITCH LAYOUT" appears in
+            // ColumnNames (extracted from the header row).
+
+            // Arrange
+            var filePath = GetTestFilePath("EdgeCases", "merged-cells-offset-rows.xlsx");
+
+            // Act
+            var result = await _service.LoadFileAsync(filePath);
+
+            // Assert — file loads successfully
+            result.Should().NotBeNull();
+            result.Status.Should().BeOneOf(LoadStatus.Success, LoadStatus.PartialSuccess);
+            result.Sheets.Should().NotBeEmpty();
+
+            // The first sheet contains the multi-level merged header layout
+            var sheet = result.Sheets.Values.First();
+            sheet.DataRowCount.Should().BeGreaterThan(0);
+
+            // "SWITCH LAYOUT" is the merged header spanning B2:G2.
+            // With the fix it lands on SASheetData row 0 (the header row), so it must appear
+            // in ColumnNames. Before the fix it landed on row 1, leaving the header empty.
+            sheet.ColumnNames.Should().Contain("SWITCH LAYOUT",
+                "merged cell B2:G2 must expand into the header row (Excel row 2 = SASheetData row 0)");
+
+            // "Switch Connections" is the merged header spanning J2:L2 — same row, same fix.
+            sheet.ColumnNames.Should().Contain("Switch Connections",
+                "merged cell J2:L2 must also expand into the header row");
+        }
+
+        [Fact]
+        public void RawXml_MultiHeaderDataRegion_FirstRowIsRow2()
+        {
+            // Directly verify the OpenXML Row.RowIndex for the sample file
+            var filePath = GetTestFilePath("EdgeCases", "multipli-headers-in-dataregion.xlsx");
+
+            using var doc = SpreadsheetDocument.Open(filePath, false);
+            var wbPart = doc.WorkbookPart!;
+            var sheetEntry = wbPart.Workbook.Sheets!.Elements<Sheet>().First();
+            var wsPart = (WorksheetPart)wbPart.GetPartById(sheetEntry.Id!);
+
+            // First call — same as ProcessHeaderRow
+            var firstRow = wsPart.Worksheet.Descendants<Row>().FirstOrDefault();
+            firstRow.Should().NotBeNull();
+            firstRow!.RowIndex.Should().NotBeNull("first XML row must have a RowIndex");
+            firstRow.RowIndex!.Value.Should().Be(2, "first row in XML is Excel row 2 (r=2)");
+
+            // Second call — same as ProcessSheet does after ProcessHeaderRow
+            var secondCall = wsPart.Worksheet.Descendants<Row>().FirstOrDefault();
+            secondCall.Should().NotBeNull();
+            secondCall!.RowIndex.Should().NotBeNull("second Descendants call must also find RowIndex");
+            secondCall.RowIndex!.Value.Should().Be(2, "second call must return same row (r=2)");
+
+            // Verify they're the same row object
+            ReferenceEquals(firstRow, secondCall).Should().BeTrue("both calls should return same DOM node");
+
+            // Also check first cell reference
+            var firstCell = firstRow.Elements<Cell>().FirstOrDefault();
+            firstCell.Should().NotBeNull();
+            firstCell!.CellReference!.Value.Should().Be("B2");
+
+            // Check if MergeCells element exists in the XML
+            var mergeCells = wsPart.Worksheet.Elements<MergeCells>().FirstOrDefault();
+            mergeCells.Should().NotBeNull("the test file should contain merged cells");
+            var merges = mergeCells!.Elements<MergeCell>().Select(m => m.Reference?.Value).ToList();
+            merges.Should().Contain("B2:G2");
+        }
+
+        [Fact]
+        public async Task LoadFileAsync_MultiHeaderDataRegion_PreservesOriginCoordinates()
+        {
+            // The file has dimension B2:L11 — Row 1 absent from XML, data starts at column B.
+            var filePath = GetTestFilePath("EdgeCases", "multipli-headers-in-dataregion.xlsx");
+
+            var result = await _service.LoadFileAsync(filePath);
+
+            result.Should().NotBeNull();
+            result.Status.Should().BeOneOf(LoadStatus.Success, LoadStatus.PartialSuccess);
+
+            var sheet = result.Sheets.Values.First();
+
+            // Diagnostic: what did the reader actually produce?
+            var diagnosticMsg = $"OriginRow={sheet.OriginRow}, OriginColumn={sheet.OriginColumn}, " +
+                                $"RowCount={sheet.RowCount}, ColumnCount={sheet.ColumnCount}, " +
+                                $"CellRef[0,0]={sheet.GetCellReference(0, 0)}, " +
+                                $"HeaderRowCount={sheet.HeaderRowCount}, " +
+                                $"ColumnNames=[{string.Join(", ", sheet.ColumnNames.Take(5))}...]";
+
+            // Check what happens when we open the same file with raw OpenXML
+            using var doc = SpreadsheetDocument.Open(filePath, false);
+            var wbPart = doc.WorkbookPart!;
+            var sheetEntry = wbPart.Workbook.Sheets!.Elements<Sheet>().First();
+            var wsPart = (WorksheetPart)wbPart.GetPartById(sheetEntry.Id!);
+            var firstXmlRow = wsPart.Worksheet.Descendants<Row>().FirstOrDefault();
+            var rawRowIndex = firstXmlRow?.RowIndex?.Value;
+            var rawFirstCell = firstXmlRow?.Elements<Cell>().FirstOrDefault()?.CellReference?.Value;
+            diagnosticMsg += $" | RawXML: firstRow.RowIndex={rawRowIndex}, firstCell={rawFirstCell}";
+
+            // Origin must reflect that data starts at Excel B2
+            sheet.OriginRow.Should().Be(1, $"first XML row is Excel row 2. Diagnostic: {diagnosticMsg}");
+            sheet.OriginColumn.Should().Be(1, $"first column is B (index 1). Diagnostic: {diagnosticMsg}");
+
+            sheet.GetCellReference(0, 0).Should().Be("B2");
+            sheet.ColumnCount.Should().Be(11);
+
+            // Verify merged cells are preserved
+            sheet.MergedCells.Should().NotBeEmpty(
+                "the file contains merged cells (B2:G2 'SWITCH LAYOUT', J2:L2 'Switch Connections')");
+
+            // Log what we got for diagnostics
+            var mergeInfo = string.Join("; ", sheet.MergedCells.Select(kv =>
+                $"{kv.Key} → R{kv.Value.StartRow}C{kv.Value.StartCol}:R{kv.Value.EndRow}C{kv.Value.EndCol}"));
+            mergeInfo.Should().NotBeEmpty($"Merged cells: {mergeInfo}");
+        }
+
         #endregion
 
         #region Multiple Files Tests
@@ -450,3 +578,5 @@ namespace SheetAtlas.Tests.Integration
         #endregion
     }
 }
+
+// TEMP DIAGNOSTIC - remove after debugging

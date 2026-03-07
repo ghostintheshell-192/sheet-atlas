@@ -4,9 +4,7 @@ using SheetAtlas.Core.Domain.ValueObjects;
 namespace SheetAtlas.Core.Application.Interfaces
 {
     /// <summary>
-    /// Service responsible for reading and parsing cell values from Excel worksheets.
-    /// Handles different cell data types (shared strings, booleans, numbers, dates).
-    /// Preserves type information by returning SACellValue instead of string.
+    /// Service for reading Excel cell values with type preservation. Returns SACellValue instead of string.
     /// </summary>
     public interface ICellValueReader
     {

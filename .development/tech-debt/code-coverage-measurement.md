@@ -39,6 +39,7 @@ Formal coverage metrics would complement, not replace, manual testing.
 **Option B** for now - current approach is effective.
 
 Consider Option A if:
+
 - Team grows beyond solo development
 - Coverage gaps are suspected
 - Quality issues emerge
@@ -59,6 +60,7 @@ Consider Option A if:
 **Decision**: KEEP AS LOW PRIORITY
 
 **Rationale**:
+
 - Current approach (manual + unit tests) is working effectively
 - Solo development - coverage metrics less critical than team scenarios
 - Manual testing proven valuable (caught performance issues agents wouldn't detect)
@@ -67,6 +69,11 @@ Consider Option A if:
 **Recommendation**: Defer to later stage (v1.0+ or when team grows). Current Option B (manual + targeted unit tests) remains appropriate for alpha/beta phase.
 
 **Reconsider if**:
+
 - Team expands beyond solo development
 - Quality issues suggest coverage gaps
 - Preparing for commercial release audit
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

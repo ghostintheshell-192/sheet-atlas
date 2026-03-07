@@ -1,4 +1,5 @@
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels;
 
@@ -94,5 +95,69 @@ public class ExportCompletedEventArgs : EventArgs
         Format = format;
         RowsExported = rowsExported;
         NormalizedCellCount = normalizedCellCount;
+    }
+}
+
+/// <summary>
+/// Event arguments for clearing all regions of a specific file.
+/// </summary>
+public class ClearFileRegionsEventArgs : EventArgs
+{
+    public string FilePath { get; }
+    public string FileName { get; }
+
+    public ClearFileRegionsEventArgs(string filePath, string fileName)
+    {
+        FilePath = filePath;
+        FileName = fileName;
+    }
+}
+
+/// <summary>
+/// Event arguments raised when the user renames a DataRegion via the sidebar.
+/// </summary>
+public class RenameRegionEventArgs : EventArgs
+{
+    public string FilePath { get; }
+    public string SheetName { get; }
+    public DataRegion Region { get; }
+    public string NewName { get; }
+
+    public RenameRegionEventArgs(string filePath, string sheetName, DataRegion region, string newName)
+    {
+        FilePath = filePath;
+        SheetName = sheetName;
+        Region = region;
+        NewName = newName;
+    }
+}
+
+/// <summary>
+/// Event arguments for DataRegion creation/deletion.
+/// </summary>
+public class RegionEventArgs : EventArgs
+{
+    public string FilePath { get; }
+    public string SheetName { get; }
+    public DataRegion Region { get; }
+
+    public RegionEventArgs(string filePath, string sheetName, DataRegion region)
+    {
+        FilePath = filePath;
+        SheetName = sheetName;
+        Region = region;
+    }
+}
+
+/// <summary>
+/// Event arguments for requesting file selection from the regions sidebar.
+/// </summary>
+public class FileSelectRequestedEventArgs : EventArgs
+{
+    public string FilePath { get; }
+
+    public FileSelectRequestedEventArgs(string filePath)
+    {
+        FilePath = filePath;
     }
 }

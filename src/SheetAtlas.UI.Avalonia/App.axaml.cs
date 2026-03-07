@@ -80,6 +80,7 @@ public partial class App : Application
             var treeSearchResultsViewModel = _host.Services.GetRequiredService<TreeSearchResultsViewModel>();
             var templateManagementViewModel = _host.Services.GetRequiredService<TemplateManagementViewModel>();
             var columnLinkingViewModel = _host.Services.GetRequiredService<ColumnLinkingViewModel>();
+            var regionsSidebarViewModel = _host.Services.GetRequiredService<RegionsSidebarViewModel>();
             var settingsViewModel = _host.Services.GetRequiredService<SettingsViewModel>();
 
             mainViewModel.SetSearchViewModel(searchViewModel);
@@ -87,6 +88,7 @@ public partial class App : Application
             mainViewModel.SetTreeSearchResultsViewModel(treeSearchResultsViewModel);
             mainViewModel.SetTemplateManagementViewModel(templateManagementViewModel);
             mainViewModel.SetColumnLinkingViewModel(columnLinkingViewModel);
+            mainViewModel.SetRegionsSidebarViewModel(regionsSidebarViewModel);
             mainViewModel.SetSettingsViewModel(settingsViewModel);
 
             mainWindow.DataContext = mainViewModel;
@@ -159,6 +161,8 @@ public partial class App : Application
                 services.AddSingleton<IColumnLinkingService, ColumnLinkingService>();
                 services.AddSingleton<IExceptionHandler, ExceptionHandler>();
                 services.AddSingleton<IFileLogService, FileLogService>();
+                services.AddSingleton<IDataRegionPersistenceService, DataRegionPersistenceService>();
+                services.AddSingleton<IRegionDetectionService, RegionDetectionService>();
                 services.AddSingleton<ISettingsService, SettingsService>();
 
                 // Register Avalonia-specific services
@@ -209,6 +213,7 @@ public partial class App : Application
                             .Select(f => f.File!),
                         filesManager);
                 });
+                services.AddSingleton<RegionsSidebarViewModel>();
                 services.AddSingleton<SettingsViewModel>();
 
                 // Register Views

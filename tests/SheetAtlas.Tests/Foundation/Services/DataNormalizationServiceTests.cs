@@ -21,7 +21,7 @@ namespace SheetAtlas.Tests.Foundation.Services
         [Fact]
         public void Normalize_ExcelSerialDate_ParsesCorrectly()
         {
-            // Arrange - 45602 = 2024-11-05 (Excel serial date with 1900 leap year bug)
+            // Arrange - 45602 = 2024-11-06 (Excel serial date, post-1900 leap year bug)
             double excelSerialDate = 45602;
 
             // Act
@@ -34,7 +34,7 @@ namespace SheetAtlas.Tests.Foundation.Services
             result.IsSuccess.Should().BeTrue();
             result.CleanedValue.Should().NotBeNull();
             result.DetectedType.Should().Be(DataType.Date);
-            result.CleanedValue?.ToString().Should().Contain("2024-11-05");
+            result.CleanedValue?.ToString().Should().Contain("2024-11-06");
         }
 
         [Fact]

@@ -312,6 +312,58 @@ namespace SheetAtlas.Tests.Json
         }
 
         [Fact]
+        public void DataRegion_SerializesCorrectly()
+        {
+            // Arrange
+            var region = DataRegion.Manual("TestRegion", headerStart: 0, dataStart: 1, dataEnd: 50);
+
+            // Act
+            var json = JsonSerializer.Serialize(region, AppJsonContext.Default.DataRegion);
+            var deserialized = JsonSerializer.Deserialize(json, AppJsonContext.Default.DataRegion);
+
+            // Assert
+            deserialized.Should().NotBeNull();
+            deserialized!.Name.Should().Be("TestRegion");
+            deserialized.HeaderStartRow.Should().Be(0);
+            deserialized.DataStartRow.Should().Be(1);
+            deserialized.DataEndRow.Should().Be(50);
+            deserialized.IsAutoDetected.Should().BeFalse();
+        }
+
+        [Fact]
+        public void DataRegionFile_SerializesCorrectly()
+        {
+            // Arrange
+            var regionFile = new DataRegionFile
+            {
+                Version = 1,
+                LastModified = new DateTime(2025, 6, 15, 10, 0, 0, DateTimeKind.Utc),
+                Sheets = new Dictionary<string, SheetRegionsDto>
+                {
+                    ["Sheet1"] = new SheetRegionsDto
+                    {
+                        Regions = new Dictionary<string, DataRegion>
+                        {
+                            ["Main"] = DataRegion.Manual("Main", headerStart: 0, dataStart: 1)
+                        }
+                    }
+                }
+            };
+
+            // Act
+            var json = JsonSerializer.Serialize(regionFile, AppJsonContext.Default.DataRegionFile);
+            var deserialized = JsonSerializer.Deserialize(json, AppJsonContext.Default.DataRegionFile);
+
+            // Assert
+            deserialized.Should().NotBeNull();
+            deserialized!.Version.Should().Be(1);
+            deserialized.Sheets.Should().ContainKey("Sheet1");
+            deserialized.Sheets["Sheet1"].Regions.Should().ContainKey("Main");
+            deserialized.Sheets["Sheet1"].Regions["Main"].Name.Should().Be("Main");
+            deserialized.Sheets["Sheet1"].Regions["Main"].DataStartRow.Should().Be(1);
+        }
+
+        [Fact]
         public void Context_ShouldIgnoreNullValues()
         {
             // Arrange

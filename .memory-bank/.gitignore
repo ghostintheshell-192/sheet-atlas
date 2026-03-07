@@ -1,0 +1,7 @@
+# Session transcripts (backups only, not needed in git)
+sessions/
+
+# Session handoffs (local continuity, not tracked in git)
+*.md
+!README.md
+!_archive-*.md

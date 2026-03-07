@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/github/license/ghostintheshell-192/sheet-atlas)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 
-A powerful cross-platform desktop application for searching across multiple Excel files and comparing rows between them. Built with .NET 8 and Avalonia UI for native performance on Windows, Linux, and macOS.
+A powerful cross-platform desktop application for analyzing, comparing, and normalizing Excel files. Define data regions, search across files, compare rows, and export normalized data — all with complete local processing. Built with .NET 8 and Avalonia UI for native performance on Windows, Linux, and macOS.
 
 🌐 **[Visit the official website](https://ghostintheshell-192.github.io/sheet-atlas/)** | 📥 **[Download Latest Release](https://github.com/ghostintheshell-192/sheet-atlas/releases/latest)**
 
@@ -24,11 +24,26 @@ A powerful cross-platform desktop application for searching across multiple Exce
 - Support for case-sensitive, exact match, and regex patterns
 - Tree-view results with file/sheet/cell organization
 
+### **Data Regions**
+
+- Define named data regions within sheets to scope operations
+- Visual drag selection on interactive sheet canvas
+- Cross-file region detection with header-anchored matching
+- Region-scoped search, comparison, and normalization
+
+### **Normalize & Export**
+
+- In-place normalization: copies original file, corrects values and formats
+- Column-level type correction based on dominant data type
+- Fixes date/number format mismatches automatically
+- QuickBar toolbar for one-click access
+
 ### **Row Comparison**
 
 - Compare rows from different Excel files
 - Intelligent column header mapping
 - Visual highlighting of differences
+- Comparison scoped to Data Region column bounds
 
 ### **User Experience**
 
@@ -69,6 +84,9 @@ You can also [build from source](#build-from-source) if preferred.
 # Clone the repository
 git clone https://github.com/ghostintheshell-192/sheet-atlas.git
 cd sheet-atlas
+
+# Configure git hooks (required for contributors)
+git config core.hooksPath .githooks
 
 # Build the application
 dotnet build --configuration Release
@@ -200,7 +218,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-### Current Release (v0.5.x Alpha)
+### Current Release (v0.6.0 Alpha)
 
 - ✅ Support for .xlsx, .xls, .csv files
 - ✅ Multi-file loading and cross-file search
@@ -212,19 +230,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ Template validation and column linking
 - ✅ Settings panel (theme, defaults, output folder)
 - ✅ Data normalization (dates, currency, percentages)
+- ✅ Data Regions with cross-file detection
+- ✅ Normalize & Export with column-level type correction
 - ✅ Windows, Linux, macOS installers
 
-### Upcoming Features
+### Next (v0.7.0) — Template Application
 
-- [ ] Chart and graph visualization
-- [ ] Batch processing operations
-- [ ] Plugin system for extensions
-- [ ] Formula support in comparisons
+- [ ] Apply a template to standardize file structure (column mapping, ordering)
+- [ ] Preview and report of what will change before applying
+- [ ] Type coercion per template column definition
 
-### Long-term Goals
+### Planned
 
-- [ ] Advanced analytics and reporting
-- [ ] Custom transformation rules
+- [ ] ODS file format support (LibreOffice native files)
+- [ ] Opt-in telemetry for crash reporting and feature usage analytics
+- [ ] UI/UX overhaul
+- [ ] Vertical (column-to-column) comparison
 
 ---
 

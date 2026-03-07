@@ -1,7 +1,9 @@
 using SheetAtlas.UI.Avalonia.Managers.Files;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.UI.Avalonia.Managers.Comparison;
+using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Domain.Entities;
+using SheetAtlas.Core.Domain.ValueObjects;
 using System.Collections.ObjectModel;
 
 namespace SheetAtlas.UI.Avalonia.ViewModels
@@ -11,6 +13,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ReadOnlyObservableCollection<IFileLoadResultViewModel> LoadedFiles => _filesManager.LoadedFiles;
         public ReadOnlyObservableCollection<RowComparisonViewModel> RowComparisons => _comparisonCoordinator.RowComparisons;
         public bool HasLoadedFiles => LoadedFiles.Count > 0;
+        public bool HasSelectedFile => SelectedFile != null;
 
         public void SubscribeToEvents()
         {
@@ -34,10 +37,15 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             _comparisonCoordinator.ComparisonRemoved -= OnComparisonRemoved;
             _comparisonCoordinator.PropertyChanged -= OnComparisonCoordinatorPropertyChanged;
 
-            if (SearchViewModel != null && _searchViewModelPropertyChangedHandler != null)
+            if (SearchViewModel != null)
             {
-                SearchViewModel.PropertyChanged -= _searchViewModelPropertyChangedHandler;
-                _searchViewModelPropertyChangedHandler = null;
+                SearchViewModel.RegionFilterCleared -= OnRegionFilterCleared;
+
+                if (_searchViewModelPropertyChangedHandler != null)
+                {
+                    SearchViewModel.PropertyChanged -= _searchViewModelPropertyChangedHandler;
+                    _searchViewModelPropertyChangedHandler = null;
+                }
             }
 
             if (FileDetailsViewModel != null)
@@ -46,6 +54,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 FileDetailsViewModel.CleanAllDataRequested -= OnCleanAllDataRequested;
                 FileDetailsViewModel.RemoveNotificationRequested -= OnRemoveNotificationRequested;
                 FileDetailsViewModel.TryAgainRequested -= OnTryAgainRequested;
+                FileDetailsViewModel.RegionAdded -= OnRegionAdded;
+                FileDetailsViewModel.RegionDeleted -= OnRegionDeleted;
+                FileDetailsViewModel.RegionResized -= OnRegionResized;
             }
 
             if (TemplateManagementViewModel != null)
@@ -57,6 +68,17 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 ColumnLinkingViewModel.ColumnLinks.CollectionChanged -= OnColumnLinksCollectionChanged;
             }
+
+            if (RegionsSidebarViewModel != null)
+            {
+                RegionsSidebarViewModel.RegionClearRequested -= OnRegionClearRequested;
+                RegionsSidebarViewModel.RenameRegionRequested -= OnRenameRegionRequested;
+                RegionsSidebarViewModel.ClearAllRegionsRequested -= OnClearAllRegionsRequested;
+                RegionsSidebarViewModel.ClearFileRegionsRequested -= OnClearFileRegionsRequested;
+                RegionsSidebarViewModel.EditRegionRequested -= OnEditRegionRequested;
+                RegionsSidebarViewModel.PropertyChanged -= OnRegionsSidebarPropertyChanged;
+                RegionsSidebarViewModel.ApplyDetectedRegionsRequested -= OnApplyDetectedRegionsRequested;
+            }
         }
 
         private void OnFileLoaded(object? sender, FileLoadedEventArgs e)
@@ -65,6 +87,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             OnPropertyChanged(nameof(HasLoadedFiles));
             OnPropertyChanged(nameof(StatusText));
+
+            // Refresh regions sidebar (persisted regions are loaded before this event fires)
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
 
             if (LoadedFiles.Count == 1)
             {
@@ -88,6 +114,10 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
 
             OnPropertyChanged(nameof(HasLoadedFiles));
             OnPropertyChanged(nameof(StatusText));
+
+            // Refresh regions sidebar (removed file's regions should disappear)
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
 
             if (!e.IsRetry && SelectedFile == e.File)
             {
@@ -154,6 +184,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Connect column filter to search (in case ColumnLinkingViewModel was set first)
             ConnectColumnFilterToSearch();
 
+            SearchViewModel.RegionFilterCleared += OnRegionFilterCleared;
+
             if (SearchViewModel != null)
             {
                 _searchViewModelPropertyChangedHandler = (s, e) =>
@@ -184,6 +216,8 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             FileDetailsViewModel.CleanAllDataRequested += OnCleanAllDataRequested;
             FileDetailsViewModel.RemoveNotificationRequested += OnRemoveNotificationRequested;
             FileDetailsViewModel.TryAgainRequested += OnTryAgainRequested;
+            FileDetailsViewModel.RegionDeleted += OnRegionDeleted;
+            FileDetailsViewModel.RegionResized += OnRegionResized;
 
             // Connect semantic name provider (in case ColumnLinkingViewModel was set first)
             ConnectSemanticNameProvider();
@@ -255,6 +289,342 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             OnPropertyChanged(nameof(ColumnCount));
             OnPropertyChanged(nameof(StatusText));
+        }
+
+        public void SetRegionsSidebarViewModel(RegionsSidebarViewModel regionsSidebarViewModel)
+        {
+            RegionsSidebarViewModel = regionsSidebarViewModel ?? throw new ArgumentNullException(nameof(regionsSidebarViewModel));
+
+            // Connect FileDetailsViewModel region events to sidebar
+            if (FileDetailsViewModel != null)
+            {
+                FileDetailsViewModel.RegionAdded += OnRegionAdded;
+            }
+
+            // Connect clear, rename and edit from sidebar
+            RegionsSidebarViewModel.RegionClearRequested += OnRegionClearRequested;
+            RegionsSidebarViewModel.RenameRegionRequested += OnRenameRegionRequested;
+            RegionsSidebarViewModel.ClearAllRegionsRequested += OnClearAllRegionsRequested;
+            RegionsSidebarViewModel.ClearFileRegionsRequested += OnClearFileRegionsRequested;
+            RegionsSidebarViewModel.EditRegionRequested += OnEditRegionRequested;
+            RegionsSidebarViewModel.FileSelectRequested += OnFileSelectFromSidebar;
+
+            // Connect region selection to search filtering
+            RegionsSidebarViewModel.PropertyChanged += OnRegionsSidebarPropertyChanged;
+
+            // Connect cross-file detection dependencies
+            RegionsSidebarViewModel.SetDetectionDependencies(
+                _regionDetectionService,
+                () => LoadedFiles);
+            RegionsSidebarViewModel.ApplyDetectedRegionsRequested += OnApplyDetectedRegionsRequested;
+
+            // Populate from already-loaded files
+            RegionsSidebarViewModel.RefreshFromFiles(LoadedFiles);
+        }
+
+        private void OnRegionsSidebarPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(RegionsSidebarViewModel.SelectedRegion)
+                || e.PropertyName == nameof(RegionsSidebarViewModel.SelectedRegionGroup)
+                || e.PropertyName == nameof(RegionsSidebarViewModel.IsRegionView))
+            {
+                ApplyRegionFilter();
+            }
+        }
+
+        private void ApplyRegionFilter()
+        {
+            if (SearchViewModel == null || RegionsSidebarViewModel == null) return;
+
+            if (RegionsSidebarViewModel.IsRegionView && RegionsSidebarViewModel.SelectedRegionGroup != null)
+            {
+                // "By Region" view: cross-file filter by region name
+                var group = RegionsSidebarViewModel.SelectedRegionGroup;
+                var regions = RegionsSidebarViewModel.CollectRegionsByName(group.RegionName);
+                SearchViewModel.SetCrossFileRegionFilter(group.RegionName, regions);
+                _logger.LogInfo($"Cross-file region filter set: '{group.RegionName}' across {regions.Count} entries", "MainWindowViewModel");
+            }
+            else if (!RegionsSidebarViewModel.IsRegionView && RegionsSidebarViewModel.SelectedRegion != null)
+            {
+                // "By File" view: single-file filter
+                var selected = RegionsSidebarViewModel.SelectedRegion;
+                SearchViewModel.SetSelectedRegion(selected.FilePath, selected.SheetName, selected.Region);
+                _logger.LogInfo($"Region filter set: '{selected.Name}' on sheet '{selected.SheetName}'", "MainWindowViewModel");
+            }
+            else
+            {
+                SearchViewModel.ClearSelectedRegion();
+                _logger.LogInfo("Region filter cleared", "MainWindowViewModel");
+            }
+
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+        }
+
+        private void OnRegionFilterCleared(object? sender, EventArgs e)
+        {
+            if (RegionsSidebarViewModel != null)
+                RegionsSidebarViewModel.SelectedRegion = null;
+
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+        }
+
+        private void OnRegionResized(object? sender, RegionEventArgs e)
+        {
+            RegionsSidebarViewModel?.UpdateRegion(e.FilePath, e.SheetName, e.Region);
+            _logger.LogInfo($"Region '{e.Region.Name}' resized, sidebar updated", "MainWindowViewModel");
+        }
+
+        private void OnRegionDeleted(object? sender, RegionEventArgs e)
+        {
+            RegionsSidebarViewModel?.RemoveRegion(e.FilePath, e.SheetName, e.Region.Name);
+            ClearSearchFilterIfNeeded(e.Region.Name);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo($"Region '{e.Region.Name}' deleted from canvas, sidebar synced", "MainWindowViewModel");
+        }
+
+        private void ClearSearchFilterIfNeeded(string regionName)
+        {
+            if (SearchViewModel?.ActiveRegionName == regionName)
+                SearchViewModel.ClearSelectedRegion();
+        }
+
+        private void OnRegionAdded(object? sender, RegionEventArgs e)
+        {
+            var fileName = Path.GetFileName(e.FilePath);
+            RegionsSidebarViewModel?.AddRegion(e.FilePath, fileName, e.SheetName, e.Region);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+        }
+
+        private void OnEditRegionRequested(object? sender, RegionEventArgs e)
+        {
+            NavigateToDataRegion(e.FilePath, e.SheetName, e.Region.Name);
+        }
+
+        private void OnFileSelectFromSidebar(object? sender, FileSelectRequestedEventArgs e)
+        {
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm != null)
+                SelectedFile = fileVm;
+        }
+
+        private void OnRegionClearRequested(object? sender, RegionEventArgs e)
+        {
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm?.File == null) return;
+
+            var sheet = fileVm.File.GetSheet(e.SheetName);
+            if (sheet == null) return;
+
+            sheet.RemoveDataRegion(e.Region.Name);
+            RegionsSidebarViewModel?.RemoveRegion(e.FilePath, e.SheetName, e.Region.Name);
+
+            if (FileDetailsViewModel?.ActiveRegion?.Name == e.Region.Name)
+                FileDetailsViewModel.ActiveRegion = null;
+
+            _ = PersistRegionsForFileAsync(fileVm);
+            FileDetailsViewModel?.RefreshRegions();
+            ClearSearchFilterIfNeeded(e.Region.Name);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo($"Region '{e.Region.Name}' cleared from sheet '{e.SheetName}'", "MainWindowViewModel");
+        }
+
+        private void OnRenameRegionRequested(object? sender, RenameRegionEventArgs e)
+        {
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm?.File == null) return;
+
+            var sheet = fileVm.File.GetSheet(e.SheetName);
+            if (sheet == null) return;
+
+            var existing = sheet.GetDataRegion(e.Region.Name);
+            if (existing == null) return;
+
+            // Reject if the target name already exists
+            if (sheet.GetDataRegion(e.NewName) != null)
+            {
+                _logger.LogWarning(
+                    $"Region rename skipped: '{e.NewName}' already exists in sheet '{e.SheetName}'",
+                    "MainWindowViewModel");
+                return;
+            }
+
+            sheet.RemoveDataRegion(e.Region.Name);
+            var renamed = existing with { Name = e.NewName };
+            sheet.AddDataRegion(renamed);
+
+            // Keep canvas in sync when the renamed region is currently active
+            if (FileDetailsViewModel?.ActiveRegion?.Name == e.Region.Name &&
+                FileDetailsViewModel.SelectedFile?.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                FileDetailsViewModel.ActiveRegion = renamed;
+            }
+
+            _ = PersistRegionsForFileAsync(fileVm);
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+            FileDetailsViewModel?.RefreshRegions();
+            ClearSearchFilterIfNeeded(e.Region.Name);
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo(
+                $"Region '{e.Region.Name}' renamed to '{e.NewName}' in sheet '{e.SheetName}'",
+                "MainWindowViewModel");
+        }
+
+        private async void OnClearAllRegionsRequested(object? sender, EventArgs e)
+        {
+            bool confirmed = await _dialogService.ShowConfirmationAsync(
+                "This will remove all data region definitions from all loaded files.\n\nThe spreadsheet data is not affected.",
+                "Clear All Regions");
+            if (!confirmed) return;
+
+            foreach (var fileVm in LoadedFiles.ToList())
+            {
+                if (fileVm.File == null) continue;
+                ClearAllRegionsForFile(fileVm);
+            }
+
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+            if (FileDetailsViewModel != null)
+            {
+                FileDetailsViewModel.ActiveRegion = null;
+                FileDetailsViewModel.RefreshRegions();
+            }
+            SearchViewModel?.ClearSelectedRegion();
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo("All regions cleared from all files", "MainWindowViewModel");
+        }
+
+        private async void OnClearFileRegionsRequested(object? sender, ClearFileRegionsEventArgs e)
+        {
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm?.File == null) return;
+
+            bool confirmed = await _dialogService.ShowConfirmationAsync(
+                $"This will remove all data region definitions from \"{e.FileName}\".\n\nThe spreadsheet data is not affected.",
+                "Clear File Regions");
+            if (!confirmed) return;
+
+            ClearAllRegionsForFile(fileVm);
+            RegionsSidebarViewModel?.RefreshFromFiles(LoadedFiles);
+
+            if (FileDetailsViewModel != null &&
+                FileDetailsViewModel.SelectedFile?.FilePath.Equals(e.FilePath, StringComparison.OrdinalIgnoreCase) == true)
+            {
+                FileDetailsViewModel.ActiveRegion = null;
+                FileDetailsViewModel.RefreshRegions();
+            }
+
+            SearchViewModel?.ClearSelectedRegion();
+            OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+
+            _logger.LogInfo($"All regions cleared from file '{e.FileName}'", "MainWindowViewModel");
+        }
+
+        private void ClearAllRegionsForFile(IFileLoadResultViewModel fileVm)
+        {
+            if (fileVm.File == null) return;
+
+            foreach (var (_, sheetData) in fileVm.File.Sheets)
+            {
+                foreach (var regionName in sheetData.DataRegions.Keys.ToList())
+                    sheetData.RemoveDataRegion(regionName);
+            }
+
+            _ = PersistRegionsForFileAsync(fileVm);
+        }
+
+        private void OnApplyDetectedRegionsRequested(object? sender, ApplyDetectedRegionsEventArgs e)
+        {
+            int applied = 0;
+
+            foreach (var item in e.Selections)
+            {
+                if (item.Detection.DetectedRegion == null) continue;
+
+                var fileVm = LoadedFiles.FirstOrDefault(f =>
+                    f.FilePath.Equals(item.FilePath, StringComparison.OrdinalIgnoreCase));
+                if (fileVm?.File == null) continue;
+
+                var sheet = fileVm.File.GetSheet(item.SheetName);
+                if (sheet == null) continue;
+
+                // Skip if region with same name already exists
+                if (sheet.GetDataRegion(item.Detection.DetectedRegion.Name) != null) continue;
+
+                try
+                {
+                    sheet.AddDataRegion(item.Detection.DetectedRegion);
+                    RegionsSidebarViewModel?.AddRegion(item.FilePath, item.FileName, item.SheetName, item.Detection.DetectedRegion);
+
+                    // Persist for this file
+                    _ = PersistRegionsForFileAsync(fileVm);
+                    applied++;
+                }
+                catch (InvalidOperationException ex)
+                {
+                    _logger.LogWarning($"Could not apply region to '{item.FileName}/{item.SheetName}': {ex.Message}", "MainWindowViewModel");
+                }
+            }
+
+            if (applied > 0)
+            {
+                OnPropertyChanged(nameof(HasMultipleRegionsMessage));
+                _logger.LogInfo($"Applied detected regions to {applied} file(s)", "MainWindowViewModel");
+            }
+        }
+
+        private async Task PersistRegionsForFileAsync(IFileLoadResultViewModel fileVm)
+        {
+            if (fileVm.File == null) return;
+
+            var data = new DataRegionFile
+            {
+                LastModified = DateTime.UtcNow,
+                Sheets = new Dictionary<string, SheetRegionsDto>()
+            };
+
+            foreach (var (sheetName, sheetData) in fileVm.File.Sheets)
+            {
+                var regions = sheetData.DataRegions;
+                if (regions.Count > 0)
+                {
+                    data.Sheets[sheetName] = new SheetRegionsDto
+                    {
+                        Regions = new Dictionary<string, DataRegion>(regions)
+                    };
+                }
+            }
+
+            await _dataRegionPersistenceService.SaveAsync(fileVm.FilePath, data);
+        }
+
+        /// <summary>
+        /// Navigate to a specific data region: selects the file, sheet, activates the region,
+        /// and switches to the DataRegions tab.
+        /// </summary>
+        public void NavigateToDataRegion(string filePath, string sheetName, string regionName)
+        {
+            var fileVm = LoadedFiles.FirstOrDefault(f =>
+                f.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+            if (fileVm == null) return;
+
+            SelectedFile = fileVm;
+
+            if (FileDetailsViewModel != null)
+            {
+                FileDetailsViewModel.SelectedSheetName = sheetName;
+                FileDetailsViewModel.ActivateRegionForEditing(regionName);
+            }
+
+            IsDataRegionsTabVisible = true;
+            SelectedTabIndex = GetTabIndex("DataRegions");
         }
 
         public void SetSettingsViewModel(SettingsViewModel settingsViewModel)
@@ -355,12 +725,14 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             return tabName switch
             {
-                "FileDetails" => 0,  // First TabItem in XAML
-                "Search" => 1,       // Second TabItem in XAML
-                "Comparison" => 2,   // Third TabItem in XAML
-                "Templates" => 3,    // Fourth TabItem in XAML
-                "Settings" => 4,     // Fifth TabItem in XAML
-                _ => -1              // Invalid tab name
+                "Welcome" => 0,       // First TabItem in XAML
+                "FileDetails" => 1,   // Second TabItem in XAML
+                "Search" => 2,        // Third TabItem in XAML
+                "Comparison" => 3,    // Fourth TabItem in XAML
+                "Templates" => 4,     // Fifth TabItem in XAML
+                "DataRegions" => 5,   // Sixth TabItem in XAML
+                "Settings" => 6,      // Seventh TabItem in XAML
+                _ => -1               // Invalid tab name
             };
         }
 
@@ -376,11 +748,13 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             // Each tab type has its preferred fallback sequence
             var tabPriorities = closedTabName switch
             {
-                "FileDetails" => new[] { "Search", "Comparison", "Templates", "Settings" },
-                "Search" => new[] { "FileDetails", "Comparison", "Templates", "Settings" },
-                "Comparison" => new[] { "Search", "FileDetails", "Templates", "Settings" },
-                "Templates" => new[] { "Search", "FileDetails", "Comparison", "Settings" },
-                "Settings" => new[] { "Search", "FileDetails", "Comparison", "Templates" },
+                "Welcome" => new[] { "FileDetails", "Search", "Comparison", "Templates", "DataRegions", "Settings" },
+                "FileDetails" => new[] { "Search", "Comparison", "Templates", "DataRegions", "Settings", "Welcome" },
+                "Search" => new[] { "FileDetails", "Comparison", "Templates", "DataRegions", "Settings", "Welcome" },
+                "Comparison" => new[] { "Search", "FileDetails", "Templates", "DataRegions", "Settings", "Welcome" },
+                "Templates" => new[] { "Search", "FileDetails", "Comparison", "DataRegions", "Settings", "Welcome" },
+                "DataRegions" => new[] { "FileDetails", "Search", "Comparison", "Templates", "Settings", "Welcome" },
+                "Settings" => new[] { "Search", "FileDetails", "Comparison", "Templates", "DataRegions", "Welcome" },
                 _ => Array.Empty<string>()
             };
 
@@ -388,10 +762,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             {
                 bool isVisible = tabName switch
                 {
+                    "Welcome" => IsWelcomeTabVisible,
                     "FileDetails" => IsFileDetailsTabVisible,
                     "Search" => IsSearchTabVisible,
                     "Comparison" => IsComparisonTabVisible,
                     "Templates" => IsTemplatesTabVisible,
+                    "DataRegions" => IsDataRegionsTabVisible,
                     "Settings" => IsSettingsTabVisible,
                     _ => false
                 };

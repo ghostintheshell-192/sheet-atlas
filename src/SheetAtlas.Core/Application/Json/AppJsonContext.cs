@@ -3,6 +3,7 @@ using SheetAtlas.Core.Application.DTOs;
 using SheetAtlas.Core.Domain.Entities;
 using SheetAtlas.Core.Domain.ValueObjects;
 using SheetAtlas.Logging.Models;
+using DataRegion = SheetAtlas.Core.Domain.ValueObjects.DataRegion;
 
 namespace SheetAtlas.Core.Application.Json
 {
@@ -49,6 +50,11 @@ namespace SheetAtlas.Core.Application.Json
     [JsonSerializable(typeof(List<ExcelError>))]
     [JsonSerializable(typeof(List<string>))]
     [JsonSerializable(typeof(Dictionary<string, object?>))]
+    [JsonSerializable(typeof(DataRegion))]
+    [JsonSerializable(typeof(DataRegionFile))]
+    [JsonSerializable(typeof(SheetRegionsDto))]
+    [JsonSerializable(typeof(Dictionary<string, SheetRegionsDto>))]
+    [JsonSerializable(typeof(Dictionary<string, DataRegion>))]
     public partial class AppJsonContext : JsonSerializerContext
     {
     }

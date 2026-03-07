@@ -11,24 +11,34 @@ report: null  # Optional: link to archive/analysis/YYYY-MM-DD_report_agent-name.
 # [Issue Title]
 
 ## Problem
+
 [Description of the problem / objective]
 
 ## Analysis
+
 [Root cause / investigation / context]
 
 ## Possible Solutions
+
 - **Option A**: [Description] - [Pros/Cons]
 - **Option B**: [Description] - [Pros/Cons]
 - **Option C**: [Description] - [Pros/Cons]
 
 ## Recommended Approach
+
 [Which option to prefer and why, or "To be determined"]
 
 ## Notes
+
 [Other considerations, temporary workarounds, links to relevant files]
 
 ## Related Documentation
+
 - **Related Issues**: (if any in `related:` frontmatter)
 - **Architecture Decision**: (if linked via `related_decision:`)
 - **Agent Report**: (if created from agent finding via `report:`)
 - **Code Locations**: (link to specific files and line numbers)
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

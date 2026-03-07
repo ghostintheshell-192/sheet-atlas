@@ -62,6 +62,7 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- Status icon -->
@@ -95,6 +96,31 @@
                                           Foreground="{DynamicResource SecondaryText}"
                                           TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
+
+                            <!-- ⋮ context menu button -->
+                            <Button Grid.Column="3"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,0"
+                                    MinWidth="0"
+                                    MinHeight="0"
+                                    VerticalAlignment="Center"
+                                    ToolTip.Tip="File actions">
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuItem Header="File Details"
+                                                  Click="OnFileDetailsClick"/>
+                                        <MenuItem Header="Data Regions"
+                                                  Click="OnFileDataRegionsClick"/>
+                                        <MenuItem Header="Templates"
+                                                  Click="OnFileTemplatesClick"/>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                                <TextBlock Text="⋮"
+                                           FontSize="14"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource SecondaryText}"/>
+                            </Button>
 
                             <!-- Error count badge -->
                             <Border Grid.Column="2"

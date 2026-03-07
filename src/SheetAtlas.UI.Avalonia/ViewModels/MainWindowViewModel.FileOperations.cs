@@ -110,5 +110,57 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 "Unload All Files");
         }
 
+        private async Task ExecuteNormalizeExportAsync()
+        {
+            if (SelectedFile?.File == null)
+                return;
+
+            try
+            {
+                var baseName = Path.GetFileNameWithoutExtension(SelectedFile.FilePath);
+                var outputFolder = _settingsService.Current.FileLocations.OutputFolder;
+                var defaultPath = Path.Combine(outputFolder, $"{baseName}_normalized.xlsx");
+
+                var savedPath = await _filePickerService.SaveFileAsync(
+                    "Normalize & Export",
+                    defaultPath,
+                    new[] { "*.xlsx" });
+
+                if (string.IsNullOrEmpty(savedPath))
+                    return;
+
+                _logger.LogInfo($"Normalize & Export to {savedPath}", "MainWindowViewModel");
+
+                var result = await _excelWriterService.NormalizeToExcelAsync(
+                    SelectedFile.FilePath,
+                    SelectedFile.File.Sheets,
+                    savedPath);
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInfo(
+                        $"Normalize & Export completed: {result.NormalizedCellCount} cells normalized in {result.Duration.TotalMilliseconds:F0}ms",
+                        "MainWindowViewModel");
+                    _activityLog.LogInfo(
+                        $"Normalized {result.NormalizedCellCount} cells to {Path.GetFileName(savedPath)}",
+                        "Export");
+                }
+                else
+                {
+                    _logger.LogError($"Normalize & Export failed: {result.ErrorMessage}", "MainWindowViewModel");
+                    await _dialogService.ShowErrorAsync(
+                        $"Export failed: {result.ErrorMessage}",
+                        "Export Error");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Normalize & Export error: {ex.Message}", ex, "MainWindowViewModel");
+                await _dialogService.ShowErrorAsync(
+                    $"An error occurred during export.\n\nDetails: {ex.Message}",
+                    "Export Error");
+            }
+        }
+
     }
 }

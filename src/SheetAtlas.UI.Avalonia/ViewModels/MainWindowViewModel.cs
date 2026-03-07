@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using SheetAtlas.Core.Application.Interfaces;
 using SheetAtlas.UI.Avalonia.Services;
 using SheetAtlas.Logging.Services;
 using SheetAtlas.UI.Avalonia.Managers;
@@ -17,6 +18,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IThemeManager _themeManager;
     private readonly IActivityLogService _activityLog;
     private readonly IDialogService _dialogService;
+    private readonly IRegionDetectionService _regionDetectionService;
+    private readonly IDataRegionPersistenceService _dataRegionPersistenceService;
+    private readonly IExcelWriterService _excelWriterService;
+    private readonly ISettingsService _settingsService;
 
     private IFileLoadResultViewModel? _selectedFile;
     private object? _currentView;
@@ -27,6 +32,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isComparisonTabVisible;
     private bool _isTemplatesTabVisible;
     private bool _isSettingsTabVisible;
+    private bool _isDataRegionsTabVisible;
+    private bool _isWelcomeTabVisible;
+    private bool _isQuickBarVisible = true;
     private bool _isStatusBarVisible = true;
     private bool _disposed = false;
 
@@ -45,6 +53,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public TreeSearchResultsViewModel? TreeSearchResultsViewModel { get; private set; }
     public TemplateManagementViewModel? TemplateManagementViewModel { get; private set; }
     public ColumnLinkingViewModel? ColumnLinkingViewModel { get; private set; }
+    public RegionsSidebarViewModel? RegionsSidebarViewModel { get; private set; }
     public SettingsViewModel? SettingsViewModel { get; private set; }
 
     public IFileLoadResultViewModel? SelectedFile
@@ -55,22 +64,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             if (SetField(ref _selectedFile, value))
             {
                 if (FileDetailsViewModel != null)
-                {
                     FileDetailsViewModel.SelectedFile = value;
-                }
+
+                OnPropertyChanged(nameof(HasSelectedFile));
 
                 // Note: TemplateManagementViewModel is updated via UpdateSelectedFiles()
                 // which is called by the SelectionChanged event handler in MainWindow.
                 // This supports multi-selection properly.
 
-                if (value != null)
-                {
-                    IsFileDetailsTabVisible = true;
-                    SelectedTabIndex = GetTabIndex("FileDetails");
-                }
-                else
+                // When file is deselected, close File Details tab (nothing to show).
+                // Opening the tab only happens via explicit ShowFileDetailsTabCommand.
+                if (value == null && IsFileDetailsTabVisible)
                 {
                     IsFileDetailsTabVisible = false;
+                    SwitchToNextVisibleTab("FileDetails");
                 }
             }
         }
@@ -154,7 +161,37 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public bool HasAnyTabVisible => IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible;
+    public bool IsDataRegionsTabVisible
+    {
+        get => _isDataRegionsTabVisible;
+        set
+        {
+            if (SetField(ref _isDataRegionsTabVisible, value))
+            {
+                OnPropertyChanged(nameof(HasAnyTabVisible));
+            }
+        }
+    }
+
+    public bool IsWelcomeTabVisible
+    {
+        get => _isWelcomeTabVisible;
+        set
+        {
+            if (SetField(ref _isWelcomeTabVisible, value))
+            {
+                OnPropertyChanged(nameof(HasAnyTabVisible));
+            }
+        }
+    }
+
+    public bool HasAnyTabVisible => IsWelcomeTabVisible || IsFileDetailsTabVisible || IsSearchTabVisible || IsComparisonTabVisible || IsTemplatesTabVisible || IsSettingsTabVisible || IsDataRegionsTabVisible;
+
+    public bool IsQuickBarVisible
+    {
+        get => _isQuickBarVisible;
+        set => SetField(ref _isQuickBarVisible, value);
+    }
 
     public bool IsStatusBarVisible
     {
@@ -167,6 +204,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     /// Used for badge display on Columns sidebar icon.
     /// </summary>
     public int ColumnCount => ColumnLinkingViewModel?.ColumnLinks.Count ?? 0;
+
+    /// <summary>
+    /// True when regions exist but none is selected — shows hint to select one.
+    /// </summary>
+    public bool HasMultipleRegionsMessage =>
+        RegionsSidebarViewModel != null &&
+        RegionsSidebarViewModel.TotalRegionCount > 0 &&
+        SearchViewModel?.IsRegionFilterActive != true;
 
     /// <summary>
     /// Status text shown in the status bar.
@@ -188,7 +233,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ILogService logger,
         IThemeManager themeManager,
         IActivityLogService activityLog,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IRegionDetectionService regionDetectionService,
+        IDataRegionPersistenceService dataRegionPersistenceService,
+        IExcelWriterService excelWriterService,
+        ISettingsService settingsService)
     {
         _filesManager = filesManager ?? throw new ArgumentNullException(nameof(filesManager));
         _comparisonCoordinator = comparisonCoordinator ?? throw new ArgumentNullException(nameof(comparisonCoordinator));
@@ -197,12 +246,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _themeManager = themeManager ?? throw new ArgumentNullException(nameof(themeManager));
         _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+        _regionDetectionService = regionDetectionService ?? throw new ArgumentNullException(nameof(regionDetectionService));
+        _dataRegionPersistenceService = dataRegionPersistenceService ?? throw new ArgumentNullException(nameof(dataRegionPersistenceService));
+        _excelWriterService = excelWriterService ?? throw new ArgumentNullException(nameof(excelWriterService));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
         ThemeManager = themeManager;
 
-        _selectedTabIndex = -1;
-
+        _selectedTabIndex = 0; // Welcome tab is first and shown on startup
         _isSidebarExpanded = false;
+        _isWelcomeTabVisible = true;
         _isFileDetailsTabVisible = false;
         _isSearchTabVisible = false;
         _isComparisonTabVisible = false;
@@ -235,6 +288,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             TreeSearchResultsViewModel?.Dispose();
             TemplateManagementViewModel?.Dispose();
             ColumnLinkingViewModel?.Dispose();
+            RegionsSidebarViewModel?.Dispose();
         }
     }
 }

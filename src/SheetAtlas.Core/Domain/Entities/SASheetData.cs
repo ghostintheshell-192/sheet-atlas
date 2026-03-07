@@ -3,16 +3,7 @@ using SheetAtlas.Core.Domain.ValueObjects;
 namespace SheetAtlas.Core.Domain.Entities
 {
     /// <summary>
-    /// Efficient sheet storage with flat array architecture.
-    /// Uses single contiguous SACellData[] instead of List of arrays.
-    /// Benefits: zero fragmentation, cache-friendly, GC can release memory properly.
-    /// Memory: ~2-3x overhead instead of 10-14x like DataTable.
-    ///
-    /// ROW INDEXING:
-    /// - All row indices are 0-based ABSOLUTE (row 0 = first row in sheet)
-    /// - Header rows are INCLUDED in the data array (rows 0 to HeaderRowCount-1)
-    /// - Data rows start at row HeaderRowCount
-    /// - Excel Row N corresponds to SASheetData row (N-1)
+    /// Efficient sheet storage using flat contiguous array. 0-based absolute indexing, includes header rows. ~2-3x memory overhead vs 10-14x for DataTable.
     /// </summary>
     public class SASheetData : IDisposable
     {
@@ -37,6 +28,20 @@ namespace SheetAtlas.Core.Domain.Entities
         public int HeaderRowCount { get; private set; } = 1;
 
         /// <summary>
+        /// Excel row index (0-based) corresponding to local row 0 in the flat array.
+        /// Set by readers to preserve original Excel coordinates.
+        /// Example: if data starts at Excel row 3 (0-based), OriginRow = 3.
+        /// </summary>
+        public int OriginRow { get; private set; }
+
+        /// <summary>
+        /// Excel column index (0-based) corresponding to local column 0 in the flat array.
+        /// Set by readers to preserve original Excel coordinates.
+        /// Example: if data starts at Excel column B, OriginColumn = 1.
+        /// </summary>
+        public int OriginColumn { get; private set; }
+
+        /// <summary>
         /// Flat array of all cells: cells[row * ColumnCount + col].
         /// Single contiguous allocation = zero fragmentation, excellent cache locality.
         /// INCLUDES header rows (rows 0 to HeaderRowCount-1) AND data rows.
@@ -55,6 +60,8 @@ namespace SheetAtlas.Core.Domain.Entities
 
         private Dictionary<string, MergedRange>? _mergedCells;
         private Dictionary<int, ColumnMetadata>? _columnMetadata;
+        private Dictionary<string, DataRegion>? _dataRegions;
+        private Dictionary<string, Dictionary<int, ColumnMetadata>>? _regionColumnMetadata;
 
         public SASheetData(string sheetName, string[] columnNames, int initialCapacity = DefaultInitialCapacity)
         {
@@ -81,6 +88,69 @@ namespace SheetAtlas.Core.Domain.Entities
                 throw new ArgumentException($"Header row count ({headerRowCount}) cannot exceed total row count ({_rowCount})", nameof(headerRowCount));
 
             HeaderRowCount = headerRowCount;
+        }
+
+        /// <summary>
+        /// Set the Excel origin coordinates for this sheet.
+        /// Called by readers during construction to preserve original Excel positions.
+        /// </summary>
+        public void SetOrigin(int originRow, int originColumn)
+        {
+            if (originRow < 0)
+                throw new ArgumentOutOfRangeException(nameof(originRow), "Origin row cannot be negative");
+            if (originColumn < 0)
+                throw new ArgumentOutOfRangeException(nameof(originColumn), "Origin column cannot be negative");
+
+            OriginRow = originRow;
+            OriginColumn = originColumn;
+        }
+
+        /// <summary>
+        /// Convert a local row index (0-based, flat array) to an Excel row index (0-based).
+        /// </summary>
+        public int ToExcelRow(int localRow) => localRow + OriginRow;
+
+        /// <summary>
+        /// Convert a local column index (0-based, flat array) to an Excel column index (0-based).
+        /// </summary>
+        public int ToExcelColumn(int localCol) => localCol + OriginColumn;
+
+        /// <summary>
+        /// Convert an Excel row index (0-based) to a local row index (0-based, flat array).
+        /// </summary>
+        public int ToLocalRow(int excelRow) => excelRow - OriginRow;
+
+        /// <summary>
+        /// Convert an Excel column index (0-based) to a local column index (0-based, flat array).
+        /// </summary>
+        public int ToLocalColumn(int excelCol) => excelCol - OriginColumn;
+
+        /// <summary>
+        /// Get Excel cell reference string (e.g. "B5") for a local row/column position.
+        /// Row is converted to 1-based Excel row number, column to Excel letter(s).
+        /// </summary>
+        public string GetCellReference(int localRow, int localCol)
+        {
+            int excelRow = ToExcelRow(localRow) + 1; // Excel rows are 1-based for display
+            int excelCol = ToExcelColumn(localCol);
+            return $"{GetColumnLetter(excelCol)}{excelRow}";
+        }
+
+        /// <summary>
+        /// Convert a 0-based column index to Excel column letter(s). 0=A, 1=B, ..., 25=Z, 26=AA.
+        /// </summary>
+        private static string GetColumnLetter(int columnIndex)
+        {
+            var result = string.Empty;
+            int remaining = columnIndex;
+
+            do
+            {
+                result = (char)('A' + remaining % 26) + result;
+                remaining = remaining / 26 - 1;
+            } while (remaining >= 0);
+
+            return result;
         }
 
         /// <summary>
@@ -302,11 +372,130 @@ namespace SheetAtlas.Core.Domain.Entities
             _mergedCells[cellRef] = range;
         }
 
-        // === Column Metadata Support (Future) ===
+        // === DataRegion Support ===
 
         /// <summary>
-        /// Get column metadata (width, hidden state).
+        /// All defined DataRegions for this sheet.
+        /// Lazy-loaded: empty dictionary returned until first region added.
+        /// Key = region Name.
+        /// </summary>
+        public IReadOnlyDictionary<string, DataRegion> DataRegions
+        {
+            get
+            {
+                if (_dataRegions == null)
+                    return new Dictionary<string, DataRegion>();
+                return _dataRegions;
+            }
+        }
+
+        /// <summary>
+        /// Add a DataRegion to this sheet.
+        /// Validates: Name required, no duplicate names, no overlapping regions.
+        /// </summary>
+        public void AddDataRegion(DataRegion region)
+        {
+            ArgumentNullException.ThrowIfNull(region);
+
+            if (string.IsNullOrWhiteSpace(region.Name))
+                throw new ArgumentException("Region must have a name", nameof(region));
+
+            _dataRegions ??= new Dictionary<string, DataRegion>();
+
+            if (_dataRegions.ContainsKey(region.Name))
+                throw new InvalidOperationException($"Region '{region.Name}' already exists");
+
+            foreach (var existing in _dataRegions.Values)
+            {
+                if (region.OverlapsWith(existing))
+                    throw new InvalidOperationException(
+                        $"Region '{region.Name}' overlaps with existing region '{existing.Name}'");
+            }
+
+            _dataRegions[region.Name] = region;
+        }
+
+        /// <summary>
+        /// Remove a DataRegion by name. Also clears its per-region ColumnMetadata.
+        /// No-op if region doesn't exist.
+        /// </summary>
+        public void RemoveDataRegion(string name)
+        {
+            _dataRegions?.Remove(name);
+            _regionColumnMetadata?.Remove(name);
+        }
+
+        /// <summary>
+        /// Get a DataRegion by name. Returns null if not found.
+        /// </summary>
+        public DataRegion? GetDataRegion(string name)
+        {
+            if (_dataRegions == null)
+                return null;
+
+            return _dataRegions.TryGetValue(name, out var region) ? region : null;
+        }
+
+        /// <summary>
+        /// Enumerate only data rows within a specific DataRegion (yields row by row, no allocation).
+        /// Respects the region's DataStartRow and DataEndRow bounds.
+        /// </summary>
+        public IEnumerable<RowView> EnumerateDataRows(DataRegion region)
+        {
+            int startRow = region.DataStartRow;
+            int endRow = region.DataEndRow ?? (_rowCount - 1);
+
+            // Clamp to actual sheet bounds
+            if (startRow >= _rowCount)
+                yield break;
+            if (endRow >= _rowCount)
+                endRow = _rowCount - 1;
+
+            for (int row = startRow; row <= endRow; row++)
+            {
+                yield return new RowView(this, row);
+            }
+        }
+
+        // === Per-Region Column Metadata ===
+
+        /// <summary>
+        /// Get column metadata for a specific region.
+        /// Returns null if no metadata set for this region/column.
+        /// </summary>
+        public ColumnMetadata? GetColumnMetadata(string regionName, int columnIndex)
+        {
+            if (_regionColumnMetadata == null)
+                return null;
+
+            if (!_regionColumnMetadata.TryGetValue(regionName, out var regionMeta))
+                return null;
+
+            return regionMeta.TryGetValue(columnIndex, out var metadata) ? metadata : null;
+        }
+
+        /// <summary>
+        /// Set column metadata for a specific region (lazy allocation).
+        /// </summary>
+        public void SetColumnMetadata(string regionName, int columnIndex, ColumnMetadata metadata)
+        {
+            _regionColumnMetadata ??= new Dictionary<string, Dictionary<int, ColumnMetadata>>();
+
+            if (!_regionColumnMetadata.TryGetValue(regionName, out var regionMeta))
+            {
+                regionMeta = new Dictionary<int, ColumnMetadata>();
+                _regionColumnMetadata[regionName] = regionMeta;
+            }
+
+            regionMeta[columnIndex] = metadata;
+        }
+
+        // === Column Metadata Support (Global — backward compatibility) ===
+
+        /// <summary>
+        /// Get global column metadata (width, hidden state).
         /// Returns null if no metadata set for column.
+        /// For per-region metadata, use GetColumnMetadata(string regionName, int columnIndex).
         /// </summary>
         public ColumnMetadata? GetColumnMetadata(int columnIndex)
         {
@@ -346,6 +535,8 @@ namespace SheetAtlas.Core.Domain.Entities
 
                 _mergedCells?.Clear();
                 _columnMetadata?.Clear();
+                _dataRegions?.Clear();
+                _regionColumnMetadata?.Clear();
             }
 
             _disposed = true;

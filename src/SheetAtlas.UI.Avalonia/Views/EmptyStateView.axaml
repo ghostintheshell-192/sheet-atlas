@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+             x:Class="SheetAtlas.UI.Avalonia.Views.EmptyStateView">
+
+    <Border HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+        <StackPanel Spacing="16" HorizontalAlignment="Center">
+            <TextBlock Name="IconTextBlock"
+                      FontSize="48"
+                      HorizontalAlignment="Center"
+                      Opacity="0.4"/>
+            <TextBlock Name="TitleTextBlock"
+                      FontSize="16"
+                      FontWeight="SemiBold"
+                      Foreground="{DynamicResource PrimaryText}"
+                      HorizontalAlignment="Center"/>
+            <TextBlock Name="MessageTextBlock"
+                      FontSize="14"
+                      Foreground="{DynamicResource SecondaryText}"
+                      HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Border>
+
+</UserControl>

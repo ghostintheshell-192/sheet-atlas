@@ -37,6 +37,7 @@ private static SolidColorBrush GetMatchBackground(bool isDarkMode)
 ## Proposed Fix
 
 Option A: **Cache brush instances** (simple)
+
 ```csharp
 private static readonly SolidColorBrush DarkMatchBrush = new(Color.Parse("#0D1117"));
 private static readonly SolidColorBrush LightMatchBrush = new(Color.Parse("#FFFFFF"));
@@ -44,6 +45,7 @@ private static readonly SolidColorBrush LightMatchBrush = new(Color.Parse("#FFFF
 ```
 
 Option B: **Use theme resources** (preferred for theme switching)
+
 ```csharp
 return Application.Current.FindResource("ComparisonMatchBackgroundDark") as IBrush;
 ```
@@ -52,3 +54,7 @@ return Application.Current.FindResource("ComparisonMatchBackgroundDark") as IBru
 
 - Low priority since comparison view is not rendered frequently
 - Would become higher priority if adding real-time diff view or large dataset scrolling
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

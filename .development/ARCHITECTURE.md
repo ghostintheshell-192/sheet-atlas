@@ -1,0 +1,298 @@
+# Architecture Reference
+
+Quick reference for navigating the SheetAtlas codebase.
+For detailed documentation, see [docs/project/ARCHITECTURE.md](../docs/project/ARCHITECTURE.md).
+
+## Layer Overview
+
+| Layer | Project | Purpose |
+|-------|---------|---------|
+| **UI** | SheetAtlas.UI.Avalonia | Avalonia views, ViewModels, Managers |
+| **Core** | SheetAtlas.Core | Business logic, domain entities, services |
+| **Infrastructure** | SheetAtlas.Infrastructure | File readers/writers, external integrations |
+| **Logging** | SheetAtlas.Logging | Cross-cutting logging abstraction |
+
+**Dependency rule**: UI → Core ← Infrastructure. Core has no knowledge of UI or Infrastructure.
+
+## Key Decisions
+
+- [ADR-001: Error Handling Philosophy](reference/decisions/001-error-handling-philosophy.md)
+- [ADR-002: Row Indexing Semantics](reference/decisions/002-row-indexing-semantics.md)
+- [ADR-003: Technology Stack](reference/decisions/003-technology-stack.md)
+- [ADR-004: Foundation Layer First](reference/decisions/004-foundation-layer-first.md)
+- [ADR-005: Security First](reference/decisions/005-security-first.md)
+- [ADR-006: Git Workflow](reference/decisions/006-git-workflow.md)
+- [ADR-007: Unified Data Flow For Export](reference/decisions/007-unified-data-flow-for-export.md)
+- [ADR-008: Facade Pattern For Dependency Injection](reference/decisions/008-facade-pattern-for-dependency-injection.md)
+- [ADR-009: Dataregion Data Model](reference/decisions/009-dataregion-data-model.md)
+- [ADR-010: Dataregion Ui Pattern](reference/decisions/010-dataregion-ui-pattern.md)
+- [ADR-011: Dataregion Persistence](reference/decisions/011-dataregion-persistence.md)
+- [ADR-012: Dataregion Cross File Detection](reference/decisions/012-dataregion-cross-file-detection.md)
+- [ADR-013: Coordinate Preserving Storage](reference/decisions/013-coordinate-preserving-storage.md)
+- [ADR-014: Region Scoped Template Validation](reference/decisions/014-region-scoped-template-validation.md)
+
+## Project Tree
+
+> Auto-generated from source code.
+> Run `.development/scripts/generate-architecture.sh` to update.
+
+
+### SheetAtlas.Core/Application/DTOs
+- `ColumnAnalysisResult.cs` — Result of analyzing column characteristics. Extends ColumnMetadata record with detected information.
+- `ColumnValidationResult.cs` — Validation result for a single column. Combines expected column definition with actual column analysis.
+- `CsvReaderOptions.cs` — Configuration options for CSV file reading
+- `DataRegionFile.cs` — Root DTO for regions.json persistence. See ADR-011.
+- `ErrorSummary.cs` — Pre-calculated aggregations for UI performance
+- `ExportResult.cs` — Result of an export operation. Follows Result pattern - check IsSuccess before using output path.
+- `FileInfoDto.cs` — Information about the Excel file being logged
+- `FileLoadResult.cs` — Result of loading an Excel file. Contains status, loaded file, and any errors or warnings.
+- `FileLogEntry.cs` — Root object for structured file log JSON Represents a single load attempt for an Excel file
+- `LoadAttemptInfo.cs` — Information about the file load attempt
+- `MergeComplexityAnalysis.cs` — Analysis of merged cell complexity in sheet. Used to recommend strategy and warn user.
+- `MergeWarning.cs` — Warning generated during merged cell resolution.
+- `NormalizationResult.cs` — Result of normalizing single cell value. Preserves original + cleaned value + quality issues. Follows Result pattern (no exceptions for business errors).
+- `UserSettings.cs` — User preferences with persistent storage. All properties have sensible defaults - app works without configuration.
+- `ValidationIssue.cs` — Represents a single validation issue found during template validation. Includes location, severity, and contextual information.
+- `ValidationReport.cs` — Complete validation report for an Excel file against a template. Contains all validation results, issues, and summary statistics.
+
+### SheetAtlas.Core/Application/Interfaces
+- `ICellReferenceParser.cs` — Parses Excel cell references (e.g., A1) to/from column/row indices.
+- `ICellValueReader.cs` — Service for reading Excel cell values with type preservation. Returns SACellValue instead of string.
+- `IColumnAnalysisService.cs` — Analyzes column characteristics: data type, confidence, generates ColumnMetadata. Enhances existing ColumnMetadata record with detected type and quality metrics.
+- `IComparisonExportService.cs` — Service for exporting row comparison results to various formats. Includes metadata (search terms, files, timestamps) for context.
+- `ICurrencyDetector.cs` — Extracts currency information from Excel number format strings. Used during file load to enhance ColumnMetadata with currency awareness.
+- `IDataNormalizationService.cs` — Normalizes cell values: dates, numbers, text, booleans. Populates OriginalValue and CleanedValue in CellMetadata. Core to search accuracy (+40% improvement).
+- `IDataRegionPersistenceService.cs` — Persists DataRegion definitions to/from JSON files. Each Excel file gets its own regions.json in the DataRegions folder.
+- `IExcelWriterService.cs` — Service for exporting enriched sheet data to various formats. Uses CleanedValue from cell metadata to write typed cells.
+- `IExceptionHandler.cs` — Centralized exception handling service. Converts exceptions to user-friendly error messages and logs technical details.
+- `IFileFormatReader.cs` — Reader for specific Excel file formats
+- `IFileLogService.cs` — Service for managing structured file logging Provides read/write operations for Excel file error logs in JSON format
+- `IHeaderGroupingService.cs` — Groups headers by semantic name, merging columns that map to the same name.
+- `IHeaderResolver.cs` — Resolves semantic names for column headers. Provides unified interface for different resolution sources (ColumnLink, Template, Dictionary).
+- `IMergedCellResolver.cs` — Resolves merged cells using configurable strategies. Handles horizontal/vertical merges, warns on complex patterns.
+- `IMergedRangeExtractor.cs` — Generic interface for extracting merged cell range information from various file formats. Each format (OpenXML, ODF, etc.) provides its own context type.
+- `IRegionDetectionService.cs` — Detects DataRegion boundaries in target sheets by matching headers from a source region. Used for cross-file region application (ADR-012 Phase 2).
+- `IRowComparisonService.cs` — Service for comparing rows from search results. Extracts row data and column headers.
+- `ISettingsService.cs` — Service for managing user preferences with persistent storage. Settings are stored as JSON in the user's application data folder.
+- `ISheetAnalysisOrchestrator.cs` — Orchestrates the analysis and enrichment pipeline for sheet data. Coordinates foundation services to analyze columns, resolve merged cells, and populate metadata.
+- `ITemplateRepository.cs` — Repository for managing Excel templates (CRUD operations). Templates are stored as JSON files in a user-configurable location.
+- `ITemplateValidationService.cs` — Service for validating Excel files against templates and creating templates from files. Core service for the Template Management feature.
+
+### SheetAtlas.Core/Application/Json
+- `AppJsonContext.cs` — JSON serialization context for source-generated serializers. Required for PublishTrimmed=true support (AOT and trimming). All types used with JsonSerializer must be registered here.
+
+### SheetAtlas.Core/Application/Services
+- `CellReferenceParser.cs` — Implementation of ICellReferenceParser. Parses Excel cell references using regex.
+- `CellValueReader.cs` — Reads and parses cell values from Excel with type preservation. Handles shared strings, numbers, dates, booleans. Uses string interning for memory efficiency.
+- `ColumnLinkingService.cs` — Input for column linking: column info from a loaded file.
+- `DataRegionPersistenceService.cs` — Persists DataRegion definitions as JSON files. Storage: {LocalApplicationData}/SheetAtlas/DataRegions/{folder}/regions.json Follows FileLogService pattern for folder naming and atomic writes.
+- `ExcelErrorJsonConverter.cs` — Custom JSON converter for ExcelError Handles serialization of Exception property by extracting only serializable info
+- `ExceptionHandler.cs` — Centralized exception handling implementation. Converts technical exceptions to user-friendly messages and logs details.
+- `FileLogService.cs` — Manages structured logging of Excel file load attempts to JSON files Each Excel file gets its own folder with chronological JSON logs
+- `HeaderGroupingService.cs` — Groups headers by semantic name, merging columns that map to the same name. Consolidates header grouping logic previously duplicated across ComparisonExportService and RowComparisonViewModel.
+- `RegionDetectionService.cs` — Detects DataRegion boundaries in target sheets using header-anchored matching. Phase 2 algorithm: case-insensitive header match, boundary = empty row or known header pattern. Fallback: source region r...
+- `RowComparisonService.cs` — Implementation of IRowComparisonService. Creates row comparisons from search results.
+- `SearchService.cs` — Service for searching within Excel files across sheets and cells.
+- `SettingsService.cs` — Manages user preferences with persistent JSON storage. Settings are stored in %AppData%/SheetAtlas/settings.json.
+- `SheetAnalysisOrchestrator.cs` — Orchestrates the analysis and enrichment pipeline for sheet data. Coordinates foundation services: merged cell resolution, column analysis, currency detection, data normalization.
+
+### SheetAtlas.Core/Application/Services/Foundation
+- `ColumnAnalysisService.cs` — Analyzes column characteristics: data type, confidence, generates ColumnMetadata. Implements IColumnAnalysisService interface.
+- `CurrencyDetector.cs` — Extracts currency information from Excel number format strings. Implements ICurrencyDetector interface.
+- `DataNormalizationService.cs` — Normalizes cell values: dates, numbers, text, booleans. Implements IDataNormalizationService interface.
+- `MergedCellResolver.cs` — Resolves merged cells using configurable strategies. Implements IMergedCellResolver interface.
+- `TemplateRepository.cs` — File-based repository for managing Excel templates. Stores templates as JSON files in a configurable directory.
+- `TemplateValidationService.cs` — Service for validating Excel files against templates and creating templates from files. Uses IColumnAnalysisService for type detection and validation.
+
+### SheetAtlas.Core/Application/Services/HeaderResolvers
+- `DictionaryHeaderResolver.cs` — Resolves semantic names from a dictionary. Used by export services that receive semantic name mappings as parameters.
+- `FunctionHeaderResolver.cs` — Resolves semantic names using a function delegate. Used by ViewModels with injected resolver function.
+- `NullHeaderResolver.cs` — No-op resolver that returns null for all headers. Used when no semantic name mapping is needed (identity mapping).
+
+### SheetAtlas.Core/Application/Utilities
+- `NumberFormatHelper.cs` — Utility class for detecting number format patterns in Excel number format strings. Used by ColumnAnalysisService and DataNormalizationService for type detection.
+
+### SheetAtlas.Core/Configuration
+- `AppSettings.cs` — Application-wide configuration settings
+
+### SheetAtlas.Core/Domain/Entities
+- `ExcelFile.cs` — Represents a loaded Excel file with its sheets, load status, and any errors encountered. Implements IDisposable to properly release memory used by sheet data.
+- `ExcelTemplate.cs` — Excel template defining expected structure and validation rules. Supports JSON serialization for persistence.
+- `RowComparison.cs` — Represents a complete row from an Excel sheet for comparison purposes
+- `RowComparisonWarning.cs` — Represents a warning about column structure inconsistencies during row comparison
+- `SASheetData.cs` — Efficient sheet storage using flat contiguous array. 0-based absolute indexing, includes header rows. ~2-3x memory overhead vs 10-14x for DataTable.
+- `SearchResult.cs` — Configuration options for search operations.
+
+### SheetAtlas.Core/Domain/Exceptions
+- `ComparisonException.cs` — Thrown when file comparison operations fail due to incompatible files. Represents business rule violations specific to comparison logic.
+- `SheetAtlasException.cs` — Base exception for all Excel Viewer domain exceptions. Represents business rule violations and domain-specific errors.
+
+### SheetAtlas.Core/Domain/ValueObjects
+- `CellAnomaly.cs` — Represents an anomaly detected in a cell during column analysis. Used by ColumnAnalysisService to report data quality issues with context.
+- `ColumnLink.cs` — Links multiple column names to a single semantic concept. Used for grouping semantically equivalent columns across files.
+- `CurrencyInfo.cs` — Immutable currency information extracted from Excel number format. Used for currency-aware comparison and normalization.
+- `DataRegion.cs` — Defines a named rectangular data region within an Excel sheet. Used as interpretive lens for search, comparison, and normalization. Stored in SASheetData as Dictionary&lt;string, DataRegion&gt; keyed ...
+- `DataType.cs` — Detected data type for cell or column. Used by normalization and column analysis services.
+- `DateSystem.cs` — Indicates which date serial number system the Excel workbook uses. Affects how date serial numbers are converted to DateTime values.
+- `ExcelError.cs` — Indicates the overall outcome of a file load operation.
+- `ExpectedColumn.cs` — Defines an expected column in an Excel template. Captures column requirements: name, position, type, and validation rules. Immutable value object with factory methods for common patterns.
+- `ExportCellValue.cs`
+- `LinkedColumn.cs` — Represents a column from a specific source file/sheet. Used to track the origin of columns in a ColumnLink.
+- `MergeStrategy.cs` — Strategy for resolving merged cells. Configurable via appsettings.json FoundationLayer.MergedCells.DefaultStrategy.
+- `RuleType.cs` — Types of validation rules that can be applied to template columns. Used by ExpectedColumn and ValidationRule for template validation.
+- `SACellData.cs` — Optional cell metadata for validation, data cleaning, formulas, and styles. Created on-demand (~5-10% of cells), not allocated for clean simple cells.
+- `SACellValue.cs` — Cell data type discriminator. Used by CellValue to determine the actual type stored.
+- `StringPool.cs` — String interning pool for deduplicating repeated values. Reduces memory for repeated strings (categories, enums). Thread-safe reads.
+- `ValidationRule.cs` — A validation rule that can be applied to a column in an Excel template. Immutable value object with factory methods for common rules.
+
+### SheetAtlas.Core/Shared/Helpers
+- `FilePathHelper.cs`
+- `RowIndexConverter.cs` — Converts between Excel 1-based and absolute 0-based row indexing. Excel Row 1 = Absolute Row 0. See ADR-002 for details.
+
+### SheetAtlas.Infrastructure/External
+- `ExcelReaderService.cs` — Service for loading Excel files using format-specific readers
+
+### SheetAtlas.Infrastructure/External/Readers
+- `CsvFileReader.cs` — Reader for CSV (Comma-Separated Values) files
+- `FileReaderContext.cs` — Facade that groups common dependencies for all file format readers. Reduces constructor parameter count and centralizes shared service access.
+- `NumberFormatInferenceService.cs` — Service for inferring Excel NumberFormat from CSV text values. Handles percentages, scientific notation, and decimal precision detection.
+- `OpenXmlFileReader.cs` — Reader for OpenXML Excel formats (.xlsx, .xlsm, .xltx, .xltm)
+- `OpenXmlMergedRangeExtractor.cs` — Extracts merged cell range information from OpenXML (.xlsx) worksheets. Implements generic IMergedRangeExtractor for WorksheetPart context.
+- `XlsFileReader.cs` — Reader for legacy Excel binary formats (.xls, .xlt)
+
+### SheetAtlas.Infrastructure/External/Writers
+- `ComparisonExportService.cs` — Service for exporting row comparison results to Excel and CSV formats. Excel exports include metadata sheet with search terms, files, and timestamp.
+- `ExcelWriterService.cs` — Service for exporting sheet data to Excel and CSV. Preserves types and number formats from source files.
+
+### SheetAtlas.Logging/Models
+- `LogAction.cs` — Represents an action that can be performed on a notification
+- `LogMessage.cs` — Represents a user notification (error, warning, info)
+- `LogSeverity.cs` — Severity level of a notification
+
+### SheetAtlas.Logging/Services
+- `ILogService.cs` — Service for managing application log messages
+- `LogService.cs` — In-memory and file-based implementation of log service Manages log message storage, file persistence, and events
+- `LogServiceExtensions.cs` — Extension methods for ILogService to simplify logging calls
+
+### SheetAtlas.UI.Avalonia
+- `App.axaml.cs`
+- `Program.cs`
+
+### SheetAtlas.UI.Avalonia/Commands
+- `RelayCommand.cs` — RelayCommand with built-in error handling to prevent unhandled exceptions from crashing the app. Provides a global safety net for all command executions.
+
+### SheetAtlas.UI.Avalonia/Controls
+- `CollapsibleSection.axaml.cs` — A reusable collapsible section control with customizable header and content. Provides consistent styling across SearchView and ComparisonView.
+- `MultiSidebar.axaml.cs` — A VSCode-style multi-sidebar control with icon bar and collapsible panels.
+- `SheetGridCanvas.cs` — Custom-rendered spreadsheet grid for visualizing sheet data and selecting regions. Uses DrawingContext for performance — no UI element per cell. Designed to sit inside a ScrollViewer; reports full log...
+
+### SheetAtlas.UI.Avalonia/Converters
+- `BoolToTextConverter.cs`
+- `CollectionNotEmptyConverter.cs` — Converts a collection to a boolean indicating if it's not empty
+- `ComparisonTypeToBackgroundConverter.cs` — Converts ComparisonType or CellComparisonResult to appropriate background brush for visual distinction Supports gradient coloring based on frequency intensity for different values
+- `EnumEqualsConverter.cs`
+- `GreaterThanZeroConverter.cs` — Converts a nullable int to bool (true if value > 0). Used for badge visibility on sidebar icons.
+- `LogSeverityToColorConverter.cs`
+
+### SheetAtlas.UI.Avalonia/Managers/Comparison
+- `IRowComparisonCoordinator.cs` — Manages the lifecycle of row comparison ViewModels. Handles creation, selection, and removal of row comparisons.
+- `RowComparisonCoordinator.cs` — Coordinates the lifecycle of row comparison ViewModels. Manages creation, selection, and removal of comparisons.
+
+### SheetAtlas.UI.Avalonia/Managers/FileDetails
+- `FileDetailsCoordinator.cs` — Coordinates file detail operations such as file removal, retry, and cleanup. Orchestrates interactions between FilesManager, SearchViewModels, and ComparisonCoordinator.
+- `IFileDetailsCoordinator.cs` — Coordinates file detail operations: removal, retry, cleanup. Orchestrates FilesManager, SearchViewModels, and ComparisonCoordinator.
+
+### SheetAtlas.UI.Avalonia/Managers/Files
+- `ILoadedFilesManager.cs` — Manages the collection of loaded Excel files and their lifecycle. Handles loading, removal, and retry operations for failed loads.
+- `LoadedFilesManager.cs` — Manages the collection of loaded Excel files and their lifecycle. Handles loading, removal, and retry operations for failed loads.
+
+### SheetAtlas.UI.Avalonia/Managers/Navigation
+- `ITabNavigationCoordinator.cs` — Coordinates tab visibility and navigation in the main window. Handles showing, hiding, and switching between different tabs (FileDetails, Search, Comparison).
+- `TabNavigationCoordinator.cs` — Coordinates tab visibility and navigation in the main window. Manages showing, hiding, and switching between different tabs.
+
+### SheetAtlas.UI.Avalonia/Managers/Search
+- `ISearchResultsManager.cs` — Manager for search operations and results
+- `SearchResultsManager.cs` — Manages search operations and results. Executes searches, groups results by file/sheet, provides search suggestions.
+
+### SheetAtlas.UI.Avalonia/Managers/Selection
+- `ISelectionManager.cs` — Manager for selection and visibility operations
+- `SelectionManager.cs` — Manages selection of cells and sheets in search results. Tracks selected items and notifies listeners of changes.
+
+### SheetAtlas.UI.Avalonia/Managers/Theme
+- `IThemeManager.cs` — Manages application theme (Light/Dark/System). Applies theme changes and persists user preferences.
+- `ThemeManager.cs` — Implementation of IThemeManager. Detects system theme and applies user preferences.
+
+### SheetAtlas.UI.Avalonia/Models
+- `CellComparisonResult.cs` — Represents the result of comparing a cell value with other values in the same column
+- `ComparisonType.cs` — Represents the type of difference found when comparing cells across rows
+- `CrossFileApplyViewModel.cs` — UI model for a single cross-file detection result. Displayed as a card in the detection results panel.
+- `FileDetailAction.cs`
+- `FileDetailProperty.cs`
+- `IToggleable.cs` — Interface for items that can be toggled (expanded/collapsed or selected/deselected)
+- `RegionTreeModels.cs` — Top-level group in the Regions sidebar: one per loaded file.
+- `SidebarItem.cs` — Represents a sidebar item in the MultiSidebar control. Each item has an icon, tooltip, content template, and open/close state.
+
+### SheetAtlas.UI.Avalonia/Models/Search
+- `CellOccurrenceImpl.cs`
+- `FileOccurrenceImpl.cs`
+- `GroupedSearchResultImpl.cs`
+- `ICellOccurrence.cs` — Represents a cell occurrence in search results
+- `IFileOccurrence.cs` — Represents a file occurrence in search results
+- `IGroupedSearchResult.cs` — Represents a group of search results with the same value
+- `ISearchResultFactory.cs` — Factory for creating search result models
+- `ISheetOccurrence.cs` — Represents a sheet occurrence in search results
+- `SearchResultFactory.cs`
+- `SheetOccurrenceImpl.cs`
+
+### SheetAtlas.UI.Avalonia/Services
+- `AvaloniaDialogService.cs`
+- `AvaloniaFilePickerService.cs`
+- `ErrorNotificationService.cs` — UI-layer service for displaying errors to users. Bridges exception handling with dialog presentation.
+- `IActivityLogService.cs` — Service for logging application activities and operations. Maintains a timeline of events that can be displayed to the user.
+- `IDialogService.cs`
+- `IFilePickerService.cs`
+
+### SheetAtlas.UI.Avalonia/ViewModels
+- `ColumnLinkingViewModel.cs` — ViewModel item for displaying a ColumnLink in the sidebar.
+- `ErrorLogRowViewModel.cs` — ViewModel for a single row in the error log table (flat list)
+- `FileActionEventArgs.cs` — Event arguments for file-related actions requested from FileDetailsViewModel. Used for actions like Remove, Clean, Retry, etc.
+- `FileDetailsViewModel.cs` — ViewModel for file details display. Shows basic file information, notifications/errors, and export functionality. Template management has been moved to TemplateManagementViewModel.
+- `FileLoadResultViewModel.cs`
+- `FileResultGroup.cs`
+- `IFileLoadResultViewModel.cs`
+- `MainWindowViewModel.Commands.cs`
+- `MainWindowViewModel.cs`
+- `MainWindowViewModel.EventHandlers.cs`
+- `MainWindowViewModel.FileOperations.cs`
+- `MainWindowViewModel.HelpCommands.cs`
+- `RegionsSidebarViewModel.cs` — ViewModel for the Regions sidebar. Displays a File → Sheet → Region hierarchy and supports cross-file region detection (ADR-012 Phase 2).
+- `RowComparisonViewModel.cs` — Builds a mapping from original column names to their semantic names for export.
+- `SearchHistoryItem.cs`
+- `SearchResultItem.cs`
+- `SearchViewModel.cs`
+- `SettingsViewModel.cs` — ViewModel for the Settings tab. Manages user preferences with Save/Reset/Cancel operations.
+- `SheetResultGroup.cs`
+- `TemplateManagementViewModel.cs` — ViewModel for the Templates tab. Manages the template library and template operations. Supports single file (create/validate) and multi-file (batch validate/apply) operations.
+- `TreeSearchResultsViewModel.cs`
+- `ValidationIssueViewModel.cs` — ViewModel for displaying validation issues in the UI.
+- `ViewModelBase.cs` — Base class for ViewModels. Implements INotifyPropertyChanged with helper methods for property change notifications.
+
+### SheetAtlas.UI.Avalonia/Views
+- `ClosableTabHeader.axaml.cs`
+- `ColumnsSidebarView.axaml.cs`
+- `DataRegionsView.axaml.cs`
+- `EmptyStateView.axaml.cs`
+- `FileDetailsView.axaml.cs`
+- `FileLoadResultView.axaml.cs`
+- `FilesSidebarView.axaml.cs`
+- `MainWindow.axaml.cs`
+- `RegionsSidebarView.axaml.cs`
+- `RowComparisonView.axaml.cs`
+- `SettingsView.axaml.cs`
+- `TemplateManagementView.axaml.cs`
+- `TreeSearchResultsView.axaml.cs`
+- `WelcomeView.axaml.cs`
+
+---
+
+*Auto-generated by `.development/scripts/generate-architecture.sh`*

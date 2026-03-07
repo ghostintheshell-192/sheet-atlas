@@ -13,20 +13,24 @@ related: []
 Bidirectional synchronization issue between Search tab and RowComparison tab.
 
 **Reproduction:**
+
 1. Select cells in Search tab
 2. Create row comparison → RowComparison tab shows selected cells
 3. Click "Clear Selection" in Search tab
 4. **Bug**: RowComparison tab still shows old selection (doesn't update)
 
 **Current behavior that works:**
+
 - Closing RowComparison tab with X → Search selections are cleared ✅
 
 ## Analysis
 
 ### Root Cause
+
 `RowComparisonViewModel` is a static snapshot created at comparison time. It doesn't subscribe to selection changes from `TreeSearchResultsViewModel`.
 
 ### Related Work
+
 - Code review report: `.personal/archive/analysis/2025-10-19_report_code-reviewer.md`
 - Refactoring branch: `refactor/implement-idisposable-pattern` (if exists)
 
@@ -61,6 +65,7 @@ Wait for event-driven architecture refactoring (Priority C in refactoring plan).
 **Verified by code-reviewer agent**: Bug is **CONFIRMED PRESENT**.
 
 **Analysis**:
+
 - TreeSearchResultsViewModel: Has `ClearSelection()` but does NOT notify RowComparisonViewModel
 - RowComparisonViewModel: Receives static snapshot, NO event subscription to search selection changes
 - MainWindowViewModel: Only connects close comparison → clear search (one direction)
@@ -69,3 +74,7 @@ Wait for event-driven architecture refactoring (Priority C in refactoring plan).
 **Root cause**: No bidirectional event subscription between ViewModels. RowComparisonViewModel is isolated snapshot.
 
 **Recommendation**: KEEP OPEN. Valid architectural issue. Consider implementing IRowComparisonCoordinator mediator pattern for bidirectional sync, or auto-close comparison when source selection cleared.
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

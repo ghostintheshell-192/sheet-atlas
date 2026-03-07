@@ -8,6 +8,7 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand LoadFileCommand { get; private set; } = null!;
         public ICommand UnloadAllFilesCommand { get; private set; } = null!;
         public ICommand ToggleSidebarCommand { get; private set; } = null!;
+        public ICommand ToggleQuickBarCommand { get; private set; } = null!;
         public ICommand ToggleStatusBarCommand { get; private set; } = null!;
         public ICommand ShowFileDetailsTabCommand { get; private set; } = null!;
         public ICommand ShowSearchTabCommand { get; private set; } = null!;
@@ -19,7 +20,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         public ICommand CloseTemplatesTabCommand { get; private set; } = null!;
         public ICommand ShowSettingsTabCommand { get; private set; } = null!;
         public ICommand CloseSettingsTabCommand { get; private set; } = null!;
+        public ICommand ShowDataRegionsTabCommand { get; private set; } = null!;
+        public ICommand CloseDataRegionsTabCommand { get; private set; } = null!;
+        public ICommand ShowWelcomeTabCommand { get; private set; } = null!;
+        public ICommand CloseWelcomeTabCommand { get; private set; } = null!;
         public ICommand ShowSearchResultsCommand { get; private set; } = null!;
+        public ICommand NormalizeExportCommand { get; private set; } = null!;
         public ICommand ShowAboutCommand { get; private set; } = null!;
         public ICommand ShowDocumentationCommand { get; private set; } = null!;
         public ICommand ViewErrorLogCommand { get; private set; } = null!;
@@ -39,6 +45,12 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 return Task.CompletedTask;
             });
 
+            ToggleQuickBarCommand = new RelayCommand(() =>
+            {
+                IsQuickBarVisible = !IsQuickBarVisible;
+                return Task.CompletedTask;
+            });
+
             ToggleStatusBarCommand = new RelayCommand(() =>
             {
                 IsStatusBarVisible = !IsStatusBarVisible;
@@ -48,9 +60,9 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
             ShowFileDetailsTabCommand = new RelayCommand(() =>
             {
                 if (SelectedFile == null && LoadedFiles.Any())
-                {
                     SelectedFile = LoadedFiles.First();
-                }
+                IsFileDetailsTabVisible = true;
+                SelectedTabIndex = GetTabIndex("FileDetails");
                 return Task.CompletedTask;
             });
 
@@ -119,12 +131,46 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
                 return Task.CompletedTask;
             });
 
+            ShowDataRegionsTabCommand = new RelayCommand(() =>
+            {
+                if (SelectedFile == null && LoadedFiles.Any())
+                {
+                    SelectedFile = LoadedFiles.First();
+                }
+                IsDataRegionsTabVisible = true;
+                SelectedTabIndex = GetTabIndex("DataRegions");
+                return Task.CompletedTask;
+            });
+
+            CloseDataRegionsTabCommand = new RelayCommand(() =>
+            {
+                IsDataRegionsTabVisible = false;
+                SwitchToNextVisibleTab("DataRegions");
+                return Task.CompletedTask;
+            });
+
             ShowSearchResultsCommand = new RelayCommand(() =>
             {
                 IsSearchTabVisible = true;
                 SelectedTabIndex = GetTabIndex("Search");
                 return Task.CompletedTask;
             });
+
+            ShowWelcomeTabCommand = new RelayCommand(() =>
+            {
+                IsWelcomeTabVisible = true;
+                SelectedTabIndex = GetTabIndex("Welcome");
+                return Task.CompletedTask;
+            });
+
+            CloseWelcomeTabCommand = new RelayCommand(() =>
+            {
+                IsWelcomeTabVisible = false;
+                SwitchToNextVisibleTab("Welcome");
+                return Task.CompletedTask;
+            });
+
+            NormalizeExportCommand = new RelayCommand(async () => await ExecuteNormalizeExportAsync());
 
             ShowAboutCommand = new RelayCommand(async () => await ShowAboutDialogAsync());
             ShowDocumentationCommand = new RelayCommand(async () => await OpenDocumentationAsync());

@@ -17,6 +17,7 @@ report: null
 ## Analysis
 
 The method is fully implemented:
+
 - Takes `retentionDays` parameter (default 30)
 - Deletes JSON files older than cutoff
 - Removes empty directories
@@ -49,3 +50,7 @@ _ = logService.CleanupOldLogsAsync(30); // fire-and-forget, don't block startup
 
 - **Code Location**: `src/SheetAtlas.Core/Application/Services/FileLogService.cs:CleanupOldLogsAsync()`
 - **Related Spec**: `.personal/specs/archived/enhanced-file-logging.md`
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

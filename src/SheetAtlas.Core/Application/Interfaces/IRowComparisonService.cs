@@ -2,6 +2,9 @@ using SheetAtlas.Core.Domain.Entities;
 
 namespace SheetAtlas.Core.Application.Interfaces
 {
+    /// <summary>
+    /// Service for comparing rows from search results. Extracts row data and column headers.
+    /// </summary>
     public interface IRowComparisonService
     {
         /// <summary>
@@ -15,8 +18,8 @@ namespace SheetAtlas.Core.Application.Interfaces
         ExcelRow ExtractRowFromSearchResult(SearchResult searchResult);
 
         /// <summary>
-        /// Get column headers for a specific sheet
+        /// Get column headers for a specific sheet, optionally filtered to a DataRegion's column bounds.
         /// </summary>
-        IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName);
+        IReadOnlyList<string> GetColumnHeaders(ExcelFile file, string sheetName, string? regionName = null);
     }
 }

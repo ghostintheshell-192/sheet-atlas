@@ -1,9 +1,7 @@
 namespace SheetAtlas.Core.Domain.ValueObjects
 {
     /// <summary>
-    /// String interning pool for deduplicating repeated string values.
-    /// Reduces memory footprint when many cells contain identical strings (categories, enums, etc.).
-    /// Thread-safe for concurrent reads, requires external synchronization for writes.
+    /// String interning pool for deduplicating repeated values. Reduces memory for repeated strings (categories, enums). Thread-safe reads.
     /// </summary>
     public sealed class StringPool
     {

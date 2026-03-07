@@ -8,6 +8,9 @@ namespace SheetAtlas.UI.Avalonia.Managers
         Dark
     }
 
+    /// <summary>
+    /// Manages application theme (Light/Dark/System). Applies theme changes and persists user preferences.
+    /// </summary>
     public interface IThemeManager : INotifyPropertyChanged
     {
         Theme CurrentTheme { get; }

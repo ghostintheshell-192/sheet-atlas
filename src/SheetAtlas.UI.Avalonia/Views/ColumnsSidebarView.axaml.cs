@@ -142,48 +142,17 @@ public partial class ColumnsSidebarView : UserControl
 
     #region Context Menu Handlers
 
-    private void OnMenuButtonClick(object? sender, RoutedEventArgs e)
+    private void OnRenameMenuItemClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button button)
-        {
-            // Find the parent Border that has the ContextMenu
-            var parent = button.Parent;
-            while (parent != null && parent is not Border { ContextMenu: not null })
-            {
-                parent = (parent as Visual)?.GetVisualParent();
-            }
-
-            if (parent is Border border && border.ContextMenu != null)
-            {
-                border.ContextMenu.Open(border);
-            }
-        }
+        if (sender is MenuItem menuItem && menuItem.DataContext is ColumnLinkViewModel vm)
+            vm.IsEditing = true;
     }
 
-    private void OnRenameClick(object? sender, RoutedEventArgs e)
+    private void OnUngroupMenuItemClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem menuItem)
-        {
-            var contextMenu = menuItem.Parent as ContextMenu;
-            var vm = contextMenu?.DataContext as ColumnLinkViewModel;
-            if (vm != null)
-            {
-                vm.IsEditing = true;
-            }
-        }
-    }
-
-    private void OnUngroupClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem menuItem)
-        {
-            var contextMenu = menuItem.Parent as ContextMenu;
-            var vm = contextMenu?.DataContext as ColumnLinkViewModel;
-            if (vm != null && DataContext is ColumnLinkingViewModel parentVm)
-            {
-                parentVm.UngroupColumn(vm);
-            }
-        }
+        if (sender is MenuItem menuItem && menuItem.DataContext is ColumnLinkViewModel vm
+            && DataContext is ColumnLinkingViewModel parentVm)
+            parentVm.UngroupColumn(vm);
     }
 
     private void OnEditTextBoxKeyDown(object? sender, KeyEventArgs e)

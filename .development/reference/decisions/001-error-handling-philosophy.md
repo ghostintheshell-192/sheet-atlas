@@ -2,6 +2,8 @@
 
 **Date**: October 2025
 **Status**: Active
+**Impact**: critical
+**Summary**: Never throw for business errors. Use exceptions only for programming bugs (ArgumentNull, InvalidOperation), Result objects for expected failures (file not found, corrupted data). Core/Domain returns Result, UI checks Status.
 
 ## Context
 

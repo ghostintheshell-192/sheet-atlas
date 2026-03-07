@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SheetAtlas.UI.Avalonia.ViewModels"
+             xmlns:views="using:SheetAtlas.UI.Avalonia.Views"
              xmlns:controls="using:SheetAtlas.UI.Avalonia.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -95,20 +96,9 @@
                     </ListBox>
 
                     <!-- Empty state -->
-                    <StackPanel VerticalAlignment="Center"
-                                HorizontalAlignment="Center"
-                                Spacing="8"
-                                IsVisible="{Binding !TemplateLibrary.Count}">
-                        <TextBlock Text="No templates yet"
-                                   FontSize="14"
-                                   Foreground="{DynamicResource SecondaryText}"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock Text="Create one from a loaded file"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource SecondaryText}"
-                                   Opacity="0.7"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
+                    <views:EmptyStateView IsVisible="{Binding !TemplateLibrary.Count}"
+                                         Title="No templates yet"
+                                         Message="Create one from a loaded file"/>
                 </Grid>
 
                 <!-- Library Actions -->

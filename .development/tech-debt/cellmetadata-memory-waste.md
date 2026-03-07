@@ -13,6 +13,7 @@ related: []
 Currently allocating entire `CellMetadata` object (~96 bytes) just to store `NumberFormat` string for foundation services analysis.
 
 **Memory Impact:**
+
 - `CellMetadata` is a class with ~10 reference fields (OriginalValue, CleanedValue, Formula, Style, Validation, etc.)
 - Object header: 16 bytes + 10 fields × 8 bytes = 96 bytes total
 - Formatted cells in typical sheet: 30-70%
@@ -21,6 +22,7 @@ Currently allocating entire `CellMetadata` object (~96 bytes) just to store `Num
 ## Analysis
 
 ### Current Implementation
+
 ```csharp
 // In CreateRowData()
 if (numberFormat != null)
@@ -31,9 +33,11 @@ if (numberFormat != null)
 ```
 
 ### Design Issue
+
 `CellMetadata` was intended for **exceptional cases** (5-10% of cells: formulas, validation errors, quality issues), not for structural data present in majority of cells.
 
 `NumberFormat` is needed only:
+
 - During `EnrichSheetWithColumnAnalysis` (immediately after file load)
 - Never again (unless re-analysis)
 
@@ -71,6 +75,7 @@ Evaluate memory usage with real-world files. If profiling shows >50MB waste on t
 **Verified by performance-profiler agent**: Issue is **STILL PRESENT**.
 
 **Current code** (OpenXmlFileReader.cs:418-423):
+
 ```csharp
 if (numberFormat != null) {
     metadata = new CellMetadata { NumberFormat = numberFormat };
@@ -78,9 +83,14 @@ if (numberFormat != null) {
 ```
 
 **Key findings**:
+
 - Memory waste confirmed: ~96 bytes per formatted cell
 - Typical impact: 4-8MB on 100K-cell sheet with 50% formatted cells
 - NumberFormat only used during enrichment phase, then discarded
 - Issue is REAL but LOWER priority than originally assessed
 
 **Recommendation**: Keep OPEN as optimization opportunity, but low priority. Memory deallocates after enrichment completes (GC eligible). Optimize only if profiling shows >50MB waste in production workloads.
+
+---
+
+📍 **Investigation Note**: Read [ARCHITECTURE.md](../ARCHITECTURE.md) to locate relevant files and understand the architectural context before starting your analysis.

@@ -3,6 +3,8 @@
 **Status**: Active
 **Date**: 2025-11-28 (Proposed) → 2026-01-31 (Implemented)
 **Context**: Template Management System (Week 3)
+**Impact**: important
+**Summary**: Single unified data flow where CleanedValue is canonical representation. Both internal operations (search, compare) and export use same normalized data. ExcelWriterService writes typed cells preserving number formats and data types.
 
 ## Context
 

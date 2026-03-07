@@ -2,6 +2,8 @@
 
 **Date**: October 2025
 **Status**: Active
+**Impact**: critical
+**Summary**: 0-based absolute indexing internally, 1-based for display. SearchResult.Row and SASheetData use row 0 as first row. UI converts with displayRow = internalRow + 1. Search/comparison skip header rows (HeaderRowCount).
 
 ## Context
 

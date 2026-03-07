@@ -8,12 +8,13 @@ This directory contains all documentation for the SheetAtlas project, organized 
 
 **GitHub Pages website** - Public-facing project website
 
-- **URL**: https://ghostintheshell-192.github.io/sheet-atlas/
+- **URL**: <https://ghostintheshell-192.github.io/sheet-atlas/>
 - **Contents**: Landing page, downloads, features, screenshots
 - **Deployment**: Automatic via GitHub Actions on push to `main` branch
 - **Workflow**: `.github/workflows/deploy-pages.yml`
 
 **Files:**
+
 - `index.html` - Main landing page (generated from `index.html.template`)
 - `index.html.template` - Template with version placeholders
 - `styles/` - CSS stylesheets
@@ -31,24 +32,10 @@ This directory contains all documentation for the SheetAtlas project, organized 
 - **Entry point**: [project/README.md](project/README.md)
 
 **Files:**
+
 - `README.md` - Developer hub (setup, build, test)
 - `ARCHITECTURE.md` - Architecture overview with Mermaid diagrams
 - `technical-specs.md` - Performance, security, config specifications
-
----
-
-### `development/`
-
-**Internal development documentation** - Planning and design decisions
-
-- **Audience**: Core development team
-- **Contents**: Design reviews, architecture decisions, planning documents
-
-**Subdirectories:**
-- `design-reviews/` - API design reviews and technical decisions
-- `planning/` - Feature planning and roadmaps
-
-**Note**: For private notes and business strategy, use `.personal/` in the repository root (excluded from git).
 
 ---
 
@@ -62,6 +49,7 @@ This directory contains all documentation for the SheetAtlas project, organized 
 4. Website automatically deploys to GitHub Pages
 
 **Template placeholders:**
+
 - `${VERSION}` - Full version (e.g., `v0.3.3`)
 - `${VERSION_NUMBER}` - Version number (e.g., `0.3.3`)
 - `${RELEASE_DATE}` - Release date
@@ -76,6 +64,7 @@ This directory contains all documentation for the SheetAtlas project, organized 
 ### Release Documentation Updates
 
 The release pipeline (`.github/workflows/release.yml`) automatically:
+
 - Generates `index.html` from template with current version
 - Commits updated website to `main` branch
 - Triggers GitHub Pages deployment
@@ -107,12 +96,14 @@ Located in repository root:
 ## 📊 Documentation Migration History
 
 **October 2025 Reorganization:**
+
 - Separated website (`docs/website/`) from developer docs
 - Introduced template-based website generation
 - Removed business strategy docs (moved to `.personal/`)
 - Eliminated duplicate files (`overview.md`, `roadmap.md`)
 
 **November 2025 Cleanup:**
+
 - Consolidated overlapping README files
 - Updated all references to reflect current structure
 - Removed broken links to deleted files

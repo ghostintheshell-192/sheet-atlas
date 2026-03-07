@@ -41,9 +41,14 @@ namespace SheetAtlas.Core.Application.Services.Foundation
             bool isPotentialDate = NumberFormatHelper.IsDateFormat(numberFormat);
 
             // Normalize based on detected type
-            if (isPotentialDate && original.IsFloatingPoint)
+            // Integer serial dates are common: Excel stores dates as numbers, CellValueReader
+            // reads whole numbers as Integer (e.g., 36717 for July 10, 2000)
+            if (isPotentialDate && (original.IsFloatingPoint || original.IsInteger))
             {
-                return NormalizeExcelSerialDate(original, dateSystem);
+                var floatOriginal = original.IsInteger
+                    ? SACellValue.FromFloatingPoint(original.AsInteger())
+                    : original;
+                return NormalizeExcelSerialDate(floatOriginal, dateSystem);
             }
 
             if (original.IsText)
@@ -119,17 +124,21 @@ namespace SheetAtlas.Core.Application.Services.Foundation
 
         private static DateTime ConvertSerial1900(double serial)
         {
-            // Handle Excel 1900 leap year bug
+            // Handle Excel 1900 leap year bug (serial 60 = phantom Feb 29, 1900)
             if (serial == Excel1900LeapYearBugSerial)
             {
-                // Feb 29, 1900 doesn't exist - skip to March 1
                 return new DateTime(1900, 3, 1);
             }
 
-            // Serials after the bug need adjustment
-            if (serial > Excel1900LeapYearBugSerial)
-                serial -= 1;
+            // Pre-bug dates (serial 1-59): Excel serial is 1 less than OADate offset
+            if (serial < Excel1900LeapYearBugSerial)
+            {
+                return _epoch1900.AddDays(serial + 1);
+            }
 
+            // Post-bug dates (serial > 60): OADate and Excel serial align directly.
+            // epoch(1899-12-30) + serial = correct DateTime.
+            // This ensures round-trip: serial → DateTime → ToOADate() → same serial.
             return _epoch1900.AddDays(serial);
         }
 

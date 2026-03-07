@@ -10,7 +10,7 @@
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="SheetAtlas.UI.Avalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="Excel Cross Reference Viewer"
+        Title="SheetAtlas"
         MinWidth="800" MinHeight="600"
         Background="{DynamicResource MainBackground}">
 
@@ -25,9 +25,10 @@
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>  <!-- Menu Bar -->
+            <RowDefinition Height="Auto"/>  <!-- Quick Bar -->
+            <RowDefinition Height="*"/>     <!-- Main Content -->
+            <RowDefinition Height="Auto"/>  <!-- Status Bar -->
         </Grid.RowDefinitions>
 
         <!-- Professional Menu Bar -->
@@ -41,11 +42,11 @@
 
             <!-- File Menu -->
             <MenuItem Header="_File">
-                <MenuItem Header="📁 _Load Files"
-                         Command="{Binding LoadFileCommand}"/>
-                <MenuItem Header="🗑️ _Unload All Files"
-                         Command="{Binding UnloadAllFilesCommand}"
-                         IsEnabled="{Binding HasLoadedFiles}"/>
+                <MenuItem Header="_Load Files"
+                          Command="{Binding LoadFileCommand}"/>
+                <MenuItem Header="_Unload All Files"
+                          Command="{Binding UnloadAllFilesCommand}"
+                          IsEnabled="{Binding HasLoadedFiles}"/>
                 <Separator/>
                 <MenuItem Header="Recent Files" IsEnabled="False"/>
             </MenuItem>
@@ -59,38 +60,67 @@
                           Command="{Binding ShowSearchTabCommand}"/>
                 <MenuItem Header="Show _Comparison"
                           Command="{Binding ShowComparisonTabCommand}"/>
+                <MenuItem Header="Show _Data Regions"
+                          Command="{Binding ShowDataRegionsTabCommand}"
+                          IsEnabled="{Binding HasLoadedFiles}"/>
                 <MenuItem Header="Show _Templates"
                           Command="{Binding ShowTemplatesTabCommand}"/>
                 <Separator/>
+                <MenuItem Header="{Binding IsQuickBarVisible, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Hide Quick Bar|Show Quick Bar'}"
+                          Command="{Binding ToggleQuickBarCommand}"/>
                 <MenuItem Header="{Binding IsStatusBarVisible, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Hide Status Bar|Show Status Bar'}"
                           Command="{Binding ToggleStatusBarCommand}"/>
             </MenuItem>
 
             <!-- Tools Menu -->
             <MenuItem Header="_Tools">
-                <MenuItem Header="_Export Results" IsEnabled="False"/>
+                <MenuItem Header="_Normalize &amp; Export"
+                          Command="{Binding NormalizeExportCommand}"
+                          IsEnabled="{Binding HasSelectedFile}"
+                          InputGesture="Ctrl+E"/>
                 <Separator/>
                 <MenuItem Header="_Settings"
-                         Command="{Binding ShowSettingsTabCommand}"/>
+                          Command="{Binding ShowSettingsTabCommand}"/>
             </MenuItem>
 
             <!-- Help Menu -->
             <MenuItem Header="_Help">
-                <MenuItem Header="📋 View Error _Log"
-                         Command="{Binding ViewErrorLogCommand}"
-                         InputGesture="Ctrl+L"/>
+                <MenuItem Header="_Welcome"
+                          Command="{Binding ShowWelcomeTabCommand}"/>
+                <Separator/>
+                <MenuItem Header="View Error _Log"
+                          Command="{Binding ViewErrorLogCommand}"
+                          InputGesture="Ctrl+L"/>
                 <Separator/>
                 <MenuItem Header="_About SheetAtlas"
-                         Command="{Binding ShowAboutCommand}"/>
+                          Command="{Binding ShowAboutCommand}"/>
                 <MenuItem Header="_Documentation"
-                         Command="{Binding ShowDocumentationCommand}"
-                         InputGesture="F1"/>
+                          Command="{Binding ShowDocumentationCommand}"
+                          InputGesture="F1"/>
             </MenuItem>
 
         </Menu>
 
+        <!-- Quick Bar -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource SecondaryBackground}"
+                BorderBrush="{DynamicResource SubtleBorder}"
+                BorderThickness="0,0,0,1"
+                Padding="8,4"
+                IsVisible="{Binding IsQuickBarVisible}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Normalize &amp; Export"
+                        Classes="ModernButton"
+                        Command="{Binding NormalizeExportCommand}"
+                        IsEnabled="{Binding HasSelectedFile}"
+                        FontSize="11"
+                        Padding="10,4"
+                        ToolTip.Tip="Export normalized data (Ctrl+E)"/>
+            </StackPanel>
+        </Border>
+
         <!-- Main Content -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -105,7 +135,7 @@
                     <!-- Files Sidebar -->
                     <models:SidebarItem IconData="{StaticResource FilesIconData}"
                                         Tooltip="Loaded Files"
-                                        IsOpen="True"
+                                        IsOpen="False"
                                         Width="256">
                         <models:SidebarItem.ContentTemplate>
                             <DataTemplate x:DataType="vm:MainWindowViewModel">
@@ -125,45 +155,40 @@
                             </DataTemplate>
                         </models:SidebarItem.ContentTemplate>
                     </models:SidebarItem>
+
+                    <!-- Regions Sidebar -->
+                    <models:SidebarItem IconData="{StaticResource RegionsIconData}"
+                                        Tooltip="Data Regions"
+                                        IsOpen="False"
+                                        Width="280">
+                        <models:SidebarItem.ContentTemplate>
+                            <DataTemplate x:DataType="vm:MainWindowViewModel">
+                                <views:RegionsSidebarView DataContext="{Binding RegionsSidebarViewModel}"/>
+                            </DataTemplate>
+                        </models:SidebarItem.ContentTemplate>
+                    </models:SidebarItem>
                 </controls:MultiSidebar.Items>
             </controls:MultiSidebar>
 
             <!-- Main Content Area -->
             <Grid Grid.Column="1" Margin="12,0,0,0">
-                <!-- Welcome Message (when no tabs visible) -->
-                <Border IsVisible="{Binding HasAnyTabVisible, Converter={x:Static BoolConverters.Not}}"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                    <StackPanel Spacing="16" HorizontalAlignment="Center">
-                        <TextBlock Text="SheetAtlas"
-                                  FontSize="24"
-                                  FontWeight="SemiBold"
-                                  Foreground="{DynamicResource PrimaryText}"
-                                  HorizontalAlignment="Center"/>
-                        <TextBlock Text="Start here: File → Load Files"
-                                  FontSize="14"
-                                  Foreground="{DynamicResource SecondaryText}"
-                                  HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-
                 <!-- Content Area: Tab Control (full height) -->
                 <TabControl SelectedIndex="{Binding SelectedTabIndex}"
-                           IsVisible="{Binding HasAnyTabVisible}">
+                            IsVisible="{Binding HasAnyTabVisible}">
+                    <!-- Welcome Tab -->
+                    <TabItem IsVisible="{Binding IsWelcomeTabVisible}">
+                        <TabItem.Header>
+                            <views:ClosableTabHeader Title="Welcome"
+                                                     CloseCommand="{Binding CloseWelcomeTabCommand}"/>
+                        </TabItem.Header>
+                        <views:WelcomeView DataContext="{Binding}"/>
+                    </TabItem>
+
                     <!-- File Details Tab -->
                     <TabItem IsVisible="{Binding IsFileDetailsTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="File Details" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseFileDetailsTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="File Details"
+                                                     CloseCommand="{Binding CloseFileDetailsTabCommand}"/>
                         </TabItem.Header>
                         <ContentControl Content="{Binding FileDetailsViewModel}">
                             <ContentControl.ContentTemplate>
@@ -177,22 +202,14 @@
                     <!-- Search Tab -->
                     <TabItem IsVisible="{Binding IsSearchTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Search" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseSearchTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="Search"
+                                                     CloseCommand="{Binding CloseSearchTabCommand}"/>
                         </TabItem.Header>
 
                         <!-- Search Tab Content -->
                         <Grid Margin="8">
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
@@ -245,15 +262,15 @@
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                                     <!-- Selected rows counter -->
                                     <Border Background="{DynamicResource InfoBackground}"
-                                           CornerRadius="4"
-                                           Padding="8,4"
-                                           IsVisible="{Binding TreeSearchResultsViewModel.CanCompareRows}">
+                                            CornerRadius="4"
+                                            Padding="8,4"
+                                            IsVisible="{Binding TreeSearchResultsViewModel.CanCompareRows}">
                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                             <TextBlock Text="{Binding TreeSearchResultsViewModel.SelectedCount}"
-                                                      FontWeight="SemiBold"
-                                                      Foreground="{DynamicResource InfoColor}"/>
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource InfoColor}"/>
                                             <TextBlock Text="selected rows"
-                                                      Foreground="{DynamicResource SecondaryText}"/>
+                                                       Foreground="{DynamicResource SecondaryText}"/>
                                         </StackPanel>
                                     </Border>
 
@@ -277,8 +294,43 @@
                                 </StackPanel>
                             </Grid>
 
+                            <!-- Region Filter: active indicator -->
+                            <Border Grid.Row="2"
+                                    Background="{DynamicResource SuccessBackground}"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,0,0,8"
+                                    IsVisible="{Binding SearchViewModel.IsRegionFilterActive}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding SearchViewModel.ActiveRegionDisplayText}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SuccessColor}"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1"
+                                            Content="Clear"
+                                            Classes="ModernButton"
+                                            FontSize="10"
+                                            Padding="6,2"
+                                            Command="{Binding SearchViewModel.ClearRegionFilterCommand}"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Region Filter: hint when regions exist but none selected -->
+                            <Border Grid.Row="2"
+                                    Background="{DynamicResource InfoBackground}"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,0,0,8"
+                                    IsVisible="{Binding HasMultipleRegionsMessage}">
+                                <TextBlock Text="Select a data region from the Regions sidebar to focus search"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource InfoColor}"/>
+                            </Border>
+
                             <!-- Search Results Tree View -->
-                            <ContentControl Grid.Row="2" Content="{Binding TreeSearchResultsViewModel}">
+                            <ContentControl Grid.Row="3" Content="{Binding TreeSearchResultsViewModel}">
                                 <ContentControl.ContentTemplate>
                                     <DataTemplate>
                                         <views:TreeSearchResultsView/>
@@ -291,23 +343,14 @@
                     <!-- Row Comparison Tab -->
                     <TabItem IsVisible="{Binding IsComparisonTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Row Comparison" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseComparisonTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="Row Comparison"
+                                                     CloseCommand="{Binding CloseComparisonTabCommand}"/>
                         </TabItem.Header>
 
                         <Grid Margin="8">
                             <!-- Comparison Stack (when comparisons exist) -->
                             <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                         IsVisible="{Binding RowComparisons.Count}">
+                                          IsVisible="{Binding RowComparisons.Count}">
                                 <ItemsControl ItemsSource="{Binding RowComparisons}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:RowComparisonViewModel">
@@ -318,23 +361,23 @@
                                                         <!-- Title and Info -->
                                                         <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding Title}"
-                                                                      FontWeight="SemiBold"
-                                                                      FontSize="14"
-                                                                      Foreground="{DynamicResource SearchQueryText}"/>
+                                                                       FontWeight="SemiBold"
+                                                                       FontSize="14"
+                                                                       Foreground="{DynamicResource SearchQueryText}"/>
                                                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                                                 <TextBlock Text="{Binding RowCount}"
-                                                                          FontWeight="SemiBold"
-                                                                          FontSize="12"
-                                                                          Foreground="{DynamicResource SearchQueryText}"/>
+                                                                           FontWeight="SemiBold"
+                                                                           FontSize="12"
+                                                                           Foreground="{DynamicResource SearchQueryText}"/>
                                                                 <TextBlock Text=" rows"
-                                                                          FontSize="12"
-                                                                          Foreground="{DynamicResource SearchQueryText}"
-                                                                          Opacity="0.8"
-                                                                          Margin="0,0,16,0"/>
+                                                                           FontSize="12"
+                                                                           Foreground="{DynamicResource SearchQueryText}"
+                                                                           Opacity="0.8"
+                                                                           Margin="0,0,16,0"/>
                                                                 <TextBlock Text="{Binding CreatedAt, StringFormat='HH:mm:ss'}"
-                                                                          FontSize="12"
-                                                                          Foreground="{DynamicResource SearchQueryText}"
-                                                                          Opacity="0.8"/>
+                                                                           FontSize="12"
+                                                                           Foreground="{DynamicResource SearchQueryText}"
+                                                                           Opacity="0.8"/>
                                                             </StackPanel>
                                                         </StackPanel>
 
@@ -376,39 +419,18 @@
                             </ScrollViewer>
 
                             <!-- Empty State (when no comparisons) -->
-                            <Border HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   IsVisible="{Binding !RowComparisons.Count}">
-                                <StackPanel Spacing="16" HorizontalAlignment="Center">
-                                    <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center" Opacity="0.4"/>
-                                    <TextBlock Text="No comparisons yet"
-                                              FontSize="16"
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource PrimaryText}"
-                                              HorizontalAlignment="Center"/>
-                                    <TextBlock Text="Select rows from search results to compare"
-                                              FontSize="14"
-                                              Foreground="{DynamicResource SecondaryText}"
-                                              HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
+                            <views:EmptyStateView IsVisible="{Binding !RowComparisons.Count}"
+                                                  Icon="📊"
+                                                  Title="No comparisons yet"
+                                                  Message="Select rows from search results to compare"/>
                         </Grid>
                     </TabItem>
 
                     <!-- Templates Tab -->
                     <TabItem IsVisible="{Binding IsTemplatesTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Templates" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseTemplatesTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="Templates"
+                                                     CloseCommand="{Binding CloseTemplatesTabCommand}"/>
                         </TabItem.Header>
                         <ContentControl Content="{Binding TemplateManagementViewModel}">
                             <ContentControl.ContentTemplate>
@@ -419,20 +441,26 @@
                         </ContentControl>
                     </TabItem>
 
+                    <!-- Data Regions Tab -->
+                    <TabItem IsVisible="{Binding IsDataRegionsTabVisible}">
+                        <TabItem.Header>
+                            <views:ClosableTabHeader Title="Data Regions"
+                                                     CloseCommand="{Binding CloseDataRegionsTabCommand}"/>
+                        </TabItem.Header>
+                        <ContentControl Content="{Binding FileDetailsViewModel}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate>
+                                    <views:DataRegionsView/>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
+                    </TabItem>
+
                     <!-- Settings Tab -->
                     <TabItem IsVisible="{Binding IsSettingsTabVisible}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="Settings" VerticalAlignment="Center"/>
-                                <Button Content="✕"
-                                        Command="{Binding CloseSettingsTabCommand}"
-                                        Padding="4,0"
-                                        FontSize="14"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource SecondaryText}"
-                                        ToolTip.Tip="Close tab"/>
-                            </StackPanel>
+                            <views:ClosableTabHeader Title="Settings"
+                                                     CloseCommand="{Binding CloseSettingsTabCommand}"/>
                         </TabItem.Header>
                         <ContentControl Content="{Binding SettingsViewModel}">
                             <ContentControl.ContentTemplate>
@@ -448,7 +476,7 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Background="{DynamicResource SecondaryBackground}"
                 BorderBrush="{DynamicResource BorderColor}"
                 BorderThickness="0,1,0,0"
@@ -462,10 +490,10 @@
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0"
-                          Text="{Binding StatusText}"
-                          Foreground="{DynamicResource SecondaryText}"
-                          FontSize="12"
-                          VerticalAlignment="Center"/>
+                           Text="{Binding StatusText}"
+                           Foreground="{DynamicResource SecondaryText}"
+                           FontSize="12"
+                           VerticalAlignment="Center"/>
             </Grid>
         </Border>
     </Grid>

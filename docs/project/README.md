@@ -59,8 +59,7 @@ SheetAtlas/
 │   └── SheetAtlas.Tests/                   # Unit and integration tests
 ├── docs/                                    # Documentation
 │   ├── website/                             # GitHub Pages site
-│   ├── project/                             # Developer docs (you are here)
-│   └── development/                         # Design reviews and planning
+│   └── project/                             # Developer docs (you are here)
 ├── build/                                   # Build scripts (installers)
 ├── .github/workflows/                       # CI/CD pipelines
 ├── CLAUDE.md                                # Development conventions
