@@ -52,6 +52,9 @@ samples/
 # Legacy private directory (deprecated)
 .secrets/
 
+# Legacy binary archives
+.development/archive/legacy/*.zip
+
 # Claude Code folder and todos (do NOT commit)
 **/claude-todos*.md
 **/temp-todos*.md
