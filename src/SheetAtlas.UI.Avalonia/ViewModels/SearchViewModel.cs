@@ -238,20 +238,29 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     private async Task PerformSearchAsync(string query)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        // Called as fire-and-forget from OnQuerySubmitted, so any throw here
+        // becomes an UnobservedTaskException. Handle in-place (log + swallow).
+        try
         {
-            await _searchResultsManager.PerformSearchAsync("");
-            return;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                await _searchResultsManager.PerformSearchAsync("");
+                return;
+            }
+
+            var searchOptions = new SearchOptions
+            {
+                CaseSensitive = CaseSensitive,
+                ExactMatch = ExactMatch,
+                UseRegex = UseRegexSearch
+            };
+
+            await _searchResultsManager.PerformSearchAsync(query, searchOptions);
         }
-
-        var searchOptions = new SearchOptions
+        catch (Exception ex)
         {
-            CaseSensitive = CaseSensitive,
-            ExactMatch = ExactMatch,
-            UseRegex = UseRegexSearch
-        };
-
-        await _searchResultsManager.PerformSearchAsync(query, searchOptions);
+            _logger.LogError($"Search failed for query: {query}", ex, "SearchViewModel");
+        }
     }
 
     private void ClearSearch()
