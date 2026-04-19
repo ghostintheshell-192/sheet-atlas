@@ -584,25 +584,35 @@ namespace SheetAtlas.UI.Avalonia.ViewModels
         {
             if (fileVm.File == null) return;
 
-            var data = new DataRegionFile
+            try
             {
-                LastModified = DateTime.UtcNow,
-                Sheets = new Dictionary<string, SheetRegionsDto>()
-            };
-
-            foreach (var (sheetName, sheetData) in fileVm.File.Sheets)
-            {
-                var regions = sheetData.DataRegions;
-                if (regions.Count > 0)
+                var data = new DataRegionFile
                 {
-                    data.Sheets[sheetName] = new SheetRegionsDto
-                    {
-                        Regions = new Dictionary<string, DataRegion>(regions)
-                    };
-                }
-            }
+                    LastModified = DateTime.UtcNow,
+                    Sheets = new Dictionary<string, SheetRegionsDto>()
+                };
 
-            await _dataRegionPersistenceService.SaveAsync(fileVm.FilePath, data);
+                foreach (var (sheetName, sheetData) in fileVm.File.Sheets)
+                {
+                    var regions = sheetData.DataRegions;
+                    if (regions.Count > 0)
+                    {
+                        data.Sheets[sheetName] = new SheetRegionsDto
+                        {
+                            Regions = new Dictionary<string, DataRegion>(regions)
+                        };
+                    }
+                }
+
+                await _dataRegionPersistenceService.SaveAsync(fileVm.FilePath, data);
+            }
+            catch (Exception ex)
+            {
+                // Fire-and-forget callers cannot observe exceptions from here, so
+                // swallow and log instead of letting them become UnobservedTaskException.
+                _logger.LogError($"Failed to persist regions for {fileVm.FileName}", ex, "MainWindowViewModel");
+                _activityLog.LogError($"Failed to save regions for {fileVm.FileName}", ex, "Regions");
+            }
         }
 
         /// <summary>
