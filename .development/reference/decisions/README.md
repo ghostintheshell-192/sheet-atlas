@@ -30,7 +30,10 @@ Each decision document follows this structure:
 6. [Git Workflow](006-git-workflow.md) - Branch strategy and release process
 7. [Unified Data Flow for Export](007-unified-data-flow-for-export.md) - Single source of truth for normalized data
 8. [Facade Pattern for Dependency Injection](008-facade-pattern-for-dependency-injection.md) - Reduce constructor over-injection
-9. [DataRegion Data Model](009-dataregion-data-model.md) - Dictionary storage, no ActiveRegion, per-region metadata *(Proposed)*
-10. [DataRegion UI Pattern](010-dataregion-ui-pattern.md) - Canvas selection, Regions Sidebar, per-file display *(Proposed)*
-11. [DataRegion Persistence](011-dataregion-persistence.md) - JSON in dedicated subfolder *(Proposed)*
-12. [DataRegion Cross-File Detection](012-dataregion-cross-file-detection.md) - Header-anchored detection, not fixed bounds *(Proposed)*
+9. [DataRegion Data Model](009-dataregion-data-model.md) - Dictionary storage, no ActiveRegion, per-region metadata
+10. [DataRegion UI Pattern](010-dataregion-ui-pattern.md) - Canvas selection, Regions Sidebar, per-file display
+11. [DataRegion Persistence](011-dataregion-persistence.md) - JSON in dedicated subfolder
+12. [DataRegion Cross-File Detection](012-dataregion-cross-file-detection.md) - Header-anchored detection, not fixed bounds
+13. [Coordinate-Preserving Storage](013-coordinate-preserving-storage.md) - SASheetData preserves original Excel positions
+14. [Region-Scoped Template Validation](014-region-scoped-template-validation.md) - Validation bounded by DataRegion
+15. [Non-Destructive File Removal](015-non-destructive-file-removal.md) - "Remove from List" vs "Clean All Data" UX split

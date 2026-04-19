@@ -14,8 +14,12 @@ public interface IFileDetailsCoordinator
     void HandleRemoveFromList(IFileLoadResultViewModel? file);
 
     /// <summary>
-    /// Handles the complete cleanup of all data associated with a file.
-    /// This includes removing the file, clearing search results, comparisons, and forcing garbage collection.
+    /// Destructive cleanup path for a file: clears derived artifacts (search results,
+    /// comparisons), disposes the underlying <c>ExcelFile</c>, removes it from the loaded
+    /// files collection, and forces aggressive LOH garbage collection to reclaim memory.
+    /// This is the only path that releases the ~100–500 MB held by a loaded workbook.
+    /// Contrast with <c>ILoadedFilesManager.RemoveFile</c>, which is non-destructive.
+    /// See ADR-015.
     /// </summary>
     /// <param name="file">The file to clean up</param>
     /// <param name="treeSearchResults">Tree search results ViewModel to clean up (nullable)</param>
