@@ -23,7 +23,12 @@ public interface ILoadedFilesManager : IDisposable
     Task LoadFilesAsync(IEnumerable<string> filePaths);
 
     /// <summary>
-    /// Removes a file from the loaded files collection.
+    /// Removes a file from the loaded files collection. Non-destructive: does not dispose
+    /// the underlying <c>ExcelFile</c>. Search results and row comparisons that reference
+    /// the file remain valid until they are cleared explicitly. For full cleanup including
+    /// disposal and memory reclamation, use the "Clean All Data" command path
+    /// (<c>OnCleanAllDataRequested</c> / <c>FileDetailsCoordinator.HandleCleanAllData</c>).
+    /// See ADR-015 for the rationale.
     /// </summary>
     /// <param name="file">The file to remove</param>
     /// <param name="isRetry">True if this removal is part of a retry operation (preserves UI selection)</param>
