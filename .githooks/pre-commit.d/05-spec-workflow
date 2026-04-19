@@ -1,0 +1,74 @@
+#!/bin/bash
+# Pre-commit hook: Auto-move spec to implemented on merge to develop
+# Detects merge commits by checking for MERGE_HEAD, extracts the
+# feature branch name, and moves the matching spec.
+
+# Colors
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+SCRIPT_PATH="$PROJECT_ROOT/.development/scripts/spec-workflow.py"
+
+# Check if this project has the workflow script
+if [[ ! -f "$SCRIPT_PATH" ]]; then
+    exit 0
+fi
+
+MERGE_HEAD="$PROJECT_ROOT/.git/MERGE_HEAD"
+
+# Only act on merge commits into develop
+if [[ ! -f "$MERGE_HEAD" ]]; then
+    exit 0
+fi
+
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [[ "$CURRENT_BRANCH" != "develop" ]]; then
+    exit 0
+fi
+
+echo -e "${BLUE}[05] Spec Workflow${NC}"
+
+# Get the branch name being merged from MERGE_MSG
+MERGE_MSG_FILE="$PROJECT_ROOT/.git/MERGE_MSG"
+if [[ ! -f "$MERGE_MSG_FILE" ]]; then
+    echo -e "  ${GREEN}✓${NC} No merge message found, skipping"
+    exit 0
+fi
+
+# Extract branch name from merge message like "Merge branch 'feature/redis-caching' into develop"
+MERGE_MSG=$(head -1 "$MERGE_MSG_FILE")
+MERGED_BRANCH=$(echo "$MERGE_MSG" | sed -n "s/.*Merge branch '\([^']*\)'.*/\1/p")
+
+if [[ -z "$MERGED_BRANCH" ]]; then
+    echo -e "  ${GREEN}✓${NC} Not a branch merge, skipping"
+    exit 0
+fi
+
+# Extract spec name from branch
+SPEC_NAME=""
+case "$MERGED_BRANCH" in
+    feature/*|fix/*|docs/*|experiment/*|refactor/*)
+        SPEC_NAME="${MERGED_BRANCH#*/}"
+        ;;
+esac
+
+if [[ -z "$SPEC_NAME" ]]; then
+    echo -e "  ${GREEN}✓${NC} Branch $MERGED_BRANCH has no matching spec convention"
+    exit 0
+fi
+
+# Move spec to implemented
+OUTPUT=$(python3 "$SCRIPT_PATH" done "$SPEC_NAME" 2>/dev/null)
+
+if [[ -n "$OUTPUT" ]]; then
+    echo -e "$OUTPUT"
+    # Stage the spec file changes
+    git add "$PROJECT_ROOT/.development/specs/" 2>/dev/null
+    echo -e "  ${GREEN}✓${NC} Staged spec changes"
+else
+    echo -e "  ${GREEN}✓${NC} No spec to update for $SPEC_NAME"
+fi
+
+exit 0
