@@ -20,9 +20,12 @@ See ADR-006 for complete details.
 
 - `main`: releases only
 - `develop`: default branch for development
-- `feature/*`, `fix/*`, `docs/*`, `experiment/*`: task branches
+- `feature/*`, `fix/*`, `docs/*`, `refactor/*`, `experiment/*`, `chore/*`: task branches
 
-**NEVER work on main directly.**
+**NEVER work on `main` or `develop` directly.** Both are branch-protected: the
+pre-commit hook `.githooks/pre-commit.d/00-branch-protection` blocks direct
+commits. Merge commits (`git merge --no-ff`) are explicitly allowed on these
+branches — that is the supported path to land work.
 
 **Typical workflow:**
 
@@ -33,14 +36,38 @@ git pull origin develop
 git checkout -b feature/task-name
 
 # Work and commit
-git add .
+git add <files>
 git commit -m "feat: descriptive message"
 
 # Merge when complete
 git checkout develop
-git merge feature/task-name
+git merge --no-ff feature/task-name
 git push origin develop
 ```
+
+### Collaboration convention
+
+On this project, Claude creates task branches, commits, and merges to `develop`
+once the work is complete. The user runs `git push origin develop` manually.
+Git commands are confirmed one at a time rather than added to the permissions
+allowlist — the confirmation prompt is the deliberate checkpoint to re-read the
+diff before it lands.
+
+### Spec lifecycle automation
+
+The repo ships hooks that move spec files between `specs/{planned,in-progress,implemented}/`
+based on git activity:
+
+- **`post-checkout`**: on `git checkout -b {feature,fix,docs,refactor,experiment}/<name>`,
+  the matching spec in `specs/planned/<name>.md` is moved to `specs/in-progress/`
+  and its frontmatter `**Status**` field is updated.
+- **`pre-commit.d/05-spec-workflow`**: on merge commits into `develop`, the branch
+  name is parsed and the matching spec is moved to `specs/implemented/` and
+  staged as part of the merge commit.
+
+The script at `.development/scripts/spec-workflow.py` is the shared backend;
+missing specs, unknown branch prefixes, and non-merge commits all exit silently.
+Activation requires `git config core.hooksPath .githooks` (done once per clone).
 
 ## Release Process
 

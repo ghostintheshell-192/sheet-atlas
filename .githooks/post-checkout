@@ -1,0 +1,54 @@
+#!/bin/bash
+# Git hook: post-checkout
+# 1. Warns when checking out protected branches
+# 2. Auto-moves matching spec to in-progress on feature branch checkout
+
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+# ─── Protected branch warning ───────────────────────────────────────
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "develop" ]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "⚠️  ⚠️  ⚠️   SEI SUL BRANCH PROTETTO: $BRANCH   ⚠️  ⚠️  ⚠️"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "🚫 NON modificare file direttamente su questo branch!"
+    echo ""
+    echo "✅ Crea subito un branch per lavorare:"
+    echo ""
+    echo "   Per nuova feature:"
+    echo "   \$ git checkout -b feature/nome-feature"
+    echo ""
+    echo "   Per bug fix:"
+    echo "   \$ git checkout -b fix/nome-bug"
+    echo ""
+    echo "   Per refactoring:"
+    echo "   \$ git checkout -b refactor/descrizione"
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+fi
+
+# ─── Auto spec in-progress ──────────────────────────────────────────
+# Only run on branch switch (not file checkout)
+# $3 is 1 for branch checkout, 0 for file checkout
+if [ "$3" = "1" ]; then
+    PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+    SCRIPT_PATH="$PROJECT_ROOT/.development/scripts/spec-workflow.py"
+
+    if [ -f "$SCRIPT_PATH" ]; then
+        # Extract spec name from branch (feature/foo -> foo)
+        SPEC_NAME=""
+        case "$BRANCH" in
+            feature/*|fix/*|docs/*|experiment/*|refactor/*)
+                SPEC_NAME="${BRANCH#*/}"
+                ;;
+        esac
+
+        if [ -n "$SPEC_NAME" ]; then
+            python3 "$SCRIPT_PATH" start "$SPEC_NAME" 2>/dev/null
+        fi
+    fi
+fi
+
+exit 0
