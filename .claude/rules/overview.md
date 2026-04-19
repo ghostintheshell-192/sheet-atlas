@@ -6,7 +6,7 @@
 
 - **Type**: Open-source (potential commercial licensing after v1.0)
 - **Platform**: Cross-platform (.NET 8 + Avalonia UI)
-- **Status**: Alpha (v0.5.x)
+- **Status**: Alpha (v0.6.x)
 
 ## Development Methodology
 

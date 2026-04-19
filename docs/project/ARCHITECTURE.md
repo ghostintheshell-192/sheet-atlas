@@ -65,15 +65,18 @@ graph TB
 | **Views** | XAML, no code-behind logic |
 | **ViewModels** | MVVM state and commands |
 | **Managers** | UI coordination (Files, Search, Theme, Navigation) |
+| **Controls** | `SheetGridCanvas` — custom-rendered spreadsheet grid with drag selection for DataRegion editing (ADR-010) |
 | **Services** | UI-specific (dialogs, file picker) |
 
 ### Core (SheetAtlas.Core)
 
 **Application Services**:
-- `SearchService` — full-text search across sheets
+- `SearchService` — full-text search across sheets (region-scoped when a DataRegion is active)
 - `RowComparisonService` — row-by-row diff
 - `SheetAnalysisOrchestrator` — analysis pipeline
 - `ColumnLinkingService` — cross-file column linking
+- `RegionDetectionService` — header-anchored DataRegion detection across files (ADR-012)
+- `DataRegionPersistenceService` — JSON persistence of DataRegion definitions (ADR-011)
 - `SettingsService` — user preferences
 
 **Foundation Services**:
@@ -81,11 +84,12 @@ graph TB
 - `DataNormalizationService` — value normalization
 - `CurrencyDetector` — currency parsing
 - `MergedCellResolver` — merged cell strategies
-- `TemplateValidationService` — column validation
+- `TemplateValidationService` — column validation, region-scoped (ADR-014)
 
 **Domain**:
-- `ExcelFile`, `SASheetData` — file/sheet representation
+- `ExcelFile`, `SASheetData` — file/sheet representation, coordinate-preserving (ADR-013)
 - `SACellData`, `SACellValue` — cell data
+- `DataRegion` — named rectangular scope within a sheet (ADR-009)
 - `SearchResult`, `RowComparison` — operation results
 
 ### Infrastructure (SheetAtlas.Infrastructure)
@@ -98,7 +102,8 @@ graph TB
 
 `FileReaderContext` facade groups common reader dependencies (see ADR-008).
 
-Writers: `ExcelWriterService`, `ComparisonExportService`
+Writers: `ExcelWriterService` (including `NormalizeToExcelAsync` for
+in-place column-type correction based on dominant type), `ComparisonExportService`.
 
 ### Logging (SheetAtlas.Logging)
 
@@ -182,10 +187,14 @@ src/
 
 ## Related
 
-- [ADR-007: Unified Data Flow](../../.personal/reference/decisions/007-unified-data-flow-for-export.md)
-- [ADR-008: Facade Pattern](../../.personal/reference/decisions/008-facade-pattern-for-dependency-injection.md)
+- [ADR-007: Unified Data Flow](../../.development/reference/decisions/007-unified-data-flow-for-export.md)
+- [ADR-008: Facade Pattern](../../.development/reference/decisions/008-facade-pattern-for-dependency-injection.md)
+- [ADR-009 / 010 / 011 / 012: DataRegion](../../.development/reference/decisions/) — data model, UI pattern, persistence, cross-file detection
+- [ADR-013: Coordinate-Preserving Storage](../../.development/reference/decisions/013-coordinate-preserving-storage.md)
+- [ADR-014: Region-Scoped Template Validation](../../.development/reference/decisions/014-region-scoped-template-validation.md)
+- [ADR-015: Non-Destructive File Removal](../../.development/reference/decisions/015-non-destructive-file-removal.md)
 - [Technical Specs](technical-specs.md) — performance, security, config details
 
 ---
 
-*Last updated: January 2026*
+*Last updated: April 2026*
